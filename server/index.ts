@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { initializeStorage } from "./storage";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 
 const app = express();
 app.use(express.json());
@@ -37,6 +39,18 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize storage system first
+  try {
+    log('Initializing database connection...');
+    const storage = await initializeStorage();
+    log('Database connection established successfully');
+
+    // We don't need to run migrations manually since drizzle-kit
+    // will handle that for us when connecting to the database
+  } catch (error) {
+    log(`Error initializing storage: ${error}`);
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
