@@ -46,20 +46,6 @@ export class PgStorage implements IStorage {
     
     if (existingCategories.length === 0) {
       console.log('Seeding initial data...');
-      
-      // Create a default test user
-      const existingAdmin = await this.getUserByUsername('admin');
-      if (!existingAdmin) {
-        const adminUser: InsertUser = {
-          username: "admin",
-          password: "$2b$10$TnZHFgGdhrXGz.Tlx1/4TuEGZlMrxRPTfGwsFTeQQ.yqMW9jkfUV.", // "admin123"
-          email: "admin@example.com",
-          membership_type: "regular", // 将原来的admin改为regular
-          coins: 1000
-        };
-        await this.createUser(adminUser);
-        console.log('Created test user');
-      }
 
       // Create some basic categories
       const categoriesToCreate = [
