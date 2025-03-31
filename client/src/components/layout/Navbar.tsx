@@ -72,7 +72,11 @@ export default function Navbar() {
                 </a>
               </Link>
               <Link href="/about">
-                <a className="border-transparent text-neutral-600 hover:border-neutral-300 hover:text-neutral-800 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                <a className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                  isActive("/about") 
+                    ? "border-primary text-neutral-900" 
+                    : "border-transparent text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
+                }`}>
                   关于我们
                 </a>
               </Link>
@@ -159,7 +163,11 @@ export default function Navbar() {
                     </a>
                   </Link>
                   <Link href="/about">
-                    <a className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                    <a className={`px-3 py-2 rounded-md text-base font-medium ${
+                      isActive("/about") 
+                        ? "text-primary bg-neutral-50" 
+                        : "text-neutral-700 hover:text-primary hover:bg-neutral-50"
+                    }`}>
                       关于我们
                     </a>
                   </Link>

@@ -3,6 +3,7 @@ import Home from "./pages/Home";
 import NotFound from "./pages/not-found";
 import Resources from "./pages/Resources";
 import ResourceDetail from "./pages/ResourceDetail";
+import About from "./pages/About";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import ResourceManagement from "./pages/admin/ResourceManagement";
@@ -21,6 +22,7 @@ function App() {
               <Route path="/" component={Home} />
               <Route path="/resources" component={Resources} />
               <Route path="/resources/:id" component={ResourceDetail} />
+              <Route path="/about" component={About} />
               <Route path="/admin/resources" component={ResourceManagement} />
               <Route path="/admin/resources/upload" component={ResourceUpload} />
               <Route path="/admin/users" component={UserManagement} />
