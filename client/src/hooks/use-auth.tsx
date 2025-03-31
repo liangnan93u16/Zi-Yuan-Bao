@@ -47,13 +47,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "登录成功",
         description: `欢迎回来，${userData.username}！`,
       });
-    } catch (error) {
+    } catch (error: any) {
+      // 检查是否有响应体，包含详细错误信息
+      let errorMessage = "用户名或密码错误，请重试。";
+      
+      if (error.response) {
+        try {
+          const errorData = await error.response.json();
+          
+          // 处理不同的错误情况
+          if (errorData.locked) {
+            errorMessage = errorData.message || "账号已被锁定，请稍后再试。";
+          } else if (errorData.remainingAttempts !== undefined) {
+            errorMessage = errorData.message || `密码错误，还有${errorData.remainingAttempts}次尝试机会。`;
+          } else {
+            errorMessage = errorData.message || errorMessage;
+          }
+        } catch (e) {
+          console.error("Failed to parse error response:", e);
+        }
+      }
+      
       toast({
         title: "登录失败",
-        description: "用户名或密码错误，请重试。",
+        description: errorMessage,
         variant: "destructive",
       });
-      throw error;
+      
+      // 创建一个新错误对象，包含详细信息
+      const enhancedError = new Error(errorMessage);
+      enhancedError.name = "AuthError";
+      if (error.response && error.response.status) {
+        (enhancedError as any).status = error.response.status;
+      }
+      throw enhancedError;
     } finally {
       setLoading(false);
     }

@@ -45,6 +45,8 @@ export const users = pgTable("users", {
   membership_type: text("membership_type"),
   membership_expire_time: timestamp("membership_expire_time"),
   coins: integer("coins").default(0),
+  failed_login_attempts: integer("failed_login_attempts").default(0),
+  account_locked_until: timestamp("account_locked_until"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow()
 });

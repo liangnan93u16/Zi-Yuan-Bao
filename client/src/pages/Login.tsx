@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // 定义登录表单验证
 const formSchema = z.object({
@@ -27,6 +28,8 @@ export default function Login() {
   const { login } = useAuth();
   const [, setLocation] = useLocation();
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isAccountLocked, setIsAccountLocked] = useState(false);
   const { toast } = useToast();
 
   // 登录表单
@@ -39,7 +42,11 @@ export default function Login() {
   });
 
   async function onSubmit(data: LoginFormValues) {
+    // 清除之前的错误信息
+    setErrorMessage(null);
+    setIsAccountLocked(false);
     setIsLoading(true);
+    
     try {
       await login(data.username, data.password);
       toast({
@@ -48,6 +55,18 @@ export default function Login() {
       });
       setLocation('/');
     } catch (error: any) {
+      // 判断是否是账号锁定错误
+      if (error.message && error.message.includes('账号已被锁定')) {
+        setIsAccountLocked(true);
+        setErrorMessage(error.message);
+      } else if (error.message && error.message.includes('密码错误次数过多')) {
+        setIsAccountLocked(true);
+        setErrorMessage(error.message);
+      } else {
+        // 普通错误
+        setErrorMessage(error.message || '账号或密码错误，请重试');
+      }
+      
       toast({
         title: '登录失败',
         description: error.message || '账号或密码错误，请重试',
@@ -68,6 +87,16 @@ export default function Login() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {errorMessage && (
+            <Alert variant={isAccountLocked ? "destructive" : "default"} className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>{isAccountLocked ? '账号已锁定' : '登录失败'}</AlertTitle>
+              <AlertDescription>
+                {errorMessage}
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -77,7 +106,7 @@ export default function Login() {
                   <FormItem>
                     <FormLabel>用户名</FormLabel>
                     <FormControl>
-                      <Input placeholder="请输入用户名" {...field} disabled={isLoading} />
+                      <Input placeholder="请输入用户名" {...field} disabled={isLoading || isAccountLocked} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -90,18 +119,20 @@ export default function Login() {
                   <FormItem>
                     <FormLabel>密码</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="请输入密码" {...field} disabled={isLoading} />
+                      <Input type="password" placeholder="请输入密码" {...field} disabled={isLoading || isAccountLocked} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full" disabled={isLoading || isAccountLocked}>
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     登录中...
                   </>
+                ) : isAccountLocked ? (
+                  '账号已锁定'
                 ) : (
                   '登录'
                 )}

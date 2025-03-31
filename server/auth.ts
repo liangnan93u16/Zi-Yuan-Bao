@@ -2,6 +2,14 @@ import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import { storage } from './storage';
 import { LoginCredentials, RegisterData, User } from '@shared/schema';
+import { SessionData } from 'express-session';
+
+// 扩展 express-session 中的 Session 接口
+declare module 'express-session' {
+  interface SessionData {
+    userId?: number;
+  }
+}
 
 export interface AuthenticatedRequest extends Request {
   user?: User;
@@ -30,11 +38,56 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    // 检查账号是否被锁定
+    const now = new Date();
+    if (user.account_locked_until && new Date(user.account_locked_until) > now) {
+      // 计算还剩多少分钟
+      const remainingTimeMs = new Date(user.account_locked_until).getTime() - now.getTime();
+      const remainingMinutes = Math.ceil(remainingTimeMs / (1000 * 60));
+      
+      res.status(401).json({ 
+        message: `账号已被锁定，请${remainingMinutes}分钟后再试`,
+        locked: true,
+        lockExpires: user.account_locked_until
+      });
+      return;
+    }
+
     // Verify password
     const isPasswordValid = await verifyPassword(password, user.password);
     if (!isPasswordValid) {
-      res.status(401).json({ message: '用户名或密码不正确' });
+      // 密码错误，增加失败次数
+      const failedAttempts = (user.failed_login_attempts || 0) + 1;
+      const updates: Partial<User> = { failed_login_attempts: failedAttempts };
+      
+      // 如果达到三次失败，锁定账号1小时
+      if (failedAttempts >= 3) {
+        const lockUntil = new Date();
+        lockUntil.setHours(lockUntil.getHours() + 1); // 锁定1小时
+        updates.account_locked_until = lockUntil;
+        
+        await storage.updateUser(user.id, updates);
+        res.status(401).json({ 
+          message: '密码错误次数过多，账号已被锁定1小时',
+          locked: true,
+          lockExpires: lockUntil
+        });
+      } else {
+        await storage.updateUser(user.id, updates);
+        res.status(401).json({ 
+          message: `用户名或密码不正确，还有${3-failedAttempts}次机会`,
+          remainingAttempts: 3 - failedAttempts
+        });
+      }
       return;
+    }
+
+    // 密码正确，重置失败次数
+    if (user.failed_login_attempts && user.failed_login_attempts > 0) {
+      await storage.updateUser(user.id, { 
+        failed_login_attempts: 0,
+        account_locked_until: null
+      });
     }
 
     // Set user in session
