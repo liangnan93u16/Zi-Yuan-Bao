@@ -1,25 +1,29 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, ArrowDown } from "lucide-react";
 import CategoryCard from "@/components/resources/CategoryCard";
 import ResourceCard from "@/components/resources/ResourceCard";
-import { FilterType } from "@/lib/types";
+import { FilterType, ResourceWithCategory } from "@/lib/types";
+import { Category } from "@shared/schema";
 
 export default function Home() {
   const [filter, setFilter] = useState<FilterType>("all");
   const [page, setPage] = useState(1);
   
   // Fetch categories
-  const { data: categories, isLoading: isLoadingCategories } = useQuery({
+  const { data: categories = [], isLoading: isLoadingCategories } = useQuery<Category[]>({
     queryKey: ['/api/categories'],
   });
   
   // Fetch resources with filter
-  const { data: resources, isLoading: isLoadingResources } = useQuery({
+  const { data: resourcesData, isLoading: isLoadingResources } = useQuery<{resources: ResourceWithCategory[], total: number}>({
     queryKey: ['/api/resources', filter, page],
   });
+
+  // Extract resources from the response and provide a default empty array
+  const resources = resourcesData?.resources || [];
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -72,7 +76,7 @@ export default function Home() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {categories?.slice(0, 6).map((category) => (
+            {categories?.slice(0, 6).map((category: Category) => (
               <CategoryCard
                 key={category.id}
                 category={category}
@@ -136,7 +140,7 @@ export default function Home() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {resources?.map((resource) => (
+            {resources?.map((resource: ResourceWithCategory) => (
               <ResourceCard key={resource.id} resource={resource} />
             ))}
           </div>

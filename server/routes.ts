@@ -15,8 +15,11 @@ import {
 } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Session middleware
-  const MemoryStore = require('memorystore')(session);
+  // Session middleware with memorystore
+  // Dynamically import memorystore and create store
+  const memorystore = await import('memorystore');
+  const MemoryStore = memorystore.default(session);
+  
   app.use(
     session({
       cookie: { maxAge: 86400000 }, // 1 day
@@ -191,7 +194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Include category data if available
-      let result = resource;
+      let result: any = resource;
       if (resource.category_id) {
         const category = await storage.getCategory(resource.category_id);
         result = { ...resource, category };
@@ -399,7 +402,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      const updatedUser = await storage.updateUser(userId, validationResult.data);
+      // For TypeScript type compatibility, convert userData to any to handle date conversion
+      const updatedUserData: any = { ...validationResult.data };
+      
+      // Convert the string date to Date object if needed (handled by 'any' type)
+      if (updatedUserData.membership_expire_time) {
+        updatedUserData.membership_expire_time = new Date(updatedUserData.membership_expire_time);
+      }
+
+      const updatedUser = await storage.updateUser(userId, updatedUserData);
       if (!updatedUser) {
         res.status(404).json({ message: '用户不存在' });
         return;
