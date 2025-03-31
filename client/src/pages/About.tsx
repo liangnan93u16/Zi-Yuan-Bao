@@ -1,4 +1,4 @@
-import { Bookmark, Users, Phone, Mail, MapPin, Clock, Globe } from 'lucide-react';
+import { Bookmark, Phone, Mail, MapPin, Clock, Globe } from 'lucide-react';
 
 export default function About() {
   return (
@@ -49,58 +49,6 @@ export default function About() {
                 <span><strong>普惠学习</strong> - 让优质教育触手可及</span>
               </li>
             </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* 团队介绍 */}
-      <div className="bg-white rounded-xl shadow-sm p-8 mb-16">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-          <Users className="h-6 w-6 mr-2 text-primary" />
-          核心团队
-        </h2>
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="text-center">
-            <div className="w-40 h-40 bg-gray-200 rounded-full mx-auto mb-4 overflow-hidden">
-              <img 
-                src="https://via.placeholder.com/160x160/e2e8f0/1a202c?text=CEO" 
-                alt="CEO"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900">张明</h3>
-            <p className="text-primary font-medium">创始人 & CEO</p>
-            <p className="text-gray-600 mt-2">
-              前Google高级工程师，拥有10年互联网产品研发经验，致力于用技术改变教育
-            </p>
-          </div>
-          <div className="text-center">
-            <div className="w-40 h-40 bg-gray-200 rounded-full mx-auto mb-4 overflow-hidden">
-              <img 
-                src="https://via.placeholder.com/160x160/e2e8f0/1a202c?text=CTO" 
-                alt="CTO"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900">李华</h3>
-            <p className="text-primary font-medium">CTO</p>
-            <p className="text-gray-600 mt-2">
-              前阿里巴巴技术专家，精通全栈开发与AI技术，负责平台的技术架构与创新
-            </p>
-          </div>
-          <div className="text-center">
-            <div className="w-40 h-40 bg-gray-200 rounded-full mx-auto mb-4 overflow-hidden">
-              <img 
-                src="https://via.placeholder.com/160x160/e2e8f0/1a202c?text=COO" 
-                alt="COO"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900">王芳</h3>
-            <p className="text-primary font-medium">COO</p>
-            <p className="text-gray-600 mt-2">
-              前腾讯教育产品总监，拥有丰富的教育行业经验，负责公司运营与合作伙伴关系
-            </p>
           </div>
         </div>
       </div>
