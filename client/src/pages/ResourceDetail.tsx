@@ -1,0 +1,581 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useParams, Link } from "wouter";
+import { Button } from "@/components/ui/button";
+import { 
+  ArrowLeft, 
+  Clock, 
+  FileText, 
+  Globe, 
+  Subtitles, 
+  MonitorSmartphone, 
+  Star, 
+  StarHalf, 
+  Download, 
+  ShoppingCart, 
+  Heart,
+  CheckCircle
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+
+export default function ResourceDetail() {
+  const { id } = useParams();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [tab, setTab] = useState("details");
+
+  // Fetch resource detail
+  const { data: resource, isLoading } = useQuery({
+    queryKey: [`/api/resources/${id}`],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-40 mb-6"></div>
+          <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+            <div className="md:flex">
+              <div className="md:w-2/3 p-6 md:p-8">
+                <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+                <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded w-full mb-6"></div>
+                <div className="flex flex-wrap gap-2 mb-6">
+                  <div className="h-4 bg-gray-200 rounded w-16"></div>
+                  <div className="h-4 bg-gray-200 rounded w-16"></div>
+                  <div className="h-4 bg-gray-200 rounded w-16"></div>
+                </div>
+                <div className="h-6 bg-gray-200 rounded w-1/2 mb-6"></div>
+                <div className="h-10 bg-gray-200 rounded w-full mb-8"></div>
+                <div className="border-t border-neutral-200 pt-6">
+                  <div className="h-6 bg-gray-200 rounded w-1/4 mb-3"></div>
+                  <div className="flex">
+                    <div className="w-12 h-12 bg-gray-200 rounded-full mr-4"></div>
+                    <div>
+                      <div className="h-5 bg-gray-200 rounded w-24 mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-full"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="md:w-1/3 bg-neutral-50 p-6 md:p-8">
+                <div className="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
+                <div className="h-5 bg-gray-200 rounded w-1/3 mb-4"></div>
+                <div className="space-y-3 mb-6">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="h-4 bg-gray-200 rounded w-full"></div>
+                  ))}
+                </div>
+                <div className="h-36 bg-gray-200 rounded mb-6"></div>
+                <div className="h-10 bg-gray-200 rounded w-full"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!resource) {
+    return (
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="bg-white rounded-xl shadow-md p-8 text-center">
+          <h2 className="text-2xl font-bold mb-4">资源不存在</h2>
+          <p className="mb-6">您访问的资源可能已被删除或不存在。</p>
+          <Link href="/resources">
+            <Button>返回资源列表</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const isFree = resource.is_free;
+  const originalPrice = resource.price * 1.5; // Just for display purposes
+  const rating = 4.8; // This would come from the API in a real app
+  
+  const handleDownload = () => {
+    if (!user) {
+      toast({
+        title: "请先登录",
+        description: "您需要登录后才能下载资源。",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isFree && (!user.membership_type || new Date(user.membership_expire_time) < new Date())) {
+      toast({
+        title: "需要购买",
+        description: "此资源需要购买或成为会员才能下载。",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "开始下载",
+      description: "资源下载已开始，请稍候...",
+    });
+    
+    // Simulate download
+    setTimeout(() => {
+      toast({
+        title: "下载完成",
+        description: "资源已成功下载到您的设备。",
+      });
+    }, 2000);
+  };
+
+  const handleAddToCart = () => {
+    if (!user) {
+      toast({
+        title: "请先登录",
+        description: "您需要登录后才能将资源添加到购物车。",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "已添加到购物车",
+      description: "您可以在购物车中查看并结算资源。",
+    });
+  };
+
+  const handleAddToFavorites = () => {
+    if (!user) {
+      toast({
+        title: "请先登录",
+        description: "您需要登录后才能收藏资源。",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "已收藏",
+      description: "资源已添加到您的收藏夹。",
+    });
+  };
+
+  return (
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mb-6">
+        <Link href="/resources">
+          <a className="text-primary hover:text-blue-700 flex items-center text-sm font-medium">
+            <ArrowLeft className="mr-1 h-4 w-4" /> 返回资源列表
+          </a>
+        </Link>
+      </div>
+      
+      <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+        <div className="md:flex">
+          <div className="md:w-2/3 p-6 md:p-8">
+            <div className="flex flex-wrap gap-2 mb-4">
+              {resource.category && (
+                <Badge variant="outline" className="bg-blue-100 text-primary border-0">
+                  {resource.category.name}
+                </Badge>
+              )}
+              <Badge variant="outline" className="bg-neutral-100 text-neutral-800 border-0">
+                前端开发
+              </Badge>
+              <Badge variant="outline" className="bg-neutral-100 text-neutral-800 border-0">
+                React
+              </Badge>
+            </div>
+            
+            <h1 className="text-2xl md:text-3xl font-bold mb-2">{resource.title}</h1>
+            <p className="text-neutral-600 mb-4">{resource.subtitle || 'No description available'}</p>
+            
+            <div className="flex flex-wrap items-center gap-4 text-sm text-neutral-600 mb-6">
+              {resource.video_duration && (
+                <span className="flex items-center">
+                  <Clock className="h-4 w-4 mr-1" /> 总时长: {resource.video_duration} 分钟
+                </span>
+              )}
+              
+              {resource.video_url && (
+                <span className="flex items-center">
+                  <FileText className="h-4 w-4 mr-1" /> 课时: {Math.floor(Math.random() * 180 + 20)} 讲
+                </span>
+              )}
+              
+              {resource.language && (
+                <span className="flex items-center">
+                  <Globe className="h-4 w-4 mr-1" /> 语言: {resource.language}
+                </span>
+              )}
+              
+              {resource.subtitle_languages && (
+                <span className="flex items-center">
+                  <Subtitles className="h-4 w-4 mr-1" /> 字幕: {resource.subtitle_languages}
+                </span>
+              )}
+              
+              {resource.resolution && (
+                <span className="flex items-center">
+                  <MonitorSmartphone className="h-4 w-4 mr-1" /> 分辨率: {resource.resolution}
+                </span>
+              )}
+            </div>
+            
+            <div className="flex items-center mb-6">
+              <div className="flex items-center text-amber-500 mr-3">
+                <Star className="h-4 w-4 fill-current" />
+                <Star className="h-4 w-4 fill-current" />
+                <Star className="h-4 w-4 fill-current" />
+                <Star className="h-4 w-4 fill-current" />
+                <StarHalf className="h-4 w-4 fill-current" />
+                <span className="ml-1 text-neutral-800 font-medium">{rating}</span>
+              </div>
+              <span className="text-neutral-500 text-sm">(526 评价)</span>
+            </div>
+            
+            <div className="flex flex-wrap gap-4 mb-8">
+              <Button onClick={handleDownload} className="gap-2">
+                <Download className="h-4 w-4" /> 立即下载
+              </Button>
+              <Button onClick={handleAddToCart} variant="secondary" className="gap-2">
+                <ShoppingCart className="h-4 w-4" /> 加入购物车
+              </Button>
+              <Button onClick={handleAddToFavorites} variant="outline" className="gap-2">
+                <Heart className="h-4 w-4" /> 收藏
+              </Button>
+            </div>
+            
+            <div className="border-t border-neutral-200 pt-6">
+              <h3 className="font-semibold text-lg mb-3">关于作者</h3>
+              <div className="flex">
+                <Avatar className="h-12 w-12 mr-4">
+                  <AvatarImage src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=facearea&facepad=2&w=300&h=300&q=80" />
+                  <AvatarFallback>作者</AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-medium">陈开发</div>
+                  <p className="text-sm text-neutral-600">资深前端工程师，拥有10年React开发经验，曾任职于多家知名互联网公司。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="md:w-1/3 bg-neutral-50 p-6 md:p-8 border-t md:border-t-0 md:border-l border-neutral-200">
+            <div className="mb-6">
+              <div className="text-3xl font-bold text-neutral-900 mb-1">
+                {isFree ? '免费' : `¥${resource.price.toFixed(2)}`}
+              </div>
+              {!isFree && (
+                <div className="text-neutral-500 line-through">原价: ¥{originalPrice.toFixed(2)}</div>
+              )}
+              {isFree && (
+                <div className="bg-green-100 text-green-800 text-sm px-2 py-0.5 rounded mt-2 inline-block">
+                  限时免费，距结束还有 2 天
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-3 mb-6">
+              <div className="flex items-start">
+                <CheckCircle className="text-green-500 h-5 w-5 mr-2 mt-0.5" />
+                <span>终身访问所有课程内容</span>
+              </div>
+              <div className="flex items-start">
+                <CheckCircle className="text-green-500 h-5 w-5 mr-2 mt-0.5" />
+                <span>源代码和项目文件下载</span>
+              </div>
+              <div className="flex items-start">
+                <CheckCircle className="text-green-500 h-5 w-5 mr-2 mt-0.5" />
+                <span>完整中英双语字幕</span>
+              </div>
+              <div className="flex items-start">
+                <CheckCircle className="text-green-500 h-5 w-5 mr-2 mt-0.5" />
+                <span>移动端和TV端支持</span>
+              </div>
+              <div className="flex items-start">
+                <CheckCircle className="text-green-500 h-5 w-5 mr-2 mt-0.5" />
+                <span>课程完成证书</span>
+              </div>
+            </div>
+            
+            <div className="bg-white border border-neutral-200 rounded-lg p-4 mb-6">
+              <h4 className="font-medium mb-2">文件信息</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-neutral-600">格式:</span>
+                  <span className="font-medium">MP4, PDF</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-600">大小:</span>
+                  <span className="font-medium">{resource.video_size ? `${resource.video_size} GB` : '未知'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-600">更新日期:</span>
+                  <span className="font-medium">{new Date(resource.updated_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-center">
+              <Button className="w-full mb-3" onClick={handleDownload}>
+                立即获取
+              </Button>
+              <div className="text-xs text-neutral-500">
+                已有 12,569 人下载此资源
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+        <Tabs value={tab} onValueChange={setTab}>
+          <div className="border-b border-neutral-200">
+            <TabsList className="h-auto">
+              <TabsTrigger value="details" className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary">
+                课程详情
+              </TabsTrigger>
+              <TabsTrigger value="contents" className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary">
+                课程目录
+              </TabsTrigger>
+              <TabsTrigger value="reviews" className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary">
+                用户评价
+              </TabsTrigger>
+              <TabsTrigger value="faq" className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary">
+                常见问题
+              </TabsTrigger>
+            </TabsList>
+          </div>
+          
+          <TabsContent value="details" className="p-6 md:p-8">
+            <h3 className="text-xl font-bold mb-4">课程介绍</h3>
+            <p className="mb-4">{resource.description || '本课程是一个完整的 React.js 学习指南，从基础概念到高级应用，全面覆盖 React 开发所需的各项技能。无论你是完全的初学者还是想提升 React 技能的开发者，这门课程都能满足你的需求。'}</p>
+            
+            <p className="mb-4">课程使用最新的 React 18 版本，深入讲解了函数式组件、Hooks、Context API、Redux 状态管理以及现代 React 应用的性能优化技巧。通过实践项目，你将学会如何构建专业、可扩展的 React 应用程序。</p>
+            
+            <div className="mb-6">
+              <h4 className="font-semibold mb-2">你将学到什么:</h4>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>React 基础概念与工作原理</li>
+                <li>组件化开发与重用</li>
+                <li>React Hooks 的全面应用</li>
+                <li>状态管理策略 (Context API, Redux, Zustand)</li>
+                <li>React 路由与 SPA 应用开发</li>
+                <li>处理表单与用户输入</li>
+                <li>API 集成与数据获取</li>
+                <li>性能优化与最佳实践</li>
+                <li>测试 React 应用</li>
+                <li>3 个完整的实战项目</li>
+              </ul>
+            </div>
+            
+            <div className="mb-6">
+              <h4 className="font-semibold mb-2">适合人群:</h4>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>想要学习 React 的前端开发初学者</li>
+                <li>希望提升 React 技能的开发者</li>
+                <li>需要更新到 React 18 知识的开发人员</li>
+                <li>前端开发或全栈开发工程师</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-2">先决条件:</h4>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>基本的 HTML, CSS 和 JavaScript 知识</li>
+                <li>了解 ES6+ 语法会有所帮助</li>
+                <li>不需要任何 React 经验，课程从基础开始讲解</li>
+              </ul>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="contents" className="p-6 md:p-8">
+            <h3 className="text-xl font-bold mb-4">课程目录</h3>
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium mb-2">第1章：React 基础入门</h4>
+                <ul className="space-y-2 pl-4">
+                  <li className="flex justify-between">
+                    <span>1.1 课程介绍与环境搭建</span>
+                    <span className="text-sm text-neutral-500">15:20</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>1.2 React 核心概念</span>
+                    <span className="text-sm text-neutral-500">22:45</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>1.3 创建第一个 React 组件</span>
+                    <span className="text-sm text-neutral-500">18:30</span>
+                  </li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 className="font-medium mb-2">第2章：React Hooks 详解</h4>
+                <ul className="space-y-2 pl-4">
+                  <li className="flex justify-between">
+                    <span>2.1 useState 状态管理</span>
+                    <span className="text-sm text-neutral-500">20:15</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>2.2 useEffect 与生命周期</span>
+                    <span className="text-sm text-neutral-500">25:40</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>2.3 useContext 全局状态</span>
+                    <span className="text-sm text-neutral-500">19:50</span>
+                  </li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 className="font-medium mb-2">第3章：React 路由</h4>
+                <ul className="space-y-2 pl-4">
+                  <li className="flex justify-between">
+                    <span>3.1 React Router 基础</span>
+                    <span className="text-sm text-neutral-500">22:10</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>3.2 动态路由与参数</span>
+                    <span className="text-sm text-neutral-500">18:35</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>3.3 嵌套路由与布局</span>
+                    <span className="text-sm text-neutral-500">24:20</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="mt-4 text-center">
+              <Button variant="outline">查看完整目录</Button>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="reviews" className="p-6 md:p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold">用户评价</h3>
+              <div className="flex items-center">
+                <div className="flex items-center text-amber-500 mr-2">
+                  <Star className="h-5 w-5 fill-current" />
+                  <Star className="h-5 w-5 fill-current" />
+                  <Star className="h-5 w-5 fill-current" />
+                  <Star className="h-5 w-5 fill-current" />
+                  <StarHalf className="h-5 w-5 fill-current" />
+                </div>
+                <span className="font-bold">{rating}</span>
+                <span className="text-neutral-500 ml-1">(526 评价)</span>
+              </div>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="border-b border-neutral-200 pb-6">
+                <div className="flex justify-between mb-2">
+                  <div className="flex items-center">
+                    <Avatar className="h-10 w-10 mr-3">
+                      <AvatarFallback>王</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium">王小明</div>
+                      <div className="text-sm text-neutral-500">2023-08-20</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center text-amber-500">
+                    <Star className="h-4 w-4 fill-current" />
+                    <Star className="h-4 w-4 fill-current" />
+                    <Star className="h-4 w-4 fill-current" />
+                    <Star className="h-4 w-4 fill-current" />
+                    <Star className="h-4 w-4 fill-current" />
+                  </div>
+                </div>
+                <p className="text-neutral-700">这是我学过最好的React课程，讲解非常详细，实例也很有实用价值。特别是Hooks部分的讲解，让我对状态管理有了更深入的理解。强烈推荐给所有想学React的人！</p>
+              </div>
+              
+              <div className="border-b border-neutral-200 pb-6">
+                <div className="flex justify-between mb-2">
+                  <div className="flex items-center">
+                    <Avatar className="h-10 w-10 mr-3">
+                      <AvatarFallback>李</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium">李华</div>
+                      <div className="text-sm text-neutral-500">2023-08-15</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center text-amber-500">
+                    <Star className="h-4 w-4 fill-current" />
+                    <Star className="h-4 w-4 fill-current" />
+                    <Star className="h-4 w-4 fill-current" />
+                    <Star className="h-4 w-4 fill-current" />
+                    <Star className="h-4 w-4" />
+                  </div>
+                </div>
+                <p className="text-neutral-700">整体内容很棒，老师讲解清晰。唯一的缺点是有些高级主题讲解不够深入，希望能有进阶版本。</p>
+              </div>
+              
+              <div>
+                <div className="flex justify-between mb-2">
+                  <div className="flex items-center">
+                    <Avatar className="h-10 w-10 mr-3">
+                      <AvatarFallback>张</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium">张伟</div>
+                      <div className="text-sm text-neutral-500">2023-08-10</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center text-amber-500">
+                    <Star className="h-4 w-4 fill-current" />
+                    <Star className="h-4 w-4 fill-current" />
+                    <Star className="h-4 w-4 fill-current" />
+                    <Star className="h-4 w-4 fill-current" />
+                    <Star className="h-4 w-4 fill-current" />
+                  </div>
+                </div>
+                <p className="text-neutral-700">作为一个完全的React新手，这门课程让我受益匪浅。项目实战部分特别有用，让我能够直接应用所学知识。老师的讲解风格也很容易理解，没有晦涩难懂的概念。谢谢分享这么好的课程！</p>
+              </div>
+            </div>
+            
+            <div className="mt-6 text-center">
+              <Button variant="outline">查看更多评价</Button>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="faq" className="p-6 md:p-8">
+            <h3 className="text-xl font-bold mb-6">常见问题</h3>
+            <div className="space-y-6">
+              <div>
+                <h4 className="font-medium mb-2">1. 这门课程适合完全没有React经验的人吗？</h4>
+                <p className="text-neutral-700">是的，这门课程是从零基础开始讲解的，即使你之前没有React经验也可以学习。不过，建议你至少具备基本的HTML、CSS和JavaScript知识。</p>
+              </div>
+              
+              <div>
+                <h4 className="font-medium mb-2">2. 购买后我可以永久访问课程内容吗？</h4>
+                <p className="text-neutral-700">是的，一旦购买，你将获得课程的终身访问权限，包括未来的内容更新。</p>
+              </div>
+              
+              <div>
+                <h4 className="font-medium mb-2">3. 课程包含源代码和项目文件吗？</h4>
+                <p className="text-neutral-700">是的，课程包含所有讲解中使用的源代码和项目文件，你可以直接下载并在本地运行。</p>
+              </div>
+              
+              <div>
+                <h4 className="font-medium mb-2">4. 如果我对课程有疑问，可以获得支持吗？</h4>
+                <p className="text-neutral-700">当然可以，你可以在课程评论区提问，老师和助教会定期回复学员的问题。VIP会员还可以获得优先回复和一对一指导。</p>
+              </div>
+              
+              <div>
+                <h4 className="font-medium mb-2">5. 课程内容会定期更新吗？</h4>
+                <p className="text-neutral-700">是的，我们会根据React的版本更新和前端技术发展，定期更新课程内容，确保学员学习的是最新的知识和技能。</p>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}

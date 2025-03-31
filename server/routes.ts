@@ -1,0 +1,419 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage, ResourceFilters } from "./storage";
+import session from "express-session";
+import { z } from "zod";
+import { insertCategorySchema, insertResourceSchema, loginSchema, registerSchema } from "@shared/schema";
+import { 
+  login, 
+  register, 
+  logout, 
+  authenticateUser, 
+  authorizeAdmin, 
+  getCurrentUser,
+  AuthenticatedRequest
+} from "./auth";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Session middleware
+  const MemoryStore = require('memorystore')(session);
+  app.use(
+    session({
+      cookie: { maxAge: 86400000 }, // 1 day
+      store: new MemoryStore({
+        checkPeriod: 86400000 // prune expired entries every 24h
+      }),
+      resave: false,
+      saveUninitialized: false,
+      secret: process.env.SESSION_SECRET || 'resource-sharing-secret'
+    })
+  );
+
+  // Authentication routes
+  app.post('/api/auth/login', login);
+  app.post('/api/auth/register', register);
+  app.post('/api/auth/logout', logout);
+  app.get('/api/auth/me', getCurrentUser);
+
+  // Category routes
+  app.get('/api/categories', async (req, res) => {
+    try {
+      const categories = await storage.getAllCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      res.status(500).json({ message: '获取分类列表失败' });
+    }
+  });
+
+  app.get('/api/categories/:id', async (req, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      if (isNaN(categoryId)) {
+        res.status(400).json({ message: '无效的分类ID' });
+        return;
+      }
+
+      const category = await storage.getCategory(categoryId);
+      if (!category) {
+        res.status(404).json({ message: '分类不存在' });
+        return;
+      }
+
+      res.json(category);
+    } catch (error) {
+      console.error('Error fetching category:', error);
+      res.status(500).json({ message: '获取分类详情失败' });
+    }
+  });
+
+  app.post('/api/categories', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const validationResult = insertCategorySchema.safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({ message: '分类数据无效', errors: validationResult.error.format() });
+        return;
+      }
+
+      const category = await storage.createCategory(validationResult.data);
+      res.status(201).json(category);
+    } catch (error) {
+      console.error('Error creating category:', error);
+      res.status(500).json({ message: '创建分类失败' });
+    }
+  });
+
+  app.put('/api/categories/:id', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      if (isNaN(categoryId)) {
+        res.status(400).json({ message: '无效的分类ID' });
+        return;
+      }
+
+      const validationResult = insertCategorySchema.partial().safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({ message: '分类数据无效', errors: validationResult.error.format() });
+        return;
+      }
+
+      const updatedCategory = await storage.updateCategory(categoryId, validationResult.data);
+      if (!updatedCategory) {
+        res.status(404).json({ message: '分类不存在' });
+        return;
+      }
+
+      res.json(updatedCategory);
+    } catch (error) {
+      console.error('Error updating category:', error);
+      res.status(500).json({ message: '更新分类失败' });
+    }
+  });
+
+  app.delete('/api/categories/:id', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      if (isNaN(categoryId)) {
+        res.status(400).json({ message: '无效的分类ID' });
+        return;
+      }
+
+      const deleted = await storage.deleteCategory(categoryId);
+      if (!deleted) {
+        res.status(404).json({ message: '分类不存在' });
+        return;
+      }
+
+      res.status(204).end();
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      res.status(500).json({ message: '删除分类失败' });
+    }
+  });
+
+  // Resource routes
+  app.get('/api/resources', async (req, res) => {
+    try {
+      const filters: ResourceFilters = {};
+
+      // Parse query parameters
+      if (req.query.category_id) {
+        filters.category_id = parseInt(req.query.category_id as string);
+      }
+
+      if (req.query.status) {
+        filters.status = parseInt(req.query.status as string);
+      }
+
+      if (req.query.is_free) {
+        filters.is_free = req.query.is_free === 'true';
+      }
+
+      if (req.query.search) {
+        filters.search = req.query.search as string;
+      }
+
+      if (req.query.page) {
+        filters.page = parseInt(req.query.page as string);
+        filters.limit = parseInt(req.query.limit as string) || 10;
+      }
+
+      const result = await storage.getAllResources(filters);
+      
+      // Enrich resources with category data
+      const enrichedResources = await Promise.all(result.resources.map(async (resource) => {
+        if (resource.category_id) {
+          const category = await storage.getCategory(resource.category_id);
+          return { ...resource, category };
+        }
+        return resource;
+      }));
+
+      res.json({ ...result, resources: enrichedResources });
+    } catch (error) {
+      console.error('Error fetching resources:', error);
+      res.status(500).json({ message: '获取资源列表失败' });
+    }
+  });
+
+  app.get('/api/resources/:id', async (req, res) => {
+    try {
+      const resourceId = parseInt(req.params.id);
+      if (isNaN(resourceId)) {
+        res.status(400).json({ message: '无效的资源ID' });
+        return;
+      }
+
+      const resource = await storage.getResource(resourceId);
+      if (!resource) {
+        res.status(404).json({ message: '资源不存在' });
+        return;
+      }
+
+      // Include category data if available
+      let result = resource;
+      if (resource.category_id) {
+        const category = await storage.getCategory(resource.category_id);
+        result = { ...resource, category };
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching resource:', error);
+      res.status(500).json({ message: '获取资源详情失败' });
+    }
+  });
+
+  app.post('/api/resources', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const validationResult = insertResourceSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({ message: '资源数据无效', errors: validationResult.error.format() });
+        return;
+      }
+
+      // Check if category exists if category_id is provided
+      if (validationResult.data.category_id) {
+        const category = await storage.getCategory(validationResult.data.category_id);
+        if (!category) {
+          res.status(400).json({ message: '所选分类不存在' });
+          return;
+        }
+      }
+
+      const resource = await storage.createResource(validationResult.data);
+      res.status(201).json(resource);
+    } catch (error) {
+      console.error('Error creating resource:', error);
+      res.status(500).json({ message: '创建资源失败' });
+    }
+  });
+
+  app.patch('/api/resources/:id', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const resourceId = parseInt(req.params.id);
+      if (isNaN(resourceId)) {
+        res.status(400).json({ message: '无效的资源ID' });
+        return;
+      }
+
+      const validationResult = insertResourceSchema.partial().safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({ message: '资源数据无效', errors: validationResult.error.format() });
+        return;
+      }
+
+      // Check if category exists if category_id is provided
+      if (validationResult.data.category_id) {
+        const category = await storage.getCategory(validationResult.data.category_id);
+        if (!category) {
+          res.status(400).json({ message: '所选分类不存在' });
+          return;
+        }
+      }
+
+      const updatedResource = await storage.updateResource(resourceId, validationResult.data);
+      if (!updatedResource) {
+        res.status(404).json({ message: '资源不存在' });
+        return;
+      }
+
+      res.json(updatedResource);
+    } catch (error) {
+      console.error('Error updating resource:', error);
+      res.status(500).json({ message: '更新资源失败' });
+    }
+  });
+
+  app.delete('/api/resources/:id', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const resourceId = parseInt(req.params.id);
+      if (isNaN(resourceId)) {
+        res.status(400).json({ message: '无效的资源ID' });
+        return;
+      }
+
+      const deleted = await storage.deleteResource(resourceId);
+      if (!deleted) {
+        res.status(404).json({ message: '资源不存在' });
+        return;
+      }
+
+      res.status(204).end();
+    } catch (error) {
+      console.error('Error deleting resource:', error);
+      res.status(500).json({ message: '删除资源失败' });
+    }
+  });
+
+  // Admin resource routes
+  app.get('/api/admin/resources', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const filters: ResourceFilters = {};
+
+      // Parse query parameters
+      if (req.query.category_id) {
+        filters.category_id = parseInt(req.query.category_id as string);
+      }
+
+      if (req.query.status) {
+        filters.status = parseInt(req.query.status as string);
+      }
+
+      if (req.query.is_free !== undefined) {
+        filters.is_free = req.query.is_free === 'true';
+      }
+
+      if (req.query.search) {
+        filters.search = req.query.search as string;
+      }
+
+      if (req.query.page) {
+        filters.page = parseInt(req.query.page as string);
+        filters.limit = parseInt(req.query.limit as string) || 10;
+      }
+
+      const result = await storage.getAllResources(filters);
+      
+      // Enrich resources with category data
+      const enrichedResources = await Promise.all(result.resources.map(async (resource) => {
+        if (resource.category_id) {
+          const category = await storage.getCategory(resource.category_id);
+          return { ...resource, category };
+        }
+        return resource;
+      }));
+
+      res.json({ ...result, resources: enrichedResources });
+    } catch (error) {
+      console.error('Error fetching admin resources:', error);
+      res.status(500).json({ message: '获取资源列表失败' });
+    }
+  });
+
+  app.patch('/api/admin/resources/:id', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const resourceId = parseInt(req.params.id);
+      if (isNaN(resourceId)) {
+        res.status(400).json({ message: '无效的资源ID' });
+        return;
+      }
+
+      const validationResult = insertResourceSchema.partial().safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({ message: '资源数据无效', errors: validationResult.error.format() });
+        return;
+      }
+
+      const updatedResource = await storage.updateResource(resourceId, validationResult.data);
+      if (!updatedResource) {
+        res.status(404).json({ message: '资源不存在' });
+        return;
+      }
+
+      res.json(updatedResource);
+    } catch (error) {
+      console.error('Error updating admin resource:', error);
+      res.status(500).json({ message: '更新资源失败' });
+    }
+  });
+
+  // User management routes
+  app.get('/api/admin/users', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      
+      // Remove passwords from response
+      const safeUsers = users.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      
+      res.json(safeUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ message: '获取用户列表失败' });
+    }
+  });
+
+  app.patch('/api/admin/users/:id', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        res.status(400).json({ message: '无效的用户ID' });
+        return;
+      }
+
+      // Create schema for updatable user fields
+      const updateUserSchema = z.object({
+        membership_type: z.string().optional(),
+        membership_expire_time: z.string().optional(),
+        coins: z.number().optional(),
+        email: z.string().email().optional(),
+        avatar: z.string().optional(),
+      });
+
+      const validationResult = updateUserSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({ message: '用户数据无效', errors: validationResult.error.format() });
+        return;
+      }
+
+      const updatedUser = await storage.updateUser(userId, validationResult.data);
+      if (!updatedUser) {
+        res.status(404).json({ message: '用户不存在' });
+        return;
+      }
+
+      // Remove password from response
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({ message: '更新用户失败' });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
