@@ -12,6 +12,22 @@ export default function ResourceCard({ resource }: ResourceCardProps) {
   const isHot = Math.random() > 0.7; // This would be based on actual data in a real app
   const isNew = Math.random() > 0.8; // This would be based on actual data in a real app
   const rating = (Math.random() * (5 - 4) + 4).toFixed(1); // Random rating between 4.0 and 5.0
+  
+  // Format price as string with two decimal places
+  const getFormattedPrice = (): string => {
+    let priceValue = 0;
+    
+    if (resource.price) {
+      // Try to convert to number whatever the type is
+      const numericPrice = Number(resource.price);
+      if (!isNaN(numericPrice)) {
+        priceValue = numericPrice;
+      }
+    }
+    
+    // Format with 2 decimal places
+    return priceValue.toFixed(2);
+  };
 
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition">
@@ -83,13 +99,11 @@ export default function ResourceCard({ resource }: ResourceCardProps) {
         
         <div className="flex justify-between items-center">
           <span className={`${isFree ? 'text-primary' : 'text-neutral-900'} font-bold`}>
-            {isFree ? '免费' : `¥${resource.price.toFixed(2)}`}
+            {isFree ? '免费' : `¥${getFormattedPrice()}`}
           </span>
           
-          <Link href={`/resources/${resource.id}`}>
-            <a className="bg-primary hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-medium transition">
-              查看详情
-            </a>
+          <Link href={`/resources/${resource.id}`} className="bg-primary hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-medium transition">
+            查看详情
           </Link>
         </div>
       </div>
