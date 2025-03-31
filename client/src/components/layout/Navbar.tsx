@@ -69,6 +69,13 @@ export default function Navbar() {
                 }`}>
                   会员专区
               </Link>
+              <Link href="/resource-request" className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                  isActive("/resource-request") 
+                    ? "border-primary text-neutral-900" 
+                    : "border-transparent text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
+                }`}>
+                  资源求助
+              </Link>
               <Link href="/about" className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                   isActive("/about") 
                     ? "border-primary text-neutral-900" 
@@ -118,6 +125,9 @@ export default function Navbar() {
                         <Link href="/admin/resources">资源管理</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem>
+                        <Link href="/admin/resource-requests">资源需求管理</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
                         <Link href="/admin/users">用户管理</Link>
                       </DropdownMenuItem>
                     </>
@@ -164,6 +174,13 @@ export default function Navbar() {
                     }`}>
                       会员专区
                   </Link>
+                  <Link href="/resource-request" className={`px-3 py-2 rounded-md text-base font-medium ${
+                      isActive("/resource-request") 
+                        ? "text-primary bg-neutral-50" 
+                        : "text-neutral-700 hover:text-primary hover:bg-neutral-50"
+                    }`}>
+                      资源求助
+                  </Link>
                   <Link href="/about" className={`px-3 py-2 rounded-md text-base font-medium ${
                       isActive("/about") 
                         ? "text-primary bg-neutral-50" 
@@ -185,6 +202,9 @@ export default function Navbar() {
                           <>
                             <Link href="/admin/resources" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
                                 资源管理
+                            </Link>
+                            <Link href="/admin/resource-requests" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                                资源需求管理
                             </Link>
                             <Link href="/admin/users" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
                                 用户管理

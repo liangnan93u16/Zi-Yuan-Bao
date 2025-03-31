@@ -3,7 +3,13 @@ import { createServer, type Server } from "http";
 import { storage, ResourceFilters } from "./storage";
 import session from "express-session";
 import { z } from "zod";
-import { insertCategorySchema, insertResourceSchema, loginSchema, registerSchema } from "@shared/schema";
+import { 
+  insertCategorySchema, 
+  insertResourceSchema, 
+  insertResourceRequestSchema,
+  loginSchema, 
+  registerSchema 
+} from "@shared/schema";
 import { 
   login, 
   register, 
@@ -422,6 +428,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating user:', error);
       res.status(500).json({ message: '更新用户失败' });
+    }
+  });
+
+  // Resource Request routes - Publicly accessible for submission
+  app.post('/api/resource-requests', async (req, res) => {
+    try {
+      const validationResult = insertResourceRequestSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({ message: '资源请求数据无效', errors: validationResult.error.format() });
+        return;
+      }
+
+      const resourceRequest = await storage.createResourceRequest(validationResult.data);
+      res.status(201).json(resourceRequest);
+    } catch (error) {
+      console.error('Error creating resource request:', error);
+      res.status(500).json({ message: '提交资源请求失败' });
+    }
+  });
+
+  // Admin Resource Request routes
+  app.get('/api/admin/resource-requests', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const requests = await storage.getAllResourceRequests();
+      res.json(requests);
+    } catch (error) {
+      console.error('Error fetching resource requests:', error);
+      res.status(500).json({ message: '获取资源请求列表失败' });
+    }
+  });
+
+  app.get('/api/admin/resource-requests/:id', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      if (isNaN(requestId)) {
+        res.status(400).json({ message: '无效的资源请求ID' });
+        return;
+      }
+
+      const request = await storage.getResourceRequest(requestId);
+      if (!request) {
+        res.status(404).json({ message: '资源请求不存在' });
+        return;
+      }
+
+      res.json(request);
+    } catch (error) {
+      console.error('Error fetching resource request:', error);
+      res.status(500).json({ message: '获取资源请求详情失败' });
+    }
+  });
+
+  app.patch('/api/admin/resource-requests/:id/status', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      if (isNaN(requestId)) {
+        res.status(400).json({ message: '无效的资源请求ID' });
+        return;
+      }
+
+      // Create schema for status update
+      const updateSchema = z.object({
+        status: z.number().min(0).max(3).int(),
+        notes: z.string().optional()
+      });
+
+      const validationResult = updateSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({ message: '状态数据无效', errors: validationResult.error.format() });
+        return;
+      }
+
+      const { status, notes } = validationResult.data;
+      const updatedRequest = await storage.updateResourceRequestStatus(requestId, status, notes);
+      
+      if (!updatedRequest) {
+        res.status(404).json({ message: '资源请求不存在' });
+        return;
+      }
+
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error('Error updating resource request status:', error);
+      res.status(500).json({ message: '更新资源请求状态失败' });
     }
   });
 

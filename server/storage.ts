@@ -1,7 +1,8 @@
 import { 
   users, type User, type InsertUser, 
   categories, type Category, type InsertCategory,
-  resources, type Resource, type InsertResource
+  resources, type Resource, type InsertResource,
+  resourceRequests, type ResourceRequest, type InsertResourceRequest
 } from "@shared/schema";
 
 // Storage interface
@@ -28,6 +29,12 @@ export interface IStorage {
   deleteResource(id: number): Promise<boolean>;
   getAllResources(filters?: ResourceFilters): Promise<{ resources: Resource[], total: number }>;
   getResourcesByCategory(categoryId: number): Promise<Resource[]>;
+  
+  // Resource Request operations
+  createResourceRequest(request: InsertResourceRequest): Promise<ResourceRequest>;
+  getResourceRequest(id: number): Promise<ResourceRequest | undefined>;
+  getAllResourceRequests(): Promise<ResourceRequest[]>;
+  updateResourceRequestStatus(id: number, status: number, notes?: string): Promise<ResourceRequest | undefined>;
 }
 
 // Filter types for resource queries
@@ -45,17 +52,21 @@ export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private categories: Map<number, Category>;
   private resources: Map<number, Resource>;
+  private resourceRequests: Map<number, ResourceRequest>;
   private userIdCounter: number;
   private categoryIdCounter: number;
   private resourceIdCounter: number;
+  private resourceRequestIdCounter: number;
 
   constructor() {
     this.users = new Map();
     this.categories = new Map();
     this.resources = new Map();
+    this.resourceRequests = new Map();
     this.userIdCounter = 1;
     this.categoryIdCounter = 1;
     this.resourceIdCounter = 1;
+    this.resourceRequestIdCounter = 1;
 
     // Initialize with some sample categories
     this.initializeDefaultData();
@@ -258,6 +269,44 @@ export class MemStorage implements IStorage {
       (resource) => resource.category_id === categoryId
     );
   }
+  
+  // Resource Request methods
+  async createResourceRequest(requestData: InsertResourceRequest): Promise<ResourceRequest> {
+    const id = this.resourceRequestIdCounter++;
+    const now = new Date();
+    const request: ResourceRequest = { 
+      ...requestData, 
+      id,
+      status: 0, // Default to pending
+      admin_notes: null,
+      created_at: now,
+      updated_at: now
+    };
+    this.resourceRequests.set(id, request);
+    return request;
+  }
+  
+  async getResourceRequest(id: number): Promise<ResourceRequest | undefined> {
+    return this.resourceRequests.get(id);
+  }
+  
+  async getAllResourceRequests(): Promise<ResourceRequest[]> {
+    return Array.from(this.resourceRequests.values());
+  }
+  
+  async updateResourceRequestStatus(id: number, status: number, notes?: string): Promise<ResourceRequest | undefined> {
+    const request = await this.getResourceRequest(id);
+    if (!request) return undefined;
+    
+    const updatedRequest = { 
+      ...request, 
+      status,
+      admin_notes: notes || request.admin_notes,
+      updated_at: new Date()
+    };
+    this.resourceRequests.set(id, updatedRequest);
+    return updatedRequest;
+  }
 }
 
 import { db } from "./db";
@@ -426,6 +475,45 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(resources)
       .where(eq(resources.category_id, categoryId));
+  }
+  
+  // Resource Request methods
+  async createResourceRequest(insertRequest: InsertResourceRequest): Promise<ResourceRequest> {
+    const [request] = await db
+      .insert(resourceRequests)
+      .values(insertRequest)
+      .returning();
+    return request;
+  }
+  
+  async getResourceRequest(id: number): Promise<ResourceRequest | undefined> {
+    const [request] = await db.select().from(resourceRequests).where(eq(resourceRequests.id, id));
+    return request || undefined;
+  }
+  
+  async getAllResourceRequests(): Promise<ResourceRequest[]> {
+    return await db
+      .select()
+      .from(resourceRequests)
+      .orderBy(desc(resourceRequests.created_at));
+  }
+  
+  async updateResourceRequestStatus(id: number, status: number, notes?: string): Promise<ResourceRequest | undefined> {
+    const updateData: Partial<ResourceRequest> = { 
+      status, 
+      updated_at: new Date() 
+    };
+    
+    if (notes !== undefined) {
+      updateData.admin_notes = notes;
+    }
+    
+    const [request] = await db
+      .update(resourceRequests)
+      .set(updateData)
+      .where(eq(resourceRequests.id, id))
+      .returning();
+    return request || undefined;
   }
 
   // Initialize with default data if needed

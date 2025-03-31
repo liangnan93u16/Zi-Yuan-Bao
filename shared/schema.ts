@@ -80,6 +80,29 @@ export const registerSchema = z.object({
   email: z.string().email("邮箱格式不正确").optional().or(z.literal(''))
 });
 
+// Resource Requests table
+export const resourceRequests = pgTable("resource_requests", {
+  id: serial("id").primaryKey(),
+  requestor_name: text("requestor_name").notNull(),
+  contact_info: text("contact_info").notNull(),
+  resource_title: text("resource_title").notNull(),
+  resource_type: text("resource_type"),
+  description: text("description").notNull(),
+  status: integer("status").default(0), // 0: pending, 1: under review, 2: approved, 3: declined
+  admin_notes: text("admin_notes"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow()
+});
+
+// Insert schemas
+export const insertResourceRequestSchema = createInsertSchema(resourceRequests).omit({
+  id: true,
+  status: true,
+  admin_notes: true,
+  created_at: true,
+  updated_at: true
+});
+
 // Types
 export type Category = typeof categories.$inferSelect;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
@@ -89,6 +112,9 @@ export type InsertResource = z.infer<typeof insertResourceSchema>;
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type ResourceRequest = typeof resourceRequests.$inferSelect;
+export type InsertResourceRequest = z.infer<typeof insertResourceRequestSchema>;
 
 export type LoginCredentials = z.infer<typeof loginSchema>;
 export type RegisterData = z.infer<typeof registerSchema>;

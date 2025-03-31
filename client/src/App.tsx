@@ -3,6 +3,7 @@ import Home from "./pages/Home";
 import NotFound from "./pages/not-found";
 import Resources from "./pages/Resources";
 import ResourceDetail from "./pages/ResourceDetail";
+import ResourceRequest from "./pages/ResourceRequest";
 import About from "./pages/About";
 import Membership from "./pages/Membership";
 import Login from "./pages/Login";
@@ -11,6 +12,7 @@ import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import ResourceManagement from "./pages/admin/ResourceManagement";
 import ResourceUpload from "./pages/admin/ResourceUpload";
+import ResourceRequests from "./pages/admin/ResourceRequests";
 import UserManagement from "./pages/admin/UserManagement";
 import { AuthProvider } from "./hooks/use-auth";
 
@@ -25,12 +27,14 @@ function App() {
               <Route path="/" component={Home} />
               <Route path="/resources" component={Resources} />
               <Route path="/resources/:id" component={ResourceDetail} />
+              <Route path="/resource-request" component={ResourceRequest} />
               <Route path="/about" component={About} />
               <Route path="/membership" component={Membership} />
               <Route path="/login" component={Login} />
               <Route path="/register" component={Register} />
               <Route path="/admin/resources" component={ResourceManagement} />
               <Route path="/admin/resources/upload" component={ResourceUpload} />
+              <Route path="/admin/resource-requests" component={ResourceRequests} />
               <Route path="/admin/users" component={UserManagement} />
               <Route component={NotFound} />
             </Switch>
