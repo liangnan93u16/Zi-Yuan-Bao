@@ -48,41 +48,33 @@ export default function Navbar() {
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-              <Link href="/">
-                <a className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+              <Link href="/" className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                   isActive("/") 
                     ? "border-primary text-neutral-900" 
                     : "border-transparent text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
                 }`}>
                   首页
-                </a>
               </Link>
-              <Link href="/resources">
-                <a className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+              <Link href="/resources" className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                   location.startsWith("/resources") && !location.includes("admin")
                     ? "border-primary text-neutral-900" 
                     : "border-transparent text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
                 }`}>
                   全部资源
-                </a>
               </Link>
-              <Link href="/membership">
-                <a className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+              <Link href="/membership" className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                   isActive("/membership") 
                     ? "border-primary text-neutral-900" 
                     : "border-transparent text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
                 }`}>
                   会员专区
-                </a>
               </Link>
-              <Link href="/about">
-                <a className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+              <Link href="/about" className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                   isActive("/about") 
                     ? "border-primary text-neutral-900" 
                     : "border-transparent text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
                 }`}>
                   关于我们
-                </a>
               </Link>
             </div>
           </div>
@@ -151,67 +143,51 @@ export default function Navbar() {
               </SheetTrigger>
               <SheetContent side="right">
                 <div className="flex flex-col space-y-4 mt-4">
-                  <Link href="/">
-                    <a className={`px-3 py-2 rounded-md text-base font-medium ${
+                  <Link href="/" className={`px-3 py-2 rounded-md text-base font-medium ${
                       isActive("/") 
                         ? "text-primary bg-neutral-50" 
                         : "text-neutral-700 hover:text-primary hover:bg-neutral-50"
                     }`}>
                       首页
-                    </a>
                   </Link>
-                  <Link href="/resources">
-                    <a className={`px-3 py-2 rounded-md text-base font-medium ${
+                  <Link href="/resources" className={`px-3 py-2 rounded-md text-base font-medium ${
                       location.startsWith("/resources") && !location.includes("admin")
                         ? "text-primary bg-neutral-50" 
                         : "text-neutral-700 hover:text-primary hover:bg-neutral-50"
                     }`}>
                       全部资源
-                    </a>
                   </Link>
-                  <Link href="/membership">
-                    <a className={`px-3 py-2 rounded-md text-base font-medium ${
+                  <Link href="/membership" className={`px-3 py-2 rounded-md text-base font-medium ${
                       isActive("/membership") 
                         ? "text-primary bg-neutral-50" 
                         : "text-neutral-700 hover:text-primary hover:bg-neutral-50"
                     }`}>
                       会员专区
-                    </a>
                   </Link>
-                  <Link href="/about">
-                    <a className={`px-3 py-2 rounded-md text-base font-medium ${
+                  <Link href="/about" className={`px-3 py-2 rounded-md text-base font-medium ${
                       isActive("/about") 
                         ? "text-primary bg-neutral-50" 
                         : "text-neutral-700 hover:text-primary hover:bg-neutral-50"
                     }`}>
                       关于我们
-                    </a>
                   </Link>
                   
                   {user ? (
                     <>
                       <div className="border-t border-neutral-200 pt-4 mt-4">
-                        <Link href="/profile">
-                          <a className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                        <Link href="/profile" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
                             个人中心
-                          </a>
                         </Link>
-                        <Link href="/downloads">
-                          <a className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                        <Link href="/downloads" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
                             我的下载
-                          </a>
                         </Link>
                         {user.role === "admin" && (
                           <>
-                            <Link href="/admin/resources">
-                              <a className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                            <Link href="/admin/resources" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
                                 资源管理
-                              </a>
                             </Link>
-                            <Link href="/admin/users">
-                              <a className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                            <Link href="/admin/users" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
                                 用户管理
-                              </a>
                             </Link>
                           </>
                         )}
@@ -225,10 +201,8 @@ export default function Navbar() {
                     </>
                   ) : (
                     <div className="border-t border-neutral-200 pt-4 mt-4">
-                      <Link href="/login">
-                        <a className="px-3 py-2 rounded-md text-base font-medium text-primary hover:bg-neutral-50">
+                      <Link href="/login" className="px-3 py-2 rounded-md text-base font-medium text-primary hover:bg-neutral-50">
                           登录 / 注册
-                        </a>
                       </Link>
                     </div>
                   )}
