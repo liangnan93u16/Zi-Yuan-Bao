@@ -93,33 +93,66 @@ export default function Membership() {
   ];
 
   // Sample premium resources in case real data is not available
-  const samplePremiumResources = [
+  const samplePremiumResources: ResourceWithCategory[] = [
     {
       id: 101,
       title: 'React高级组件开发实战',
       subtitle: '从零开始构建企业级React组件库',
-      price: 199,
+      price: '199.00',
       is_free: false,
+      status: 1,
       cover_image: 'https://placehold.co/400x300/4f46e5/ffffff?text=React高级组件',
-      category: { id: 1, name: '编程开发', icon: 'code-box-line' }
+      category_id: 1,
+      created_at: null,
+      updated_at: null,
+      language: null,
+      level: null,
+      duration: null,
+      video_url: null,
+      download_url: null,
+      views: null,
+      description: null,
+      category: { id: 1, name: '编程开发', icon: 'code-box-line', created_at: null, updated_at: null }
     },
     {
       id: 102,
       title: 'UI/UX设计系统全套教程',
       subtitle: '打造一致性强的设计系统与组件库',
-      price: 249,
+      price: '249.00',
       is_free: false,
+      status: 1,
       cover_image: 'https://placehold.co/400x300/16a34a/ffffff?text=UI/UX设计系统',
-      category: { id: 2, name: '创意设计', icon: 'palette-line' }
+      category_id: 2,
+      created_at: null,
+      updated_at: null,
+      language: null,
+      level: null,
+      duration: null,
+      video_url: null,
+      download_url: null,
+      views: null,
+      description: null,
+      category: { id: 2, name: '创意设计', icon: 'palette-line', created_at: null, updated_at: null }
     },
     {
       id: 103,
       title: '商业数据分析与可视化',
       subtitle: '使用Python和Tableau进行数据决策',
-      price: 179,
+      price: '179.00',
       is_free: false,
+      status: 1,
       cover_image: 'https://placehold.co/400x300/dc2626/ffffff?text=数据分析',
-      category: { id: 3, name: '商业管理', icon: 'line-chart-line' }
+      category_id: 3,
+      created_at: null,
+      updated_at: null,
+      language: null,
+      level: null,
+      duration: null,
+      video_url: null,
+      download_url: null,
+      views: null,
+      description: null,
+      category: { id: 3, name: '商业管理', icon: 'line-chart-line', created_at: null, updated_at: null }
     }
   ];
 
@@ -275,7 +308,7 @@ export default function Membership() {
                       </CardHeader>
                       <CardFooter className="flex justify-between pt-2">
                         <Badge variant="outline">{resource.category?.name || '未分类'}</Badge>
-                        <div className="font-semibold">¥{resource.price !== null && typeof resource.price === 'number' ? resource.price.toFixed(2) : resource.price}</div>
+                        <div className="font-semibold">¥{resource.price || '0.00'}</div>
                       </CardFooter>
                     </Card>
                   ))}
