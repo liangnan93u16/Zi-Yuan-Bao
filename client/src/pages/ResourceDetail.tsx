@@ -95,7 +95,9 @@ export default function ResourceDetail() {
   }
 
   const isFree = resource.is_free;
-  const originalPrice = resource.price * 1.5; // Just for display purposes
+  // 确保price是数字
+  const price = typeof resource.price === 'string' ? parseFloat(resource.price) : (resource.price || 0);
+  const originalPrice = price * 1.5; // Just for display purposes
   const rating = 4.8; // This would come from the API in a real app
   
   const handleDownload = () => {
@@ -267,7 +269,7 @@ export default function ResourceDetail() {
           <div className="md:w-1/3 bg-neutral-50 p-6 md:p-8 border-t md:border-t-0 md:border-l border-neutral-200">
             <div className="mb-6">
               <div className="text-3xl font-bold text-neutral-900 mb-1">
-                {isFree ? '免费' : `¥${resource.price.toFixed(2)}`}
+                {isFree ? '免费' : `¥${price.toFixed(2)}`}
               </div>
               {!isFree && (
                 <div className="text-neutral-500 line-through">原价: ¥{originalPrice.toFixed(2)}</div>
