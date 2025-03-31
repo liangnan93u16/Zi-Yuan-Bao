@@ -65,6 +65,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // 返回用户信息（不包含密码）
         const { password, ...userWithoutPassword } = updatedUser;
+        
+        // 确保响应中包含正确的role属性
         res.status(200).json({
           ...userWithoutPassword,
           role: 'admin',

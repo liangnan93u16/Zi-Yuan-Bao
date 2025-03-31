@@ -104,10 +104,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const elevateToAdmin = async () => {
     try {
       setLoading(true);
-      const res = await apiRequest("POST", "/api/auth/elevate", {});
+      const res = await fetch("/api/auth/elevate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+      
       const userData = await res.json();
       
-      if (res.status === 200) {
+      if (res.ok) {
         setUser(userData);
         toast({
           title: "权限升级成功",
@@ -121,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (error) {
+      console.error("升级权限错误:", error);
       toast({
         title: "权限升级失败",
         description: "升级权限时出现错误，请重试。",
