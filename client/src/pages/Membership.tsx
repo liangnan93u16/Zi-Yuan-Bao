@@ -15,7 +15,7 @@ export default function Membership() {
   const [, setLocation] = useLocation();
   
   // Fetch premium resources
-  const { data: premiumResources } = useQuery<ResourceWithCategory[]>({
+  const { data: premiumResourcesData } = useQuery({
     queryKey: ['/api/resources', 'premium'],
     enabled: !!user,
   });
@@ -123,8 +123,19 @@ export default function Membership() {
     }
   ];
 
-  // Use real data if available, otherwise use sample data
-  const displayResources = premiumResources || samplePremiumResources;
+  // 获取资源数据，确保类型正确
+  // 定义API返回的资源类型
+  type ApiResponse = {
+    resources: ResourceWithCategory[];
+    total: number;
+  };
+  
+  // 安全地获取资源数据并处理
+  const apiResponse = premiumResourcesData as ApiResponse | undefined;
+  const resources = apiResponse?.resources || [];
+  
+  // 使用实际数据或示例数据
+  const displayResources = resources.length > 0 ? resources : samplePremiumResources;
 
   return (
     <div className="container mx-auto px-4 py-10">
@@ -241,7 +252,7 @@ export default function Membership() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {displayResources.slice(0, 3).map((resource) => (
+                  {displayResources.slice(0, 3).map((resource: ResourceWithCategory) => (
                     <Card key={resource.id} className="overflow-hidden group">
                       <div className="relative">
                         <img 
