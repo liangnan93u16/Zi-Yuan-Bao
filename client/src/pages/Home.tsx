@@ -56,7 +56,7 @@ export default function Home() {
       <div className="mb-12">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">热门分类</h2>
-          <Link href="/categories">
+          <Link href="/resources">
             <a className="text-primary hover:text-blue-700 text-sm font-medium flex items-center">
               查看全部
               <ArrowRight className="ml-1 h-4 w-4" />
@@ -91,28 +91,36 @@ export default function Home() {
       <div className="mb-12">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">最新上架</h2>
-          <div className="flex space-x-2">
-            <Button 
-              variant={filter === "all" ? "default" : "outline"} 
-              onClick={() => setFilter("all")}
-              size="sm"
-            >
-              全部
-            </Button>
-            <Button 
-              variant={filter === "free" ? "default" : "outline"} 
-              onClick={() => setFilter("free")}
-              size="sm"
-            >
-              免费
-            </Button>
-            <Button 
-              variant={filter === "paid" ? "default" : "outline"} 
-              onClick={() => setFilter("paid")}
-              size="sm"
-            >
-              付费
-            </Button>
+          <div className="flex items-center">
+            <div className="flex space-x-2 mr-4">
+              <Button 
+                variant={filter === "all" ? "default" : "outline"} 
+                onClick={() => setFilter("all")}
+                size="sm"
+              >
+                全部
+              </Button>
+              <Button 
+                variant={filter === "free" ? "default" : "outline"} 
+                onClick={() => setFilter("free")}
+                size="sm"
+              >
+                免费
+              </Button>
+              <Button 
+                variant={filter === "paid" ? "default" : "outline"} 
+                onClick={() => setFilter("paid")}
+                size="sm"
+              >
+                付费
+              </Button>
+            </div>
+            <Link href="/resources">
+              <a className="text-primary hover:text-blue-700 text-sm font-medium flex items-center">
+                查看全部
+                <ArrowRight className="ml-1 h-4 w-4" />
+              </a>
+            </Link>
           </div>
         </div>
         

@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/sheet";
 
 export default function Navbar() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -29,8 +29,12 @@ export default function Navbar() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Implement search functionality here
-    console.log("Searching for:", searchQuery);
+    if (searchQuery.trim()) {
+      // Redirect to resources page with search query
+      const encodedQuery = encodeURIComponent(searchQuery.trim());
+      setLocation(`/resources?search=${encodedQuery}`);
+      setSearchQuery("");
+    }
   };
 
   return (

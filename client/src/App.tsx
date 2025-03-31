@@ -1,6 +1,7 @@
 import { Route, Router, Switch } from "wouter";
 import Home from "./pages/Home";
 import NotFound from "./pages/not-found";
+import Resources from "./pages/Resources";
 import ResourceDetail from "./pages/ResourceDetail";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
@@ -18,6 +19,7 @@ function App() {
           <main className="flex-grow">
             <Switch>
               <Route path="/" component={Home} />
+              <Route path="/resources" component={Resources} />
               <Route path="/resources/:id" component={ResourceDetail} />
               <Route path="/admin/resources" component={ResourceManagement} />
               <Route path="/admin/resources/upload" component={ResourceUpload} />

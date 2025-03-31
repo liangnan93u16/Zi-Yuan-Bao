@@ -159,7 +159,7 @@ export default function CategoryCard({ category, count }: CategoryCardProps) {
   const { icon, bg, textColor } = defaultIcons[iconKey];
 
   return (
-    <Link href={`/categories/${category.id}`}>
+    <Link href={`/resources?category=${category.id}`}>
       <a className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition flex flex-col items-center justify-center text-center">
         <div className={`w-12 h-12 ${bg} rounded-full flex items-center justify-center mb-3`}>
           <div className={textColor}>{icon}</div>
