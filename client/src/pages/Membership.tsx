@@ -24,7 +24,7 @@ export default function Membership() {
     {
       id: 'monthly',
       name: '月度会员',
-      price: '39',
+      price: '9.9',
       period: '月',
       features: [
         '无限下载本月更新资源',
@@ -39,7 +39,7 @@ export default function Membership() {
     {
       id: 'quarterly',
       name: '季度会员',
-      price: '99',
+      price: '24',
       period: '季度',
       features: [
         '无限下载季度内更新资源',
@@ -50,13 +50,13 @@ export default function Membership() {
       ],
       recommended: true,
       badge: '推荐',
-      savePercent: '15%',
+      savePercent: '20%',
       icon: <Trophy className="w-5 h-5 text-amber-500" />
     },
     {
       id: 'yearly',
       name: '年度会员',
-      price: '368',
+      price: '72',
       period: '年',
       features: [
         '无限下载全年更新资源',
@@ -68,7 +68,7 @@ export default function Membership() {
       ],
       recommended: false,
       badge: '超值',
-      savePercent: '22%',
+      savePercent: '40%',
       icon: <Gem className="w-5 h-5 text-violet-500" />
     },
   ];
