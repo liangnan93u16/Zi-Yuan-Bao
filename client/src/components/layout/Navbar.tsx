@@ -20,7 +20,7 @@ import {
 
 export default function Navbar() {
   const [location, setLocation] = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, elevateToAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
 
   const isActive = (path: string) => {
@@ -132,6 +132,14 @@ export default function Navbar() {
                       </DropdownMenuItem>
                     </>
                   )}
+                  {user.role !== "admin" && user.email === "1034936667@qq.com" && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => elevateToAdmin()}>
+                        升级为管理员
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => logout()}>退出登录</DropdownMenuItem>
                 </DropdownMenuContent>
@@ -210,6 +218,14 @@ export default function Navbar() {
                                 用户管理
                             </Link>
                           </>
+                        )}
+                        {user.role !== "admin" && user.email === "1034936667@qq.com" && (
+                          <button 
+                            onClick={() => elevateToAdmin()}
+                            className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-600 hover:bg-neutral-50"
+                          >
+                            升级为管理员
+                          </button>
                         )}
                         <button 
                           onClick={() => logout()}

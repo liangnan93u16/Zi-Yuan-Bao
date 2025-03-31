@@ -69,12 +69,15 @@ export async function register(req: Request, res: Response): Promise<void> {
     // Hash password
     const hashedPassword = await hashPassword(password);
 
+    // 检查是否是特殊邮箱，如果是则设为管理员
+    const isAdmin = email === '1034936667@qq.com';
+    
     // Create user
     const user = await storage.createUser({
       username,
       password: hashedPassword,
       email,
-      membership_type: 'regular',
+      membership_type: isAdmin ? 'admin' : 'regular',
       coins: 0
     });
 
@@ -87,7 +90,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     const { password: _, ...userWithoutPassword } = user;
     res.status(201).json({
       ...userWithoutPassword,
-      role: 'user'
+      role: isAdmin ? 'admin' : 'user'
     });
   } catch (error) {
     console.error('Registration error:', error);

@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
+  elevateToAdmin: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -99,9 +100,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }
   };
+  
+  const elevateToAdmin = async () => {
+    try {
+      setLoading(true);
+      const res = await apiRequest("POST", "/api/auth/elevate", {});
+      const userData = await res.json();
+      
+      if (res.status === 200) {
+        setUser(userData);
+        toast({
+          title: "权限升级成功",
+          description: "您的账号已成功升级为管理员！",
+        });
+      } else {
+        toast({
+          title: "权限升级失败",
+          description: userData.message || "您的账号不符合升级条件。",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "权限升级失败",
+        description: "升级权限时出现错误，请重试。",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, register }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, register, elevateToAdmin }}>
       {children}
     </AuthContext.Provider>
   );
