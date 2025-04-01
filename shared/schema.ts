@@ -31,6 +31,9 @@ export const resources = pgTable("resources", {
   status: integer("status").default(1),
   is_free: boolean("is_free").default(false),
   description: text("description"),
+  // 新增资源链接和类型
+  resource_url: text("resource_url"),
+  resource_type: text("resource_type").default("baidu"), // baidu, aliyun
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow()
 });

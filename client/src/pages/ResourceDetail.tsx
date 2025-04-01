@@ -119,18 +119,27 @@ export default function ResourceDetail() {
       return;
     }
 
-    toast({
-      title: "开始下载",
-      description: "资源下载已开始，请稍候...",
-    });
-    
-    // Simulate download
-    setTimeout(() => {
+    if (resource.resource_url) {
+      // 如果有资源下载链接，打开新窗口访问链接
+      window.open(resource.resource_url, '_blank');
       toast({
-        title: "下载完成",
-        description: "资源已成功下载到您的设备。",
+        title: "资源链接已打开",
+        description: "请在新窗口查看资源下载链接",
       });
-    }, 2000);
+    } else {
+      toast({
+        title: "开始下载",
+        description: "资源下载已开始，请稍候...",
+      });
+      
+      // Simulate download
+      setTimeout(() => {
+        toast({
+          title: "下载完成",
+          description: "资源已成功下载到您的设备。",
+        });
+      }, 2000);
+    }
   };
 
   const handleAddToCart = () => {
@@ -315,6 +324,15 @@ export default function ResourceDetail() {
                   <span className="text-neutral-600">大小:</span>
                   <span className="font-medium">{resource.video_size ? `${resource.video_size} GB` : '未知'}</span>
                 </div>
+                {resource.resource_type && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">资源类型:</span>
+                    <span className="font-medium">
+                      {resource.resource_type === 'baidu' ? '百度网盘' : 
+                       resource.resource_type === 'aliyun' ? '阿里云盘' : '其他'}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-neutral-600">更新日期:</span>
                   <span className="font-medium">{new Date(resource.updated_at).toLocaleDateString()}</span>

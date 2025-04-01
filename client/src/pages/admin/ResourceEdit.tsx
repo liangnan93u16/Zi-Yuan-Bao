@@ -51,6 +51,8 @@ const resourceFormSchema = z.object({
   status: z.coerce.number().default(1),
   is_free: z.boolean().default(false),
   description: z.string().optional(),
+  resource_url: z.string().optional(),
+  resource_type: z.string().default("baidu"),
 });
 
 type ResourceFormValues = z.infer<typeof resourceFormSchema>;
@@ -91,6 +93,8 @@ export default function ResourceEdit() {
       status: 1,
       is_free: false,
       description: "",
+      resource_url: "",
+      resource_type: "baidu",
     },
   });
 
@@ -116,6 +120,8 @@ export default function ResourceEdit() {
         status: resource.status || 1,
         is_free: resource.is_free || false,
         description: resource.description || "",
+        resource_url: resource.resource_url || "",
+        resource_type: resource.resource_type || "baidu",
       });
     }
   }, [resource, form]);
@@ -545,6 +551,52 @@ export default function ResourceEdit() {
                           <p className="text-sm text-neutral-500 mt-2">视频仅支持URL链接</p>
                         </div>
                       </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="resource_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>资源下载链接</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="请输入百度网盘或阿里云盘链接"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        付费用户购买后可见的资源下载链接
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="resource_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>资源链接类型</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value || "baidu"}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="选择资源链接类型" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="baidu">百度网盘</SelectItem>
+                          <SelectItem value="aliyun">阿里云盘</SelectItem>
+                          <SelectItem value="other">其他</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
