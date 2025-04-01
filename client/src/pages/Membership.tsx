@@ -226,7 +226,7 @@ export default function Membership() {
                     </div>
                     <CardTitle className="text-xl">{plan.name}</CardTitle>
                     <div className="flex items-baseline mt-2">
-                      <span className="text-3xl font-bold">{plan.price} 积分</span>
+                      <span className="text-3xl font-bold">{Math.round(Number(plan.price))} 积分</span>
                       <span className="text-neutral-500 ml-1">/{plan.period}</span>
                     </div>
                     {plan.savePercent && (
@@ -308,7 +308,7 @@ export default function Membership() {
                       </CardHeader>
                       <CardFooter className="flex justify-between pt-2">
                         <Badge variant="outline">{resource.category?.name || '未分类'}</Badge>
-                        <div className="font-semibold">{resource.price || '0'} 积分</div>
+                        <div className="font-semibold">{Math.round(Number(resource.price || 0))} 积分</div>
                       </CardFooter>
                     </Card>
                   ))}

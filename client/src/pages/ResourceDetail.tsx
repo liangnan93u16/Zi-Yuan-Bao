@@ -269,10 +269,10 @@ export default function ResourceDetail() {
           <div className="md:w-1/3 bg-neutral-50 p-6 md:p-8 border-t md:border-t-0 md:border-l border-neutral-200">
             <div className="mb-6">
               <div className="text-3xl font-bold text-neutral-900 mb-1">
-                {isFree ? '免费' : `${price.toFixed(0)} 积分`}
+                {isFree ? '免费' : `${Math.round(price)} 积分`}
               </div>
               {!isFree && (
-                <div className="text-neutral-500 line-through">原价: {originalPrice.toFixed(0)} 积分</div>
+                <div className="text-neutral-500 line-through">原价: {Math.round(originalPrice)} 积分</div>
               )}
               {isFree && (
                 <div className="bg-green-100 text-green-800 text-sm px-2 py-0.5 rounded mt-2 inline-block">

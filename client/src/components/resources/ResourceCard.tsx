@@ -13,7 +13,7 @@ export default function ResourceCard({ resource }: ResourceCardProps) {
   const isNew = Math.random() > 0.8; // This would be based on actual data in a real app
   const rating = (Math.random() * (5 - 4) + 4).toFixed(1); // Random rating between 4.0 and 5.0
   
-  // Format price as string with two decimal places
+  // Format price as integer
   const getFormattedPrice = (): string => {
     let priceValue = 0;
     
@@ -25,8 +25,8 @@ export default function ResourceCard({ resource }: ResourceCardProps) {
       }
     }
     
-    // Format with 2 decimal places
-    return priceValue.toFixed(2);
+    // Format as integer
+    return Math.round(priceValue).toString();
   };
 
   return (
