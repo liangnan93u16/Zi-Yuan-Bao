@@ -30,13 +30,20 @@ export default function ResourceRequest() {
     defaultValues: {
       email: "",
       description: ""
-    }
+    },
+    mode: "onSubmit"
   });
+  
+  // 添加日志查看表单验证状态
+  console.log("表单错误状态:", form.formState.errors);
 
   async function onSubmit(data: FormValues) {
+    console.log("表单提交数据:", data);
     setIsSubmitting(true);
     try {
-      await apiRequest("/api/resource-requests", "POST", data);
+      console.log("开始发送API请求...");
+      const result = await apiRequest("POST", "/api/resource-requests", data);
+      console.log("API请求成功:", result);
       
       setIsSuccess(true);
       toast({
@@ -138,7 +145,16 @@ export default function ResourceRequest() {
                   )}
                 />
                 
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isSubmitting}
+                  onClick={() => {
+                    console.log("提交按钮被点击");
+                    console.log("表单是否有效:", form.formState.isValid);
+                    console.log("表单错误:", form.formState.errors);
+                  }}
+                >
                   {isSubmitting ? "提交中..." : "提交需求"}
                 </Button>
               </form>
