@@ -54,6 +54,7 @@ const resourceFormSchema = z.object({
   is_free: z.boolean().default(false),
   description: z.string().optional(),
   contents: z.string().optional(), // 课程目录，Markdown格式
+  faq_content: z.string().optional(), // 常见问题，Markdown格式
 });
 
 type ResourceFormValues = z.infer<typeof resourceFormSchema>;
@@ -87,6 +88,7 @@ export default function ResourceUpload() {
       is_free: false,
       description: "",
       contents: "",
+      faq_content: "",
     },
   });
 
@@ -541,7 +543,7 @@ export default function ResourceUpload() {
                             />
                           </FormControl>
                         </TabsContent>
-                        <TabsContent value="preview" className="p-4 border-t prose max-w-none">
+                        <TabsContent value="preview" className="p-4 border-t prose max-w-none prose-headings:mt-6 prose-headings:mb-3 prose-p:my-2 prose-li:my-1 prose-hr:my-6">
                           {field.value ? (
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
                               {field.value}
@@ -583,7 +585,7 @@ export default function ResourceUpload() {
                             />
                           </FormControl>
                         </TabsContent>
-                        <TabsContent value="preview" className="p-4 border-t prose max-w-none">
+                        <TabsContent value="preview" className="p-4 border-t prose max-w-none prose-headings:mt-6 prose-headings:mb-3 prose-p:my-2 prose-li:my-1 prose-hr:my-6">
                           {field.value ? (
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
                               {field.value}
@@ -595,6 +597,48 @@ export default function ResourceUpload() {
                       </Tabs>
                       <FormDescription>
                         输入课程的章节目录，支持Markdown格式化
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="faq_content"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        常见问题 (支持Markdown)
+                      </FormLabel>
+                      <Tabs defaultValue="edit" className="border rounded-md">
+                        <TabsList className="bg-muted">
+                          <TabsTrigger value="edit">编辑</TabsTrigger>
+                          <TabsTrigger value="preview">预览</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="edit" className="p-4">
+                          <FormControl>
+                            <Textarea 
+                              {...field} 
+                              rows={12}
+                              placeholder="请输入常见问题内容，支持Markdown格式。例如：# 常见问题\n\n## 1. 这门课程适合完全没有React经验的人吗？\n\n是的，这门课程是从零基础开始讲解的，即使你之前没有React经验也可以学习。不过，建议你至少具备基本的HTML、CSS和JavaScript知识。\n\n## 2. 购买后我可以永久访问课程内容吗？\n\n是的，一旦购买，你将获得课程的终身访问权限，包括未来的内容更新。"
+                              className="font-mono text-sm"
+                            />
+                          </FormControl>
+                        </TabsContent>
+                        <TabsContent value="preview" className="p-4 border-t prose max-w-none prose-headings:mt-6 prose-headings:mb-3 prose-p:my-2 prose-li:my-1 prose-hr:my-6">
+                          {field.value ? (
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {field.value}
+                            </ReactMarkdown>
+                          ) : (
+                            <div className="text-neutral-500 italic">无内容预览</div>
+                          )}
+                        </TabsContent>
+                      </Tabs>
+                      <FormDescription>
+                        输入资源相关的常见问题解答，支持Markdown格式化
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

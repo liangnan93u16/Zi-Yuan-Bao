@@ -496,7 +496,7 @@ export default function ResourceDetail() {
           <TabsContent value="faq" className="p-6 md:p-8">
             <h3 className="text-xl font-bold mb-6">常见问题</h3>
             {resource.faq_content ? (
-              <div className="prose prose-blue max-w-none">
+              <div className="prose prose-blue max-w-none prose-headings:mt-6 prose-headings:mb-3 prose-p:my-2 prose-li:my-1 prose-hr:my-6">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {resource.faq_content}
                 </ReactMarkdown>

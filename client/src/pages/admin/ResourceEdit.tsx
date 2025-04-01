@@ -608,7 +608,7 @@ export default function ResourceEdit() {
                               />
                             </FormControl>
                           </TabsContent>
-                          <TabsContent value="preview" className="p-4 border-t prose max-w-none">
+                          <TabsContent value="preview" className="p-4 border-t prose max-w-none prose-headings:mt-6 prose-headings:mb-3 prose-p:my-2 prose-li:my-1 prose-hr:my-6">
                             {field.value ? (
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                 {field.value}
@@ -650,7 +650,7 @@ export default function ResourceEdit() {
                               />
                             </FormControl>
                           </TabsContent>
-                          <TabsContent value="preview" className="p-4 border-t prose max-w-none">
+                          <TabsContent value="preview" className="p-4 border-t prose max-w-none prose-headings:mt-6 prose-headings:mb-3 prose-p:my-2 prose-li:my-1 prose-hr:my-6">
                             {field.value ? (
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                 {field.value}
@@ -687,12 +687,12 @@ export default function ResourceEdit() {
                               <Textarea 
                                 {...field} 
                                 rows={12}
-                                placeholder="请输入常见问题内容，支持Markdown格式。例如：## 常见问题\n\n1. **问：如何开始学习本课程？**\n   答：建议从第一章开始，按顺序学习。\n\n2. **问：需要什么基础知识？**\n   答：需要基本的编程基础。"
+                                placeholder="请输入常见问题内容，支持Markdown格式。例如：# 常见问题\n\n## 1. 这门课程适合完全没有React经验的人吗？\n\n是的，这门课程是从零基础开始讲解的，即使你之前没有React经验也可以学习。不过，建议你至少具备基本的HTML、CSS和JavaScript知识。\n\n## 2. 购买后我可以永久访问课程内容吗？\n\n是的，一旦购买，你将获得课程的终身访问权限，包括未来的内容更新。"
                                 className="font-mono text-sm"
                               />
                             </FormControl>
                           </TabsContent>
-                          <TabsContent value="preview" className="p-4 border-t prose max-w-none">
+                          <TabsContent value="preview" className="p-4 border-t prose max-w-none prose-headings:mt-6 prose-headings:mb-3 prose-p:my-2 prose-li:my-1 prose-hr:my-6">
                             {field.value ? (
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                 {field.value}
