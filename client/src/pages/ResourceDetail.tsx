@@ -366,7 +366,6 @@ export default function ResourceDetail() {
           </div>
           
           <TabsContent value="details" className="p-6 md:p-8">
-            <h3 className="text-xl font-bold mb-4">课程介绍</h3>
             {resource.description ? (
               <div className="prose prose-blue max-w-none">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
