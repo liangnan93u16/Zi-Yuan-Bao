@@ -166,7 +166,7 @@ export default function Profile() {
           </TabsTrigger>
           <TabsTrigger value="coins" className="text-center py-2">
             <CoinsIcon className="h-4 w-4 mr-2" />
-            <span>积分/金币</span>
+            <span>积分</span>
           </TabsTrigger>
           <TabsTrigger value="settings" className="text-center py-2">
             <Settings className="h-4 w-4 mr-2" />
@@ -213,7 +213,7 @@ export default function Profile() {
                     </p>
                     <p className="flex items-center justify-center sm:justify-start gap-1">
                       <CoinsIcon className="h-4 w-4 opacity-70" />
-                      积分/金币: {user?.coins || 0}
+                      积分: {user?.coins || 0}
                     </p>
                   </div>
                 </div>
@@ -311,39 +311,39 @@ export default function Profile() {
           </Card>
         </TabsContent>
 
-        {/* 积分/金币 */}
+        {/* 积分 */}
         <TabsContent value="coins">
           <Card>
             <CardHeader>
-              <CardTitle>积分/金币</CardTitle>
+              <CardTitle>积分</CardTitle>
               <CardDescription>
-                查看并管理您的积分和金币
+                查看并管理您的积分
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-center p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
                 <div>
-                  <p className="text-sm text-neutral-600 mb-1">当前金币数量</p>
+                  <p className="text-sm text-neutral-600 mb-1">当前积分数量</p>
                   <p className="text-3xl font-bold text-neutral-900">{user?.coins || 0}</p>
                 </div>
-                <Button className="mt-4 sm:mt-0">充值金币</Button>
+                <Button className="mt-4 sm:mt-0">充值积分</Button>
               </div>
 
               <Separator />
 
               <div>
-                <h3 className="font-medium mb-3">金币明细</h3>
+                <h3 className="font-medium mb-3">积分明细</h3>
                 <div className="text-center text-neutral-500 py-8">
-                  暂无金币交易记录
+                  暂无积分交易记录
                 </div>
               </div>
 
               <div className="rounded-lg bg-neutral-50 p-4">
-                <h4 className="font-medium mb-2">金币使用规则</h4>
+                <h4 className="font-medium mb-2">积分使用规则</h4>
                 <ul className="text-sm text-neutral-600 space-y-1">
-                  <li>金币可用于购买站内资源</li>
-                  <li>不同等级会员可享受不同比例的金币优惠</li>
-                  <li>通过签到、完成任务等方式可获得免费金币</li>
+                  <li>积分可用于购买站内资源</li>
+                  <li>不同等级会员可享受不同比例的积分优惠</li>
+                  <li>通过签到、完成任务等方式可获得免费积分</li>
                 </ul>
               </div>
             </CardContent>
