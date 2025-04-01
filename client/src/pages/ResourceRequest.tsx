@@ -14,10 +14,7 @@ import { CheckCircle } from "lucide-react";
 
 // 表单验证模式
 const formSchema = z.object({
-  requestor_name: z.string().min(2, "请输入您的姓名，至少2个字符"),
-  contact_info: z.string().min(6, "请输入联系方式，可以是邮箱或手机号"),
-  resource_title: z.string().min(3, "请输入资源标题，至少3个字符"),
-  resource_type: z.string().optional(),
+  email: z.string().email("请输入有效的邮箱地址"),
   description: z.string().min(10, "请详细描述您需要的资源，至少10个字符")
 });
 
@@ -31,10 +28,7 @@ export default function ResourceRequest() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      requestor_name: "",
-      contact_info: "",
-      resource_title: "",
-      resource_type: "",
+      email: "",
       description: ""
     }
   });
@@ -114,54 +108,12 @@ export default function ResourceRequest() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
                   control={form.control}
-                  name="requestor_name"
+                  name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>您的姓名</FormLabel>
+                      <FormLabel>您的邮箱</FormLabel>
                       <FormControl>
-                        <Input placeholder="请输入您的姓名" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="contact_info"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>联系方式</FormLabel>
-                      <FormControl>
-                        <Input placeholder="请输入您的邮箱或手机号" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="resource_title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>资源标题</FormLabel>
-                      <FormControl>
-                        <Input placeholder="您需要的资源标题，例如：Adobe Photoshop 2023 课程" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="resource_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>资源类型 (可选)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="例如：视频教程、软件资源、电子书等" {...field} />
+                        <Input placeholder="请输入您的邮箱地址" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -176,8 +128,8 @@ export default function ResourceRequest() {
                       <FormLabel>详细描述</FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="请详细描述您需要的资源，包括版本、内容要求等信息" 
-                          rows={5}
+                          placeholder="请详细描述您需要的资源，包括标题、版本、内容要求等信息" 
+                          rows={8}
                           {...field} 
                         />
                       </FormControl>

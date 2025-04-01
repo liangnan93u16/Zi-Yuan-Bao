@@ -23,10 +23,7 @@ const requestStatusMap = {
 // 请求类型定义
 type ResourceRequest = {
   id: number;
-  requestor_name: string;
-  contact_info: string;
-  resource_title: string;
-  resource_type: string | null;
+  email: string;
   description: string;
   status: number;
   admin_notes: string | null;
@@ -150,7 +147,7 @@ export default function ResourceRequests() {
                       onClick={() => handleRequestSelect(request)}
                     >
                       <div className="flex justify-between items-start">
-                        <div className="font-medium truncate flex-1">{request.resource_title}</div>
+                        <div className="font-medium truncate flex-1">{request.email}</div>
                         <Badge 
                           className={`${requestStatusMap[request.status as keyof typeof requestStatusMap]?.color || "bg-gray-500"} text-white ml-2`}
                         >
@@ -158,7 +155,7 @@ export default function ResourceRequests() {
                         </Badge>
                       </div>
                       <div className="text-sm text-muted-foreground mt-1">
-                        {request.requestor_name} · {formatDate(request.created_at)}
+                        {formatDate(request.created_at)}
                       </div>
                     </div>
                   ))
@@ -175,9 +172,9 @@ export default function ResourceRequests() {
           {selectedRequest ? (
             <Card>
               <CardHeader>
-                <CardTitle>{selectedRequest.resource_title}</CardTitle>
+                <CardTitle>资源需求详情</CardTitle>
                 <CardDescription>
-                  提交者: {selectedRequest.requestor_name} | 联系方式: {selectedRequest.contact_info}
+                  提交者邮箱: {selectedRequest.email}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -187,15 +184,6 @@ export default function ResourceRequests() {
                     {selectedRequest.description}
                   </div>
                 </div>
-
-                {selectedRequest.resource_type && (
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">资源类型</h3>
-                    <div className="p-3 bg-muted rounded-md">
-                      {selectedRequest.resource_type}
-                    </div>
-                  </div>
-                )}
 
                 <Separator />
 

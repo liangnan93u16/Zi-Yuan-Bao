@@ -83,10 +83,7 @@ export const registerSchema = z.object({
 // Resource Requests table
 export const resourceRequests = pgTable("resource_requests", {
   id: serial("id").primaryKey(),
-  requestor_name: text("requestor_name").notNull(),
-  contact_info: text("contact_info").notNull(),
-  resource_title: text("resource_title").notNull(),
-  resource_type: text("resource_type"),
+  email: text("email").notNull(),
   description: text("description").notNull(),
   status: integer("status").default(0), // 0: pending, 1: under review, 2: approved, 3: declined
   admin_notes: text("admin_notes"),
