@@ -116,7 +116,7 @@ export default function Navbar() {
                     <Link href="/profile">个人中心</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <Link href="/downloads">我的下载</Link>
+                    <Link href="/downloads">我的购买</Link>
                   </DropdownMenuItem>
                   {user.role === "admin" && (
                     <>
@@ -210,7 +210,7 @@ export default function Navbar() {
                             个人中心
                         </Link>
                         <Link href="/downloads" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
-                            我的下载
+                            我的购买
                         </Link>
                         {user.role === "admin" && (
                           <>
