@@ -8,6 +8,7 @@ import About from "./pages/About";
 import Membership from "./pages/Membership";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Profile from "./pages/Profile";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import ResourceManagement from "./pages/admin/ResourceManagement";
@@ -32,6 +33,7 @@ function App() {
               <Route path="/membership" component={Membership} />
               <Route path="/login" component={Login} />
               <Route path="/register" component={Register} />
+              <Route path="/profile" component={Profile} />
               <Route path="/admin/resources" component={ResourceManagement} />
               <Route path="/admin/resources/upload" component={ResourceUpload} />
               <Route path="/admin/resource-requests" component={ResourceRequests} />

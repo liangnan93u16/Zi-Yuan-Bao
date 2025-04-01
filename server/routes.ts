@@ -576,6 +576,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 更新用户个人资料
+  app.patch('/api/users/:id', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // 检查权限：只能修改自己的资料，或者管理员可以修改任何人的资料
+      if (req.user?.id !== userId && req.user?.membership_type !== 'admin') {
+        return res.status(403).json({ message: '您没有权限修改此用户资料' });
+      }
+      
+      // 创建Schema验证请求数据
+      const updateProfileSchema = z.object({
+        email: z.string().email("邮箱格式不正确").optional(),
+        avatar: z.string().optional(),
+      });
+      
+      const validationResult = updateProfileSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ message: '数据格式错误', errors: validationResult.error.format() });
+      }
+      
+      // 从验证结果中获取更新数据
+      const updateData = validationResult.data;
+      
+      // 更新用户资料
+      const updatedUser = await storage.updateUser(userId, updateData);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: '用户不存在' });
+      }
+      
+      // 返回更新后的用户资料（不包含密码）
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json({
+        ...userWithoutPassword,
+        role: req.user?.membership_type === 'admin' ? 'admin' : 'user'
+      });
+      
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      res.status(500).json({ message: '更新资料失败，请稍后再试' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
