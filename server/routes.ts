@@ -47,24 +47,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // 特殊用户权限升级路由
   app.post('/api/auth/elevate', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
     try {
+      console.log('Elevate route called, checking user:', req.user?.email);
       if (!req.user) {
+        console.log('No user in request');
         res.status(401).json({ message: '未登录或会话已过期' });
         return;
       }
       
       // 如果用户邮箱是特定邮箱，则将其升级为管理员
+      console.log('Checking if user can be elevated:', req.user.email, 'membership_type:', req.user.membership_type);
       if (req.user.email === '1034936667@qq.com' && req.user.membership_type !== 'admin') {
+        console.log('User qualifies for elevation to admin');
         const updatedUser = await storage.updateUser(req.user.id, { 
           membership_type: 'admin' 
         });
         
         if (!updatedUser) {
+          console.log('Updated user not found');
           res.status(404).json({ message: '用户不存在' });
           return;
         }
         
         // 返回用户信息（不包含密码）
         const { password, ...userWithoutPassword } = updatedUser;
+        console.log('User elevated to admin successfully:', userWithoutPassword);
         
         // 确保响应中包含正确的role属性
         res.status(200).json({
@@ -73,6 +79,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: '您的账号已升级为管理员'
         });
       } else {
+        console.log('User does not qualify for elevation:', req.user.email, 'membership_type:', req.user.membership_type);
         res.status(403).json({ message: '您的账号不符合升级条件' });
       }
     } catch (error) {
