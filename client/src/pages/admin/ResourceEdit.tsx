@@ -30,9 +30,12 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   ImagePlus, 
   FileVideo,
-  Loader2
+  Loader2,
+  FileText
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 // Extended schema with client validations
 const resourceFormSchema = z.object({
@@ -576,23 +579,49 @@ export default function ResourceEdit() {
                 
                 {/* 资源链接类型已取消 */}
                 
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>资源描述</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          {...field} 
-                          rows={6}
-                          placeholder="请详细描述该资源的内容、特点和适用人群"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="col-span-1 md:col-span-2">
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          资源描述 (支持Markdown)
+                        </FormLabel>
+                        <Tabs defaultValue="edit" className="border rounded-md">
+                          <TabsList className="bg-muted">
+                            <TabsTrigger value="edit">编辑</TabsTrigger>
+                            <TabsTrigger value="preview">预览</TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="edit" className="p-4">
+                            <FormControl>
+                              <Textarea 
+                                {...field} 
+                                rows={12}
+                                placeholder="请详细描述该资源的内容、特点和适用人群，支持Markdown格式"
+                                className="font-mono text-sm"
+                              />
+                            </FormControl>
+                          </TabsContent>
+                          <TabsContent value="preview" className="p-4 border-t prose max-w-none">
+                            {field.value ? (
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {field.value}
+                              </ReactMarkdown>
+                            ) : (
+                              <div className="text-neutral-500 italic">无内容预览</div>
+                            )}
+                          </TabsContent>
+                        </Tabs>
+                        <FormDescription>
+                          支持Markdown语法，包括标题、列表、链接、表格等
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 
                 <div className="flex justify-end space-x-4">
                   <Button 

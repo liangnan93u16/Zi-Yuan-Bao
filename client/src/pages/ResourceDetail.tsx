@@ -21,6 +21,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function ResourceDetail() {
   const { id } = useParams();
@@ -365,44 +367,54 @@ export default function ResourceDetail() {
           
           <TabsContent value="details" className="p-6 md:p-8">
             <h3 className="text-xl font-bold mb-4">课程介绍</h3>
-            <p className="mb-4">{resource.description || '本课程是一个完整的 React.js 学习指南，从基础概念到高级应用，全面覆盖 React 开发所需的各项技能。无论你是完全的初学者还是想提升 React 技能的开发者，这门课程都能满足你的需求。'}</p>
-            
-            <p className="mb-4">课程使用最新的 React 18 版本，深入讲解了函数式组件、Hooks、Context API、Redux 状态管理以及现代 React 应用的性能优化技巧。通过实践项目，你将学会如何构建专业、可扩展的 React 应用程序。</p>
-            
-            <div className="mb-6">
-              <h4 className="font-semibold mb-2">你将学到什么:</h4>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>React 基础概念与工作原理</li>
-                <li>组件化开发与重用</li>
-                <li>React Hooks 的全面应用</li>
-                <li>状态管理策略 (Context API, Redux, Zustand)</li>
-                <li>React 路由与 SPA 应用开发</li>
-                <li>处理表单与用户输入</li>
-                <li>API 集成与数据获取</li>
-                <li>性能优化与最佳实践</li>
-                <li>测试 React 应用</li>
-                <li>3 个完整的实战项目</li>
-              </ul>
-            </div>
-            
-            <div className="mb-6">
-              <h4 className="font-semibold mb-2">适合人群:</h4>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>想要学习 React 的前端开发初学者</li>
-                <li>希望提升 React 技能的开发者</li>
-                <li>需要更新到 React 18 知识的开发人员</li>
-                <li>前端开发或全栈开发工程师</li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-2">先决条件:</h4>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>基本的 HTML, CSS 和 JavaScript 知识</li>
-                <li>了解 ES6+ 语法会有所帮助</li>
-                <li>不需要任何 React 经验，课程从基础开始讲解</li>
-              </ul>
-            </div>
+            {resource.description ? (
+              <div className="prose prose-blue max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {resource.description}
+                </ReactMarkdown>
+              </div>
+            ) : (
+              <>
+                <p className="mb-4">本课程是一个完整的 React.js 学习指南，从基础概念到高级应用，全面覆盖 React 开发所需的各项技能。无论你是完全的初学者还是想提升 React 技能的开发者，这门课程都能满足你的需求。</p>
+                
+                <p className="mb-4">课程使用最新的 React 18 版本，深入讲解了函数式组件、Hooks、Context API、Redux 状态管理以及现代 React 应用的性能优化技巧。通过实践项目，你将学会如何构建专业、可扩展的 React 应用程序。</p>
+                
+                <div className="mb-6">
+                  <h4 className="font-semibold mb-2">你将学到什么:</h4>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>React 基础概念与工作原理</li>
+                    <li>组件化开发与重用</li>
+                    <li>React Hooks 的全面应用</li>
+                    <li>状态管理策略 (Context API, Redux, Zustand)</li>
+                    <li>React 路由与 SPA 应用开发</li>
+                    <li>处理表单与用户输入</li>
+                    <li>API 集成与数据获取</li>
+                    <li>性能优化与最佳实践</li>
+                    <li>测试 React 应用</li>
+                    <li>3 个完整的实战项目</li>
+                  </ul>
+                </div>
+                
+                <div className="mb-6">
+                  <h4 className="font-semibold mb-2">适合人群:</h4>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>想要学习 React 的前端开发初学者</li>
+                    <li>希望提升 React 技能的开发者</li>
+                    <li>需要更新到 React 18 知识的开发人员</li>
+                    <li>前端开发或全栈开发工程师</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold mb-2">先决条件:</h4>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>基本的 HTML, CSS 和 JavaScript 知识</li>
+                    <li>了解 ES6+ 语法会有所帮助</li>
+                    <li>不需要任何 React 经验，课程从基础开始讲解</li>
+                  </ul>
+                </div>
+              </>
+            )}
           </TabsContent>
           
           <TabsContent value="contents" className="p-6 md:p-8">
