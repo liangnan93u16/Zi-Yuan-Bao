@@ -170,22 +170,25 @@ export default function ReviewSection({ resourceId }: ReviewSectionProps) {
     }
   };
 
-  const renderStars = (rating: number) => {
+  const renderStars = (rating: number, size: 'sm' | 'md' = 'md') => {
     const stars = [];
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
+    
+    // 根据size调整星星大小
+    const dimensions = size === 'sm' ? "h-4 w-4" : "h-5 w-5";
 
     for (let i = 0; i < fullStars; i++) {
-      stars.push(<Star key={`full-${i}`} className="h-5 w-5 fill-current text-amber-500" />);
+      stars.push(<Star key={`full-${i}`} className={`${dimensions} fill-current text-amber-500`} />);
     }
 
     if (hasHalfStar) {
-      stars.push(<StarHalf key="half" className="h-5 w-5 fill-current text-amber-500" />);
+      stars.push(<StarHalf key="half" className={`${dimensions} fill-current text-amber-500`} />);
     }
 
     const emptyStars = 5 - stars.length;
     for (let i = 0; i < emptyStars; i++) {
-      stars.push(<Star key={`empty-${i}`} className="h-5 w-5 text-neutral-300" />);
+      stars.push(<Star key={`empty-${i}`} className={`${dimensions} text-neutral-300`} />);
     }
 
     return stars;
@@ -265,10 +268,10 @@ export default function ReviewSection({ resourceId }: ReviewSectionProps) {
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold">用户评价</h3>
         <div className="flex items-center">
-          <div className="flex items-center text-amber-500 mr-2">
-            {renderStars(ratingStats.average)}
+          <div className="flex items-center text-amber-500">
+            {renderStars(ratingStats.average, 'sm')}
           </div>
-          <span className="font-bold">{ratingStats.average.toFixed(1)}</span>
+          <span className="ml-2 font-bold">{ratingStats.average.toFixed(1)}</span>
           <span className="text-neutral-500 ml-1">({ratingStats.count} 评价)</span>
         </div>
       </div>
@@ -311,38 +314,51 @@ export default function ReviewSection({ resourceId }: ReviewSectionProps) {
 
       {/* 用户自己的评价 */}
       {user && userReview && !isEditing && (
-        <div className="bg-blue-50 rounded-lg p-4 mb-6 border border-blue-100">
-          <div className="flex justify-between items-center mb-3">
-            <h4 className="font-medium">您的评价</h4>
-            <div className="flex space-x-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2 text-neutral-600"
-                onClick={() => setIsEditing(true)}
-              >
-                <Edit className="h-4 w-4 mr-1" /> 编辑
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                onClick={handleDeleteReview}
-                disabled={deleteReviewMutation.isPending}
-              >
-                <Trash2 className="h-4 w-4 mr-1" /> 删除
-              </Button>
+        <div className="border-b border-neutral-200 pb-6 mb-6">
+          <div className="flex items-start mb-2">
+            <Avatar className="h-10 w-10 mr-3 mt-1">
+              <AvatarFallback>
+                {user.email?.substring(0, 1).toUpperCase() || "用"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <div className="flex justify-between items-center mb-1">
+                <div>
+                  <div className="font-medium">
+                    {user.email?.split('@')[0] || "匿名用户"}
+                  </div>
+                  <div className="text-xs text-neutral-500">
+                    {formatDate(userReview.updated_at)}
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <div className="flex items-center text-amber-500 mr-4">
+                    {renderStars(userReview.rating, 'sm')}
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 text-neutral-600"
+                      onClick={() => setIsEditing(true)}
+                    >
+                      <Edit className="h-4 w-4 mr-1" /> 编辑
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={handleDeleteReview}
+                      disabled={deleteReviewMutation.isPending}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" /> 删除
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <p className="text-neutral-700">{userReview.content}</p>
             </div>
           </div>
-          <div className="flex items-center mb-2">
-            <div className="flex items-center text-amber-500 mr-2">
-              {renderStars(userReview.rating)}
-            </div>
-            <span className="text-neutral-500 text-sm">
-              {formatDate(userReview.updated_at)}
-            </span>
-          </div>
-          <p className="text-neutral-800">{userReview.content}</p>
         </div>
       )}
 
@@ -357,28 +373,29 @@ export default function ReviewSection({ resourceId }: ReviewSectionProps) {
             .filter(review => !user || review.user_id !== user.id) // 不显示当前用户自己的评价（因为已经在上面单独显示了）
             .map((review) => (
               <div key={review.id} className="border-b border-neutral-200 pb-6">
-                <div className="flex justify-between mb-2">
-                  <div className="flex items-center">
-                    <Avatar className="h-10 w-10 mr-3">
-                      <AvatarImage src={review.user?.avatar || undefined} />
-                      <AvatarFallback>
-                        {review.user?.email?.substring(0, 2).toUpperCase() || "用户"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">
-                        {review.user?.email?.split('@')[0] || "匿名用户"}
+                <div className="flex items-start">
+                  <Avatar className="h-10 w-10 mr-3 mt-1">
+                    <AvatarFallback>
+                      {review.user?.email?.substring(0, 1).toUpperCase() || "用"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <div>
+                        <div className="font-medium">
+                          {review.user?.email?.split('@')[0] || "匿名用户"}
+                        </div>
+                        <div className="text-xs text-neutral-500">
+                          {formatDate(review.updated_at)}
+                        </div>
                       </div>
-                      <div className="text-neutral-500 text-sm">
-                        {formatDate(review.updated_at)}
+                      <div className="flex items-center text-amber-500">
+                        {renderStars(review.rating, 'sm')}
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center text-amber-500">
-                    {renderStars(review.rating)}
+                    <p className="text-neutral-700">{review.content}</p>
                   </div>
                 </div>
-                <p className="text-neutral-800">{review.content}</p>
               </div>
             ))
         )}
@@ -390,6 +407,12 @@ export default function ReviewSection({ resourceId }: ReviewSectionProps) {
           <Button asChild variant="outline">
             <a href="/login">登录</a>
           </Button>
+        </div>
+      )}
+
+      {reviews.length > 0 && (
+        <div className="mt-6 text-center">
+          <Button variant="outline">查看更多评价</Button>
         </div>
       )}
     </div>
