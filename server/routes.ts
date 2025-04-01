@@ -630,7 +630,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      const reviews = await storage.getReviewsByResource(resourceId);
+      // Get user ID from session if user is logged in
+      const userId = req.session.userId;
+      
+      // Get reviews - only approved ones for general public
+      // If logged in, also include the user's own pending reviews
+      const reviews = await storage.getReviewsByResource(resourceId, false, userId);
       
       // Enrich reviews with user data (excluding password)
       const enrichedReviews = await Promise.all(reviews.map(async (review) => {
@@ -753,6 +758,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting review:', error);
       res.status(500).json({ message: '删除评价失败' });
+    }
+  });
+  
+  // Admin review management routes
+  app.get('/api/admin/reviews', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      // Get query parameter for status filtering (0:pending, 1:approved, 2:rejected)
+      const statusParam = req.query.status as string | undefined;
+      const status = statusParam ? parseInt(statusParam) : undefined;
+      
+      // Get all reviews with optional status filter
+      const reviews = await storage.getAllReviews(status);
+      
+      res.json(reviews);
+    } catch (error) {
+      console.error('Error fetching reviews for admin:', error);
+      res.status(500).json({ message: '获取评价列表失败' });
+    }
+  });
+  
+  app.patch('/api/admin/reviews/:id/status', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const reviewId = parseInt(req.params.id);
+      if (isNaN(reviewId)) {
+        res.status(400).json({ message: '无效的评价ID' });
+        return;
+      }
+      
+      // Parse request body for status and admin notes
+      const statusUpdateSchema = z.object({
+        status: z.number().min(0).max(2), // 0: pending, 1: approved, 2: rejected
+        admin_notes: z.string().optional()
+      });
+      
+      const validationResult = statusUpdateSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({ 
+          message: '请求数据无效', 
+          errors: validationResult.error.format() 
+        });
+        return;
+      }
+      
+      const { status, admin_notes } = validationResult.data;
+      
+      // Update review status
+      const updatedReview = await storage.updateReviewStatus(reviewId, status, admin_notes);
+      if (!updatedReview) {
+        res.status(404).json({ message: '评价不存在' });
+        return;
+      }
+      
+      res.json(updatedReview);
+    } catch (error) {
+      console.error('Error updating review status:', error);
+      res.status(500).json({ message: '更新评价状态失败' });
     }
   });
 

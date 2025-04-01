@@ -207,19 +207,20 @@ export class DatabaseStorage implements IStorage {
     const total = countResult?.count || 0;
     
     // Get resources with pagination
-    let query = db
+    const baseQuery = db
       .select()
       .from(resources)
       .where(whereClause || sql`TRUE`)
       .orderBy(desc(resources.created_at));
     
     // Apply pagination if specified
+    let finalQuery = baseQuery;
     if (filters.page !== undefined && filters.limit !== undefined) {
       const offset = (filters.page - 1) * filters.limit;
-      query = query.limit(filters.limit).offset(offset);
+      finalQuery = baseQuery.limit(filters.limit).offset(offset);
     }
     
-    const resourcesList = await query;
+    const resourcesList = await finalQuery;
     
     return { resources: resourcesList, total };
   }
@@ -229,6 +230,45 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(resources)
       .where(eq(resources.category_id, categoryId));
+  }
+  
+  // Resource Request methods
+  async createResourceRequest(insertRequest: InsertResourceRequest): Promise<ResourceRequest> {
+    const [request] = await db
+      .insert(resourceRequests)
+      .values(insertRequest)
+      .returning();
+    return request;
+  }
+  
+  async getResourceRequest(id: number): Promise<ResourceRequest | undefined> {
+    const [request] = await db.select().from(resourceRequests).where(eq(resourceRequests.id, id));
+    return request || undefined;
+  }
+  
+  async getAllResourceRequests(): Promise<ResourceRequest[]> {
+    return await db
+      .select()
+      .from(resourceRequests)
+      .orderBy(desc(resourceRequests.created_at));
+  }
+  
+  async updateResourceRequestStatus(id: number, status: number, notes?: string): Promise<ResourceRequest | undefined> {
+    const updateData: Partial<ResourceRequest> = { 
+      status, 
+      updated_at: new Date() 
+    };
+    
+    if (notes !== undefined) {
+      updateData.admin_notes = notes;
+    }
+    
+    const [request] = await db
+      .update(resourceRequests)
+      .set(updateData)
+      .where(eq(resourceRequests.id, id))
+      .returning();
+    return request || undefined;
   }
   
   // Review methods
@@ -271,14 +311,6 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(reviews.created_at));
   }
   
-  async getReviewsByUser(userId: number): Promise<Review[]> {
-    return await db
-      .select()
-      .from(reviews)
-      .where(eq(reviews.user_id, userId))
-      .orderBy(desc(reviews.created_at));
-  }
-  
   async getAllReviews(status?: number): Promise<Review[]> {
     // Create a query to get all reviews
     let query = db.select().from(reviews);
@@ -316,43 +348,6 @@ export class DatabaseStorage implements IStorage {
     });
   }
   
-  async getResourceAverageRating(resourceId: number): Promise<number> {
-    const [result] = await db
-      .select({
-        average: sql`AVG(${reviews.rating})`.mapWith(Number)
-      })
-      .from(reviews)
-      .where(and(
-        eq(reviews.resource_id, resourceId),
-        eq(reviews.status, 1) // Only count approved reviews
-      ));
-    
-    return result?.average || 0;
-  }
-  
-  async getResourceReviewCount(resourceId: number): Promise<number> {
-    const [result] = await db
-      .select({
-        count: sql`COUNT(*)`.mapWith(Number)
-      })
-      .from(reviews)
-      .where(and(
-        eq(reviews.resource_id, resourceId),
-        eq(reviews.status, 1) // Only count approved reviews
-      ));
-    
-    return result?.count || 0;
-  }
-  
-  async updateReview(id: number, data: Partial<Review>): Promise<Review | undefined> {
-    const [review] = await db
-      .update(reviews)
-      .set({ ...data, updated_at: new Date() })
-      .where(eq(reviews.id, id))
-      .returning();
-    return review || undefined;
-  }
-  
   async updateReviewStatus(id: number, status: number, adminNotes?: string): Promise<Review | undefined> {
     const updateData: Partial<Review> = { 
       status, 
@@ -372,51 +367,46 @@ export class DatabaseStorage implements IStorage {
     return review || undefined;
   }
   
+  // This is a placeholder to delete the method in correct position
+// It's moved to right after getReviewsByResource above
+  
+  async getResourceAverageRating(resourceId: number): Promise<number> {
+    const [result] = await db
+      .select({
+        average: sql`AVG(${reviews.rating})`.mapWith(Number)
+      })
+      .from(reviews)
+      .where(eq(reviews.resource_id, resourceId));
+    
+    return result?.average || 0;
+  }
+  
+  async getResourceReviewCount(resourceId: number): Promise<number> {
+    const [result] = await db
+      .select({
+        count: sql`COUNT(*)`.mapWith(Number)
+      })
+      .from(reviews)
+      .where(eq(reviews.resource_id, resourceId));
+    
+    return result?.count || 0;
+  }
+  
+  async updateReview(id: number, data: Partial<Review>): Promise<Review | undefined> {
+    const [review] = await db
+      .update(reviews)
+      .set({ ...data, updated_at: new Date() })
+      .where(eq(reviews.id, id))
+      .returning();
+    return review || undefined;
+  }
+  
   async deleteReview(id: number): Promise<boolean> {
     const result = await db
       .delete(reviews)
       .where(eq(reviews.id, id))
       .returning({ id: reviews.id });
     return result.length > 0;
-  }
-  
-  // Resource Request methods
-  async createResourceRequest(insertRequest: InsertResourceRequest): Promise<ResourceRequest> {
-    const [request] = await db
-      .insert(resourceRequests)
-      .values(insertRequest)
-      .returning();
-    return request;
-  }
-  
-  async getResourceRequest(id: number): Promise<ResourceRequest | undefined> {
-    const [request] = await db.select().from(resourceRequests).where(eq(resourceRequests.id, id));
-    return request || undefined;
-  }
-  
-  async getAllResourceRequests(): Promise<ResourceRequest[]> {
-    return await db
-      .select()
-      .from(resourceRequests)
-      .orderBy(desc(resourceRequests.created_at));
-  }
-  
-  async updateResourceRequestStatus(id: number, status: number, notes?: string): Promise<ResourceRequest | undefined> {
-    const updateData: Partial<ResourceRequest> = { 
-      status, 
-      updated_at: new Date() 
-    };
-    
-    if (notes !== undefined) {
-      updateData.admin_notes = notes;
-    }
-    
-    const [request] = await db
-      .update(resourceRequests)
-      .set(updateData)
-      .where(eq(resourceRequests.id, id))
-      .returning();
-    return request || undefined;
   }
 
   // Initialize with default data if needed
