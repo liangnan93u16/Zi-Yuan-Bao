@@ -440,7 +440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create schema for updatable user fields
       const updateUserSchema = z.object({
         membership_type: z.string().optional(),
-        membership_expire_time: z.string().optional(),
+        membership_expire_time: z.string().nullable().optional(),
         coins: z.number().optional(),
         email: z.string().email().optional(),
         avatar: z.string().optional(),

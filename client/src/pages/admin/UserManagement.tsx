@@ -479,21 +479,37 @@ export default function UserManagement() {
                     <FormField
                       control={form.control}
                       name="membership_expire_time"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>会员到期时间</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              type="date" 
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            留空表示永不过期
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      render={({ field }) => {
+                        // 为日期字段使用字符串类型
+                        const dateValue = field.value || "";
+                        
+                        return (
+                          <FormItem>
+                            <FormLabel>会员到期时间</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="date"
+                                value={dateValue}
+                                onChange={(e) => {
+                                  // 当清空字段时，设置为空字符串
+                                  if (!e.target.value) {
+                                    field.onChange("");
+                                  } else {
+                                    field.onChange(e.target.value);
+                                  }
+                                }}
+                                onBlur={field.onBlur}
+                                name={field.name}
+                                ref={field.ref}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              留空表示永不过期
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
                     />
                     
                     <FormField
