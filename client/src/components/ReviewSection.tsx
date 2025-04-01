@@ -410,7 +410,7 @@ export default function ReviewSection({ resourceId }: ReviewSectionProps) {
         </div>
       )}
 
-      {reviews.length > 0 && (
+      {reviews.length > 5 && (
         <div className="mt-6 text-center">
           <Button variant="outline">查看更多评价</Button>
         </div>
