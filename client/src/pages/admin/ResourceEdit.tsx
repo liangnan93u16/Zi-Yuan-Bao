@@ -94,7 +94,6 @@ export default function ResourceEdit() {
       is_free: false,
       description: "",
       resource_url: "",
-      resource_type: "baidu",
     },
   });
 
@@ -121,7 +120,6 @@ export default function ResourceEdit() {
         is_free: resource.is_free || false,
         description: resource.description || "",
         resource_url: resource.resource_url || "",
-        resource_type: resource.resource_type || "baidu",
       });
     }
   }, [resource, form]);
@@ -576,31 +574,7 @@ export default function ResourceEdit() {
                   )}
                 />
                 
-                <FormField
-                  control={form.control}
-                  name="resource_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>资源链接类型</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="选择资源链接类型" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="baidu">百度网盘</SelectItem>
-                          <SelectItem value="aliyun">阿里云盘</SelectItem>
-                          <SelectItem value="other">其他</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* 资源链接类型已取消 */}
                 
                 <FormField
                   control={form.control}

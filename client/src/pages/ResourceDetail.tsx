@@ -324,15 +324,7 @@ export default function ResourceDetail() {
                   <span className="text-neutral-600">大小:</span>
                   <span className="font-medium">{resource.video_size ? `${resource.video_size} GB` : '未知'}</span>
                 </div>
-                {resource.resource_type && (
-                  <div className="flex justify-between">
-                    <span className="text-neutral-600">资源类型:</span>
-                    <span className="font-medium">
-                      {resource.resource_type === 'baidu' ? '百度网盘' : 
-                       resource.resource_type === 'aliyun' ? '阿里云盘' : '其他'}
-                    </span>
-                  </div>
-                )}
+                {/* 资源链接类型已取消 */}
                 <div className="flex justify-between">
                   <span className="text-neutral-600">更新日期:</span>
                   <span className="font-medium">{new Date(resource.updated_at).toLocaleDateString()}</span>
