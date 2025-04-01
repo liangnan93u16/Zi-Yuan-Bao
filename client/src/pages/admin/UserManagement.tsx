@@ -75,7 +75,7 @@ export default function UserManagement() {
   const { toast } = useToast();
 
   // Fetch users
-  const { data: users, isLoading } = useQuery({
+  const { data: users = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/users'],
   });
 
@@ -153,10 +153,7 @@ export default function UserManagement() {
     
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      matches = matches && (
-        user.username.toLowerCase().includes(query) || 
-        (user.email && user.email.toLowerCase().includes(query))
-      );
+      matches = matches && user.email && user.email.toLowerCase().includes(query);
     }
     
     return matches;
@@ -341,12 +338,12 @@ export default function UserManagement() {
                           <TableCell>
                             <div className="flex items-center">
                               <Avatar className="h-10 w-10 mr-4">
-                                <AvatarImage src={user.avatar} alt={user.username} />
-                                <AvatarFallback>{user.username.charAt(0).toUpperCase()}</AvatarFallback>
+                                <AvatarImage src={user.avatar} alt={user.email} />
+                                <AvatarFallback>{user.email.charAt(0).toUpperCase()}</AvatarFallback>
                               </Avatar>
                               <div>
-                                <div className="font-medium">{user.username}</div>
-                                <div className="text-sm text-neutral-500">{user.email || '未设置邮箱'}</div>
+                                <div className="font-medium">{user.email}</div>
+                                <div className="text-sm text-neutral-500">{user.membership_type || '普通用户'}</div>
                               </div>
                             </div>
                           </TableCell>
@@ -439,7 +436,7 @@ export default function UserManagement() {
                 <DialogHeader>
                   <DialogTitle>编辑用户</DialogTitle>
                   <DialogDescription>
-                    修改用户 {editingUser?.username} 的信息
+                    修改用户 {editingUser?.email} 的信息
                   </DialogDescription>
                 </DialogHeader>
                 
