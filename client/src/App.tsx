@@ -13,6 +13,7 @@ import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import ResourceManagement from "./pages/admin/ResourceManagement";
 import ResourceUpload from "./pages/admin/ResourceUpload";
+import ResourceEdit from "./pages/admin/ResourceEdit";
 import ResourceRequests from "./pages/admin/ResourceRequests";
 import UserManagement from "./pages/admin/UserManagement";
 import { AuthProvider } from "./hooks/use-auth";
@@ -36,6 +37,7 @@ function App() {
               <Route path="/profile" component={Profile} />
               <Route path="/admin/resources" component={ResourceManagement} />
               <Route path="/admin/resources/upload" component={ResourceUpload} />
+              <Route path="/admin/resources/:id/edit" component={ResourceEdit} />
               <Route path="/admin/resource-requests" component={ResourceRequests} />
               <Route path="/admin/users" component={UserManagement} />
               <Route component={NotFound} />

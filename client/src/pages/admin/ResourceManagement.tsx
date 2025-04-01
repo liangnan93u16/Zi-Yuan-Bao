@@ -269,8 +269,8 @@ export default function ResourceManagement() {
                           {new Date(resource.created_at).toLocaleDateString()}
                         </TableCell>
                         <TableCell className="text-right text-sm font-medium">
-                          <Link href={`/admin/resources/${resource.id}/edit`}>
-                            <a className="text-primary hover:text-blue-700 mr-3">编辑</a>
+                          <Link href={`/admin/resources/${resource.id}/edit`} className="text-primary hover:text-blue-700 mr-3">
+                            编辑
                           </Link>
                           <button
                             className={resource.status === 1 ? "text-red-600 hover:text-red-800" : "text-green-600 hover:text-green-800"}
