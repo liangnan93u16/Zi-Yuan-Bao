@@ -29,12 +29,12 @@ export async function verifyPassword(password: string, hashedPassword: string): 
 // Login handler
 export async function login(req: Request, res: Response): Promise<void> {
   try {
-    const { username, password } = req.body as LoginCredentials;
+    const { email, password } = req.body as LoginCredentials;
 
     // Find user
-    const user = await storage.getUserByUsername(username);
+    const user = await storage.getUserByEmail(email);
     if (!user) {
-      res.status(401).json({ message: '用户名或密码不正确' });
+      res.status(401).json({ message: '邮箱或密码不正确' });
       return;
     }
 
@@ -75,7 +75,7 @@ export async function login(req: Request, res: Response): Promise<void> {
       } else {
         await storage.updateUser(user.id, updates);
         res.status(401).json({ 
-          message: `用户名或密码不正确，还有${3-failedAttempts}次机会`,
+          message: `邮箱或密码不正确，还有${3-failedAttempts}次机会`,
           remainingAttempts: 3 - failedAttempts
         });
       }
@@ -110,12 +110,12 @@ export async function login(req: Request, res: Response): Promise<void> {
 // Registration handler
 export async function register(req: Request, res: Response): Promise<void> {
   try {
-    const { username, password, email } = req.body as RegisterData;
+    const { email, password } = req.body as RegisterData;
 
-    // Check if username already exists
-    const existingUser = await storage.getUserByUsername(username);
+    // Check if email already exists
+    const existingUser = await storage.getUserByEmail(email);
     if (existingUser) {
-      res.status(400).json({ message: '用户名已存在' });
+      res.status(400).json({ message: '该邮箱已被注册' });
       return;
     }
 
@@ -127,7 +127,6 @@ export async function register(req: Request, res: Response): Promise<void> {
     
     // Create user
     const user = await storage.createUser({
-      username,
       password: hashedPassword,
       email,
       membership_type: isAdmin ? 'admin' : 'regular',

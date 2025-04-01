@@ -6,9 +6,9 @@ import { useToast } from "@/hooks/use-toast";
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  register: (email: string, password: string) => Promise<void>;
   elevateToAdmin: () => Promise<void>;
 }
 
@@ -37,15 +37,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
-  const login = async (username: string, password: string) => {
+  const login = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const res = await apiRequest("POST", "/api/auth/login", { username, password });
+      const res = await apiRequest("POST", "/api/auth/login", { email, password });
       const userData = await res.json();
       setUser(userData);
       toast({
         title: "登录成功",
-        description: `欢迎回来，${userData.username}！`,
+        description: `欢迎回来！`,
       });
     } catch (error: any) {
       // 检查是否有响应体，包含详细错误信息
@@ -106,10 +106,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (username: string, email: string, password: string) => {
+  const register = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const res = await apiRequest("POST", "/api/auth/register", { username, email, password });
+      const res = await apiRequest("POST", "/api/auth/register", { email, password });
       const userData = await res.json();
       setUser(userData);
       toast({
@@ -119,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       toast({
         title: "注册失败",
-        description: "注册时出现错误，用户名可能已存在。",
+        description: "注册时出现错误，该邮箱可能已被注册。",
         variant: "destructive",
       });
       throw error;

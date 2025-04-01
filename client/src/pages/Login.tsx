@@ -14,8 +14,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // 定义登录表单验证
 const formSchema = z.object({
-  username: z.string().min(3, {
-    message: '用户名至少需要3个字符'
+  email: z.string().email({
+    message: '请输入有效的邮箱地址'
   }),
   password: z.string().min(6, {
     message: '密码至少需要6个字符'
@@ -36,7 +36,7 @@ export default function Login() {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: '',
+      email: '',
       password: ''
     }
   });
@@ -48,7 +48,7 @@ export default function Login() {
     setIsLoading(true);
     
     try {
-      await login(data.username, data.password);
+      await login(data.email, data.password);
       toast({
         title: '登录成功',
         description: '欢迎回来！'
@@ -83,7 +83,7 @@ export default function Login() {
         <CardHeader className="text-center space-y-1">
           <CardTitle className="text-2xl font-bold">用户登录</CardTitle>
           <CardDescription>
-            请输入您的账号和密码
+            请输入您的邮箱和密码
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -101,12 +101,12 @@ export default function Login() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="username"
+                name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>用户名</FormLabel>
+                    <FormLabel>邮箱</FormLabel>
                     <FormControl>
-                      <Input placeholder="请输入用户名" {...field} disabled={isLoading || isAccountLocked} />
+                      <Input placeholder="请输入邮箱地址" {...field} disabled={isLoading || isAccountLocked} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

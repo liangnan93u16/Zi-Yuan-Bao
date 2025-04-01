@@ -38,9 +38,8 @@ export const resources = pgTable("resources", {
 // Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
   password: text("password").notNull(),
-  email: text("email"),
   avatar: text("avatar"),
   membership_type: text("membership_type"),
   membership_expire_time: timestamp("membership_expire_time"),
@@ -72,14 +71,13 @@ export const insertUserSchema = createInsertSchema(users).omit({
 
 // Authentication schemas
 export const loginSchema = z.object({
-  username: z.string().min(1, "用户名不能为空"),
+  email: z.string().email("邮箱格式不正确").min(1, "邮箱不能为空"),
   password: z.string().min(1, "密码不能为空")
 });
 
 export const registerSchema = z.object({
-  username: z.string().min(3, "用户名至少3个字符").max(20, "用户名最多20个字符"),
-  password: z.string().min(6, "密码至少6个字符"),
-  email: z.string().email("邮箱格式不正确").optional().or(z.literal(''))
+  email: z.string().email("邮箱格式不正确"),
+  password: z.string().min(6, "密码至少6个字符")
 });
 
 // Resource Requests table

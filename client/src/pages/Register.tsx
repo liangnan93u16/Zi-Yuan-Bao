@@ -13,9 +13,6 @@ import { Loader2 } from 'lucide-react';
 
 // 定义注册表单验证
 const formSchema = z.object({
-  username: z.string().min(3, {
-    message: '用户名至少需要3个字符'
-  }),
   email: z.string().email({
     message: '请输入有效的电子邮件地址'
   }),
@@ -40,7 +37,6 @@ export default function Register() {
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: '',
       email: '',
       password: '',
       confirmPassword: ''
@@ -50,7 +46,7 @@ export default function Register() {
   async function onSubmit(data: RegisterFormValues) {
     setIsLoading(true);
     try {
-      await register(data.username, data.email, data.password);
+      await register(data.email, data.password);
       toast({
         title: '注册成功',
         description: '欢迎加入我们！'
@@ -79,19 +75,7 @@ export default function Register() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>用户名</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入用户名" {...field} disabled={isLoading} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+
               <FormField
                 control={form.control}
                 name="email"
