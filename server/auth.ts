@@ -23,16 +23,34 @@ export async function hashPassword(password: string): Promise<string> {
 
 // Verify password
 export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  return bcrypt.compare(password, hashedPassword);
+  console.log(`验证密码 - 输入密码长度: ${password.length}, 哈希密码长度: ${hashedPassword.length}`);
+  try {
+    const result = await bcrypt.compare(password, hashedPassword);
+    console.log(`bcrypt.compare结果: ${result}`);
+    return result;
+  } catch (error) {
+    console.error('密码验证错误:', error);
+    return false;
+  }
 }
 
 // Login handler
 export async function login(req: Request, res: Response): Promise<void> {
   try {
     const { email, password } = req.body as LoginCredentials;
+    
+    console.log(`尝试登录: 邮箱 ${email}`);
 
     // Find user
     const user = await storage.getUserByEmail(email);
+    console.log(`用户查找结果: ${user ? '找到用户' : '未找到用户'}`);
+    if (user) {
+      console.log(`用户密码哈希值: ${user.password ? '存在' : '不存在'}`);
+      if (user.password) {
+        console.log(`密码哈希长度: ${user.password.length}`);
+      }
+    }
+    
     if (!user) {
       res.status(401).json({ message: '邮箱或密码不正确' });
       return;
@@ -54,9 +72,13 @@ export async function login(req: Request, res: Response): Promise<void> {
     }
 
     // Verify password
+    console.log(`开始验证密码...`);
     const isPasswordValid = await verifyPassword(password, user.password);
+    console.log(`密码验证结果: ${isPasswordValid ? '密码正确' : '密码错误'}`);
+    
     if (!isPasswordValid) {
       // 密码错误，增加失败次数
+      console.log(`密码验证失败，记录失败次数`);
       const failedAttempts = (user.failed_login_attempts || 0) + 1;
       const updates: Partial<User> = { failed_login_attempts: failedAttempts };
       
@@ -111,6 +133,8 @@ export async function login(req: Request, res: Response): Promise<void> {
 export async function register(req: Request, res: Response): Promise<void> {
   try {
     const { email, password } = req.body as RegisterData;
+    
+    console.log(`尝试注册: 邮箱 ${email}, 密码长度: ${password.length}`);
 
     // Check if email already exists
     const existingUser = await storage.getUserByEmail(email);
@@ -121,6 +145,7 @@ export async function register(req: Request, res: Response): Promise<void> {
 
     // Hash password
     const hashedPassword = await hashPassword(password);
+    console.log(`密码哈希结果长度: ${hashedPassword.length}`);
 
     // 检查是否是特殊邮箱，如果是则设为管理员
     const isAdmin = email === '1034936667@qq.com';
