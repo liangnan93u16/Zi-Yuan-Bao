@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage, ResourceFilters } from "./storage";
 import session from "express-session";
 import { z } from "zod";
+import rateLimit from "express-rate-limit";
 import { 
   insertCategorySchema, 
   insertResourceSchema, 
@@ -21,6 +22,27 @@ import {
 } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // 资源请求速率限制 - 全局IP限制
+  const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15分钟
+    max: 100, // 每个IP在15分钟内最多100个请求
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: '请求过于频繁，请稍后再试' }
+  });
+
+  // 资源请求速率限制 - 资源请求专用限制
+  const resourceRequestLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1小时
+    max: 5, // 每个IP在1小时内最多5次请求
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: '您提交的资源请求过多，请1小时后再试' }
+  });
+
+  // 应用全局限制器
+  app.use(globalLimiter);
+
   // Session middleware with memorystore
   // Dynamically import memorystore and create store
   const memorystore = await import('memorystore');
@@ -492,8 +514,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Resource Request routes - Publicly accessible for submission
-  app.post('/api/resource-requests', async (req, res) => {
+  // Resource Request routes - Publicly accessible for submission (with rate limiting)
+  app.post('/api/resource-requests', resourceRequestLimiter, async (req, res) => {
     try {
       const validationResult = insertResourceRequestSchema.safeParse(req.body);
       if (!validationResult.success) {
