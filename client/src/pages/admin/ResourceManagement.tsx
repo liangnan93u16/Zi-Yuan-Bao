@@ -246,7 +246,9 @@ export default function ResourceManagement() {
                         </TableCell>
                         <TableCell>
                           <div className="text-sm text-neutral-900">
-                            {resource.is_free ? '免费' : `¥${resource.price?.toFixed(2)}`}
+                            {resource.is_free ? '免费' : `¥${typeof resource.price === 'string' ? 
+                              parseFloat(resource.price).toFixed(2) : 
+                              (resource.price || 0).toFixed(2)}`}
                           </div>
                           {resource.is_free && (
                             <div className="text-sm text-neutral-500">限时活动</div>
