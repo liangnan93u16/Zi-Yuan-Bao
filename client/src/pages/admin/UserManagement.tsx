@@ -229,8 +229,6 @@ export default function UserManagement() {
                     <SelectItem value="all">所有会员类型</SelectItem>
                     <SelectItem value="regular">普通用户</SelectItem>
                     <SelectItem value="vip">VIP会员</SelectItem>
-                    <SelectItem value="premium">高级会员</SelectItem>
-                    <SelectItem value="admin">管理员</SelectItem>
                   </SelectContent>
                 </Select>
                 
@@ -282,7 +280,6 @@ export default function UserManagement() {
                         <SelectContent>
                           <SelectItem value="regular">普通用户</SelectItem>
                           <SelectItem value="vip">VIP会员</SelectItem>
-                          <SelectItem value="premium">高级会员</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -460,8 +457,6 @@ export default function UserManagement() {
                             <SelectContent>
                               <SelectItem value="regular">普通用户</SelectItem>
                               <SelectItem value="vip">VIP会员</SelectItem>
-                              <SelectItem value="premium">高级会员</SelectItem>
-                              <SelectItem value="admin">管理员</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
