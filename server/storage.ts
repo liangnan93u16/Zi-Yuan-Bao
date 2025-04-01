@@ -61,6 +61,7 @@ export interface ResourceFilters {
   search?: string;
   page?: number;
   limit?: number;
+  offset?: number;
 }
 
 // Database implementation
@@ -204,19 +205,20 @@ export class DatabaseStorage implements IStorage {
     const total = countResult?.count || 0;
     
     // Get resources with pagination
-    let query = db
+    const baseQuery = db
       .select()
       .from(resources)
       .where(whereClause || sql`TRUE`)
       .orderBy(desc(resources.created_at));
     
     // Apply pagination if specified
+    let finalQuery = baseQuery;
     if (filters.page !== undefined && filters.limit !== undefined) {
       const offset = (filters.page - 1) * filters.limit;
-      query = query.limit(filters.limit).offset(offset);
+      finalQuery = baseQuery.limit(filters.limit).offset(offset);
     }
     
-    const resourcesList = await query;
+    const resourcesList = await finalQuery;
     
     return { resources: resourcesList, total };
   }

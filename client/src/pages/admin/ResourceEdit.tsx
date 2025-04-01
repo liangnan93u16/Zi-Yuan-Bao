@@ -55,6 +55,7 @@ const resourceFormSchema = z.object({
   is_free: z.boolean().default(false),
   description: z.string().optional(),
   contents: z.string().optional(), // 课程目录，Markdown格式
+  faq_content: z.string().optional(), // 常见问题，Markdown格式
   resource_url: z.string().optional(),
   resource_type: z.string().optional(),
 });
@@ -124,6 +125,7 @@ export default function ResourceEdit() {
         is_free: resource.is_free || false,
         description: resource.description || "",
         contents: resource.contents || "",
+        faq_content: resource.faq_content || "",
         resource_url: resource.resource_url || "",
       });
     }
@@ -665,8 +667,50 @@ export default function ResourceEdit() {
                       </FormItem>
                     )}
                   />
+                  
+                  <FormField
+                    control={form.control}
+                    name="faq_content"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          常见问题 (支持Markdown)
+                        </FormLabel>
+                        <Tabs defaultValue="edit" className="border rounded-md">
+                          <TabsList className="bg-muted">
+                            <TabsTrigger value="edit">编辑</TabsTrigger>
+                            <TabsTrigger value="preview">预览</TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="edit" className="p-4">
+                            <FormControl>
+                              <Textarea 
+                                {...field} 
+                                rows={12}
+                                placeholder="请输入常见问题内容，支持Markdown格式。例如：## 常见问题\n\n1. **问：如何开始学习本课程？**\n   答：建议从第一章开始，按顺序学习。\n\n2. **问：需要什么基础知识？**\n   答：需要基本的编程基础。"
+                                className="font-mono text-sm"
+                              />
+                            </FormControl>
+                          </TabsContent>
+                          <TabsContent value="preview" className="p-4 border-t prose max-w-none">
+                            {field.value ? (
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {field.value}
+                              </ReactMarkdown>
+                            ) : (
+                              <div className="text-neutral-500 italic">无内容预览</div>
+                            )}
+                          </TabsContent>
+                        </Tabs>
+                        <FormDescription>
+                          输入资源相关的常见问题解答，支持Markdown格式化
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-                
+
                 <div className="flex justify-end space-x-4">
                   <Button 
                     type="button" 
