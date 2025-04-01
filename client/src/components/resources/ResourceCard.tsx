@@ -99,7 +99,7 @@ export default function ResourceCard({ resource }: ResourceCardProps) {
         
         <div className="flex justify-between items-center">
           <span className={`${isFree ? 'text-primary' : 'text-neutral-900'} font-bold`}>
-            {isFree ? '免费' : `¥${getFormattedPrice()}`}
+            {isFree ? '免费' : `${getFormattedPrice()} 积分`}
           </span>
           
           <Link href={`/resources/${resource.id}`} className="bg-primary hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-medium transition">

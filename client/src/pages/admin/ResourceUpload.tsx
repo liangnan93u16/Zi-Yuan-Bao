@@ -230,13 +230,10 @@ export default function ResourceUpload() {
                     name="price"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>资源价格 *</FormLabel>
+                        <FormLabel>资源价格 (积分) *</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              ¥
-                            </span>
-                            <Input {...field} type="number" step="0.01" className="pl-8" />
+                            <Input {...field} type="number" step="1" placeholder="输入积分数量" />
                           </div>
                         </FormControl>
                         <FormMessage />

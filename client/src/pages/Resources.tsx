@@ -428,8 +428,8 @@ export default function Resources() {
             <SelectContent>
               <SelectItem value="newest">最新上架</SelectItem>
               <SelectItem value="popular">最受欢迎</SelectItem>
-              <SelectItem value="price-low">价格从低到高</SelectItem>
-              <SelectItem value="price-high">价格从高到低</SelectItem>
+              <SelectItem value="price-low">积分从低到高</SelectItem>
+              <SelectItem value="price-high">积分从高到低</SelectItem>
             </SelectContent>
           </Select>
         </div>
