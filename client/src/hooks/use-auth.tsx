@@ -95,6 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "已退出登录",
         description: "您已成功退出登录。",
       });
+      // 跳转到首页
+      window.location.href = "/";
     } catch (error) {
       toast({
         title: "退出失败",
