@@ -123,7 +123,13 @@ export default function ResourceEdit() {
   // Update resource mutation
   const updateResourceMutation = useMutation({
     mutationFn: async (data: ResourceFormValues) => {
-      return apiRequest("PATCH", `/api/resources/${resourceId}`, data);
+      // 将数字转为字符串以匹配后端期望格式
+      const formattedData = {
+        ...data,
+        price: data.price?.toString(),
+        video_size: data.video_size?.toString()
+      };
+      return apiRequest("PATCH", `/api/resources/${resourceId}`, formattedData);
     },
     onSuccess: () => {
       toast({
@@ -193,14 +199,16 @@ export default function ResourceEdit() {
               <TabsTrigger 
                 value="resources" 
                 className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
+                onClick={() => navigate("/admin/resources")}
               >
-                <a href="/admin/resources">资源列表</a>
+                资源列表
               </TabsTrigger>
               <TabsTrigger 
                 value="upload" 
                 className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
+                onClick={() => navigate("/admin/resources/upload")}
               >
-                <a href="/admin/resources/upload">上传资源</a>
+                上传资源
               </TabsTrigger>
             </TabsList>
           </div>
