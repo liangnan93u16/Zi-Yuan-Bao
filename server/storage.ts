@@ -5,6 +5,8 @@ import {
   resourceRequests, type ResourceRequest, type InsertResourceRequest,
   reviews, type Review, type InsertReview
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, like, and, or, desc, sql } from "drizzle-orm";
 
 // Storage interface
 export interface IStorage {
@@ -46,6 +48,9 @@ export interface IStorage {
   getResourceRequest(id: number): Promise<ResourceRequest | undefined>;
   getAllResourceRequests(): Promise<ResourceRequest[]>;
   updateResourceRequestStatus(id: number, status: number, notes?: string): Promise<ResourceRequest | undefined>;
+  
+  // Initialize default data
+  initializeDefaultData(): Promise<void>;
 }
 
 // Filter types for resource queries
@@ -57,334 +62,6 @@ export interface ResourceFilters {
   page?: number;
   limit?: number;
 }
-
-// In-memory implementation
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private categories: Map<number, Category>;
-  private resources: Map<number, Resource>;
-  private resourceRequests: Map<number, ResourceRequest>;
-  private reviews: Map<number, Review>;
-  private userIdCounter: number;
-  private categoryIdCounter: number;
-  private resourceIdCounter: number;
-  private resourceRequestIdCounter: number;
-  private reviewIdCounter: number;
-
-  constructor() {
-    this.users = new Map();
-    this.categories = new Map();
-    this.resources = new Map();
-    this.resourceRequests = new Map();
-    this.reviews = new Map();
-    this.userIdCounter = 1;
-    this.categoryIdCounter = 1;
-    this.resourceIdCounter = 1;
-    this.resourceRequestIdCounter = 1;
-    this.reviewIdCounter = 1;
-
-    // Initialize with some sample categories
-    this.initializeDefaultData();
-  }
-
-  private initializeDefaultData() {
-    // Create default admin user
-    const adminUser: InsertUser = {
-      password: "$2b$10$TnZHFgGdhrXGz.Tlx1/4TuEGZlMrxRPTfGwsFTeQQ.yqMW9jkfUV.", // "admin123"
-      email: "admin@example.com",
-      membership_type: "admin",
-      coins: 1000
-    };
-    this.createUser(adminUser);
-
-    // Create some basic categories
-    const categories = [
-      { name: "编程开发", icon: "code-box-line", sort_order: 1 },
-      { name: "设计创意", icon: "palette-line", sort_order: 2 },
-      { name: "商业管理", icon: "line-chart-line", sort_order: 3 },
-      { name: "影视制作", icon: "film-line", sort_order: 4 },
-      { name: "语言学习", icon: "translate-2", sort_order: 5 }
-    ];
-
-    categories.forEach(cat => {
-      this.createCategory({
-        name: cat.name,
-        icon: cat.icon,
-        sort_order: cat.sort_order
-      });
-    });
-  }
-
-  // User methods
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.email === email
-    );
-  }
-
-  async createUser(userData: InsertUser): Promise<User> {
-    const id = this.userIdCounter++;
-    const now = new Date();
-    const user: User = { 
-      ...userData, 
-      id,
-      created_at: now,
-      updated_at: now
-    };
-    this.users.set(id, user);
-    return user;
-  }
-
-  async updateUser(id: number, data: Partial<User>): Promise<User | undefined> {
-    const user = await this.getUser(id);
-    if (!user) return undefined;
-    
-    const updatedUser = { 
-      ...user, 
-      ...data,
-      updated_at: new Date()
-    };
-    this.users.set(id, updatedUser);
-    return updatedUser;
-  }
-
-  async getAllUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
-  }
-
-  // Category methods
-  async getCategory(id: number): Promise<Category | undefined> {
-    return this.categories.get(id);
-  }
-
-  async getCategoryByName(name: string): Promise<Category | undefined> {
-    return Array.from(this.categories.values()).find(
-      (category) => category.name === name
-    );
-  }
-
-  async createCategory(categoryData: InsertCategory): Promise<Category> {
-    const id = this.categoryIdCounter++;
-    const now = new Date();
-    const category: Category = { 
-      ...categoryData, 
-      id,
-      created_at: now,
-      updated_at: now
-    };
-    this.categories.set(id, category);
-    return category;
-  }
-
-  async updateCategory(id: number, data: Partial<Category>): Promise<Category | undefined> {
-    const category = await this.getCategory(id);
-    if (!category) return undefined;
-    
-    const updatedCategory = { 
-      ...category, 
-      ...data,
-      updated_at: new Date()
-    };
-    this.categories.set(id, updatedCategory);
-    return updatedCategory;
-  }
-
-  async deleteCategory(id: number): Promise<boolean> {
-    return this.categories.delete(id);
-  }
-
-  async getAllCategories(): Promise<Category[]> {
-    return Array.from(this.categories.values());
-  }
-
-  // Resource methods
-  async getResource(id: number): Promise<Resource | undefined> {
-    return this.resources.get(id);
-  }
-
-  async createResource(resourceData: InsertResource): Promise<Resource> {
-    const id = this.resourceIdCounter++;
-    const now = new Date();
-    const resource: Resource = { 
-      ...resourceData, 
-      id,
-      created_at: now,
-      updated_at: now
-    };
-    this.resources.set(id, resource);
-    return resource;
-  }
-
-  async updateResource(id: number, data: Partial<Resource>): Promise<Resource | undefined> {
-    const resource = await this.getResource(id);
-    if (!resource) return undefined;
-    
-    const updatedResource = { 
-      ...resource, 
-      ...data,
-      updated_at: new Date()
-    };
-    this.resources.set(id, updatedResource);
-    return updatedResource;
-  }
-
-  async deleteResource(id: number): Promise<boolean> {
-    return this.resources.delete(id);
-  }
-
-  async getAllResources(filters: ResourceFilters = {}): Promise<{ resources: Resource[], total: number }> {
-    let resources = Array.from(this.resources.values());
-    
-    // Apply filters
-    if (filters.category_id !== undefined) {
-      resources = resources.filter(r => r.category_id === filters.category_id);
-    }
-    
-    if (filters.status !== undefined) {
-      resources = resources.filter(r => r.status === filters.status);
-    }
-    
-    if (filters.is_free !== undefined) {
-      resources = resources.filter(r => r.is_free === filters.is_free);
-    }
-    
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      resources = resources.filter(r => 
-        r.title.toLowerCase().includes(searchLower) || 
-        (r.subtitle && r.subtitle.toLowerCase().includes(searchLower)) ||
-        (r.description && r.description.toLowerCase().includes(searchLower))
-      );
-    }
-    
-    // Sort by created_at in descending order (newest first)
-    resources.sort((a, b) => {
-      if (!a.created_at || !b.created_at) return 0;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    });
-    
-    const total = resources.length;
-    
-    // Pagination
-    if (filters.page && filters.limit) {
-      const start = (filters.page - 1) * filters.limit;
-      resources = resources.slice(start, start + filters.limit);
-    }
-    
-    return { resources, total };
-  }
-
-  async getResourcesByCategory(categoryId: number): Promise<Resource[]> {
-    return Array.from(this.resources.values()).filter(
-      (resource) => resource.category_id === categoryId
-    );
-  }
-  
-  // Resource Request methods
-  async createResourceRequest(requestData: InsertResourceRequest): Promise<ResourceRequest> {
-    const id = this.resourceRequestIdCounter++;
-    const now = new Date();
-    const request: ResourceRequest = { 
-      ...requestData, 
-      id,
-      status: 0, // Default to pending
-      admin_notes: null,
-      created_at: now,
-      updated_at: now
-    };
-    this.resourceRequests.set(id, request);
-    return request;
-  }
-  
-  async getResourceRequest(id: number): Promise<ResourceRequest | undefined> {
-    return this.resourceRequests.get(id);
-  }
-  
-  async getAllResourceRequests(): Promise<ResourceRequest[]> {
-    return Array.from(this.resourceRequests.values());
-  }
-  
-  async updateResourceRequestStatus(id: number, status: number, notes?: string): Promise<ResourceRequest | undefined> {
-    const request = await this.getResourceRequest(id);
-    if (!request) return undefined;
-    
-    const updatedRequest = { 
-      ...request, 
-      status,
-      admin_notes: notes || request.admin_notes,
-      updated_at: new Date()
-    };
-    this.resourceRequests.set(id, updatedRequest);
-    return updatedRequest;
-  }
-
-  // Review methods
-  async createReview(reviewData: InsertReview): Promise<Review> {
-    const id = this.reviewIdCounter++;
-    const now = new Date();
-    const review: Review = { 
-      ...reviewData, 
-      id,
-      created_at: now,
-      updated_at: now
-    };
-    this.reviews.set(id, review);
-    return review;
-  }
-  
-  async getReview(id: number): Promise<Review | undefined> {
-    return this.reviews.get(id);
-  }
-  
-  async getReviewsByResource(resourceId: number): Promise<Review[]> {
-    return Array.from(this.reviews.values()).filter(
-      (review) => review.resource_id === resourceId
-    );
-  }
-  
-  async getReviewsByUser(userId: number): Promise<Review[]> {
-    return Array.from(this.reviews.values()).filter(
-      (review) => review.user_id === userId
-    );
-  }
-  
-  async getResourceAverageRating(resourceId: number): Promise<number> {
-    const reviews = await this.getReviewsByResource(resourceId);
-    if (reviews.length === 0) return 0;
-    
-    const sum = reviews.reduce((total, review) => total + review.rating, 0);
-    return sum / reviews.length;
-  }
-  
-  async getResourceReviewCount(resourceId: number): Promise<number> {
-    const reviews = await this.getReviewsByResource(resourceId);
-    return reviews.length;
-  }
-  
-  async updateReview(id: number, data: Partial<Review>): Promise<Review | undefined> {
-    const review = await this.getReview(id);
-    if (!review) return undefined;
-    
-    const updatedReview = { 
-      ...review, 
-      ...data,
-      updated_at: new Date()
-    };
-    this.reviews.set(id, updatedReview);
-    return updatedReview;
-  }
-  
-  async deleteReview(id: number): Promise<boolean> {
-    return this.reviews.delete(id);
-  }
-}
-
-import { db } from "./db";
-import { eq, like, and, or, desc } from "drizzle-orm";
 
 // Database implementation
 export class DatabaseStorage implements IStorage {
@@ -696,27 +373,17 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Import SQL utility
-import { sql } from "drizzle-orm";
-
 // Export storage variable
 export let storage: IStorage;
 
 // Initialize storage - this will be called in index.ts
 export async function initializeStorage() {
-  try {
-    // Use database storage
-    const dbStorage = new DatabaseStorage();
-    
-    // Initialize default data if needed
-    await dbStorage.initializeDefaultData();
-    
-    storage = dbStorage;
-    return storage;
-  } catch (error) {
-    console.error('Failed to initialize database storage, falling back to in-memory storage:', error);
-    // Fallback to in-memory storage if database connection fails
-    storage = new MemStorage();
-    return storage;
-  }
+  // Use database storage
+  const dbStorage = new DatabaseStorage();
+  
+  // Initialize default data if needed
+  await dbStorage.initializeDefaultData();
+  
+  storage = dbStorage;
+  return storage;
 }
