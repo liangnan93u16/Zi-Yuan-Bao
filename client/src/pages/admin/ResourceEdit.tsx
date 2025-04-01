@@ -52,7 +52,7 @@ const resourceFormSchema = z.object({
   is_free: z.boolean().default(false),
   description: z.string().optional(),
   resource_url: z.string().optional(),
-  resource_type: z.string().default("baidu"),
+  resource_type: z.string().optional(),
 });
 
 type ResourceFormValues = z.infer<typeof resourceFormSchema>;
@@ -584,7 +584,7 @@ export default function ResourceEdit() {
                       <FormLabel>资源链接类型</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
-                        value={field.value || "baidu"}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
