@@ -50,23 +50,13 @@ export default function ResourceRequest() {
         title: "提交成功",
         description: "您的资源请求已成功提交，我们将尽快处理！",
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("提交资源请求失败:", error);
-      
-      // 检查是否是速率限制错误
-      if (error.message && error.message.includes("429")) {
-        toast({
-          title: "提交频率过高",
-          description: "您的提交频率过高，请等待一段时间后再试。系统限制每个IP每小时最多提交5次请求。",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "提交失败",
-          description: "提交资源请求失败，请稍后再试",
-          variant: "destructive"
-        });
-      }
+      toast({
+        title: "提交失败",
+        description: "提交资源请求失败，请稍后再试",
+        variant: "destructive"
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -112,9 +102,6 @@ export default function ResourceRequest() {
         <Alert className="mb-8">
           <AlertDescription>
             您可以在这里提交您需要的资源信息，我们的团队会根据大家的需求优先上架热门资源。提交后请保持联系方式畅通，以便我们联系您。
-            <div className="mt-2 text-sm text-yellow-600 dark:text-yellow-400">
-              <p><strong>注意：</strong>为了防止恶意提交，每个IP地址在1小时内最多可提交5次资源请求。请确保提交前仔细填写内容。</p>
-            </div>
           </AlertDescription>
         </Alert>
         

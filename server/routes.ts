@@ -3,8 +3,6 @@ import { createServer, type Server } from "http";
 import { storage, ResourceFilters } from "./storage";
 import session from "express-session";
 import { z } from "zod";
-import rateLimit from "express-rate-limit";
-import { getRateLimitConfig, rateLimitConfig } from "./config";
 import { 
   insertCategorySchema, 
   insertResourceSchema, 
@@ -23,31 +21,6 @@ import {
 } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // 获取当前环境的速率限制配置
-  const config = getRateLimitConfig();
-  console.log('当前速率限制配置:', JSON.stringify(config, null, 2));
-  
-  // 资源请求速率限制 - 全局IP限制
-  const globalLimiter = rateLimit({
-    windowMs: config.global.windowMs,
-    max: config.global.max,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { message: '请求过于频繁，请稍后再试' }
-  });
-
-  // 资源请求速率限制 - 资源请求专用限制
-  const resourceRequestLimiter = rateLimit({
-    windowMs: config.resourceRequest.windowMs,
-    max: config.resourceRequest.max,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { message: `您提交的资源请求过多，请${Math.round(config.resourceRequest.windowMs / (60 * 60 * 1000))}小时后再试` }
-  });
-
-  // 应用全局限制器
-  app.use(globalLimiter);
-
   // Session middleware with memorystore
   // Dynamically import memorystore and create store
   const memorystore = await import('memorystore');
@@ -519,8 +492,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Resource Request routes - Publicly accessible for submission (with rate limiting)
-  app.post('/api/resource-requests', resourceRequestLimiter, async (req, res) => {
+  // Resource Request routes - Publicly accessible for submission
+  app.post('/api/resource-requests', async (req, res) => {
     try {
       const validationResult = insertResourceRequestSchema.safeParse(req.body);
       if (!validationResult.success) {
@@ -544,52 +517,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching resource requests:', error);
       res.status(500).json({ message: '获取资源请求列表失败' });
-    }
-  });
-
-  // 速率限制配置相关API
-  app.get('/api/admin/rate-limit-config', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
-    try {
-      // 返回当前配置
-      res.json(rateLimitConfig);
-    } catch (error) {
-      console.error('Error fetching rate limit config:', error);
-      res.status(500).json({ message: '获取速率限制配置失败' });
-    }
-  });
-  
-  app.post('/api/admin/rate-limit-config', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
-    try {
-      // 更新配置
-      const newConfig = req.body;
-      
-      // 验证配置
-      if (!newConfig || 
-          !newConfig.global || 
-          !newConfig.resourceRequest || 
-          !newConfig.development) {
-        res.status(400).json({ message: '无效的配置数据' });
-        return;
-      }
-      
-      // 更新配置
-      rateLimitConfig.global = newConfig.global;
-      rateLimitConfig.resourceRequest = newConfig.resourceRequest;
-      rateLimitConfig.development = newConfig.development;
-      
-      // 重新配置限制器
-      // 由于限制器已经创建，我们需要重启服务器才能应用新的配置
-      // 这里我们只是保存配置并返回成功消息
-      
-      console.log('速率限制配置已更新:', JSON.stringify(rateLimitConfig, null, 2));
-      
-      res.json({ 
-        message: '速率限制配置已更新，重启服务器后生效',
-        config: rateLimitConfig
-      });
-    } catch (error) {
-      console.error('Error updating rate limit config:', error);
-      res.status(500).json({ message: '更新速率限制配置失败' });
     }
   });
 

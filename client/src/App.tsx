@@ -14,7 +14,6 @@ import ResourceManagement from "./pages/admin/ResourceManagement";
 import ResourceUpload from "./pages/admin/ResourceUpload";
 import ResourceRequests from "./pages/admin/ResourceRequests";
 import UserManagement from "./pages/admin/UserManagement";
-import RateLimitConfig from "./pages/admin/RateLimitConfig";
 import { AuthProvider } from "./hooks/use-auth";
 
 function App() {
@@ -37,7 +36,6 @@ function App() {
               <Route path="/admin/resources/upload" component={ResourceUpload} />
               <Route path="/admin/resource-requests" component={ResourceRequests} />
               <Route path="/admin/users" component={UserManagement} />
-              <Route path="/admin/rate-limit-config" component={RateLimitConfig} />
               <Route component={NotFound} />
             </Switch>
           </main>

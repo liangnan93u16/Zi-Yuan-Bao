@@ -5,8 +5,6 @@ import { initializeStorage } from "./storage";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 
 const app = express();
-// 设置 trust proxy 以解决 X-Forwarded-For 头信息的问题
-app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
