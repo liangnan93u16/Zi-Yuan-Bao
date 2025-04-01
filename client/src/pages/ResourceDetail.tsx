@@ -31,7 +31,7 @@ export default function ResourceDetail() {
   // Fetch resource detail
   const { data: resource, isLoading } = useQuery({
     queryKey: [`/api/resources/${id}`],
-  });
+  }) as { data: any, isLoading: boolean };
 
   if (isLoading) {
     return (
@@ -110,7 +110,7 @@ export default function ResourceDetail() {
       return;
     }
 
-    if (!isFree && (!user.membership_type || new Date(user.membership_expire_time) < new Date())) {
+    if (!isFree && (!user.membership_type || (user.membership_expire_time && new Date(user.membership_expire_time) < new Date()))) {
       toast({
         title: "需要购买",
         description: "此资源需要购买或成为会员才能下载。",
