@@ -7,6 +7,7 @@ import {
   insertCategorySchema, 
   insertResourceSchema, 
   insertResourceRequestSchema,
+  insertReviewSchema,
   loginSchema, 
   registerSchema 
 } from "@shared/schema";
@@ -617,6 +618,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating user profile:', error);
       res.status(500).json({ message: '更新资料失败，请稍后再试' });
+    }
+  });
+
+  // Review routes
+  app.get('/api/resources/:resourceId/reviews', async (req, res) => {
+    try {
+      const resourceId = parseInt(req.params.resourceId);
+      if (isNaN(resourceId)) {
+        res.status(400).json({ message: '无效的资源ID' });
+        return;
+      }
+
+      const reviews = await storage.getReviewsByResource(resourceId);
+      
+      // Enrich reviews with user data (excluding password)
+      const enrichedReviews = await Promise.all(reviews.map(async (review) => {
+        const user = await storage.getUser(review.user_id);
+        if (user) {
+          const { password, ...userWithoutPassword } = user;
+          return { ...review, user: userWithoutPassword };
+        }
+        return review;
+      }));
+      
+      res.json(enrichedReviews);
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      res.status(500).json({ message: '获取评价列表失败' });
+    }
+  });
+
+  app.get('/api/resources/:resourceId/rating', async (req, res) => {
+    try {
+      const resourceId = parseInt(req.params.resourceId);
+      if (isNaN(resourceId)) {
+        res.status(400).json({ message: '无效的资源ID' });
+        return;
+      }
+
+      const average = await storage.getResourceAverageRating(resourceId);
+      const count = await storage.getResourceReviewCount(resourceId);
+      
+      res.json({ average, count });
+    } catch (error) {
+      console.error('Error fetching rating:', error);
+      res.status(500).json({ message: '获取评分失败' });
+    }
+  });
+
+  app.post('/api/resources/:resourceId/reviews', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const resourceId = parseInt(req.params.resourceId);
+      if (isNaN(resourceId)) {
+        res.status(400).json({ message: '无效的资源ID' });
+        return;
+      }
+
+      // Check if the resource exists
+      const resource = await storage.getResource(resourceId);
+      if (!resource) {
+        res.status(404).json({ message: '资源不存在' });
+        return;
+      }
+
+      // 确保用户已登录
+      if (!req.user) {
+        res.status(401).json({ message: '必须登录才能提交评价' });
+        return;
+      }
+
+      // Add user_id to the review data
+      const reviewData = {
+        ...req.body,
+        user_id: req.user.id,
+        resource_id: resourceId
+      };
+
+      const validationResult = insertReviewSchema.safeParse(reviewData);
+      if (!validationResult.success) {
+        res.status(400).json({ 
+          message: '评价数据无效', 
+          errors: validationResult.error.format() 
+        });
+        return;
+      }
+
+      // Check if the user already reviewed this resource
+      const userReviews = await storage.getReviewsByUser(req.user.id);
+      const existingReview = userReviews.find(review => review.resource_id === resourceId);
+      
+      if (existingReview) {
+        // Update existing review
+        const updatedReview = await storage.updateReview(existingReview.id, validationResult.data);
+        res.json(updatedReview);
+      } else {
+        // Create new review
+        const review = await storage.createReview(validationResult.data);
+        res.status(201).json(review);
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      res.status(500).json({ message: '提交评价失败' });
+    }
+  });
+
+  app.delete('/api/reviews/:id', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const reviewId = parseInt(req.params.id);
+      if (isNaN(reviewId)) {
+        res.status(400).json({ message: '无效的评价ID' });
+        return;
+      }
+
+      const review = await storage.getReview(reviewId);
+      if (!review) {
+        res.status(404).json({ message: '评价不存在' });
+        return;
+      }
+
+      // 检查是否是评价的作者或管理员
+      if (req.user?.id !== review.user_id && req.user?.membership_type !== 'admin') {
+        res.status(403).json({ message: '无权删除该评价' });
+        return;
+      }
+
+      const deleted = await storage.deleteReview(reviewId);
+      if (!deleted) {
+        res.status(404).json({ message: '评价不存在' });
+        return;
+      }
+
+      res.status(204).end();
+    } catch (error) {
+      console.error('Error deleting review:', error);
+      res.status(500).json({ message: '删除评价失败' });
     }
   });
 

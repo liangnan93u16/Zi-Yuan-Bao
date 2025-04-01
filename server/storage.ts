@@ -2,7 +2,8 @@ import {
   users, type User, type InsertUser, 
   categories, type Category, type InsertCategory,
   resources, type Resource, type InsertResource,
-  resourceRequests, type ResourceRequest, type InsertResourceRequest
+  resourceRequests, type ResourceRequest, type InsertResourceRequest,
+  reviews, type Review, type InsertReview
 } from "@shared/schema";
 
 // Storage interface
@@ -30,6 +31,16 @@ export interface IStorage {
   getAllResources(filters?: ResourceFilters): Promise<{ resources: Resource[], total: number }>;
   getResourcesByCategory(categoryId: number): Promise<Resource[]>;
   
+  // Review operations
+  createReview(review: InsertReview): Promise<Review>;
+  getReview(id: number): Promise<Review | undefined>;
+  getReviewsByResource(resourceId: number): Promise<Review[]>;
+  getReviewsByUser(userId: number): Promise<Review[]>;
+  getResourceAverageRating(resourceId: number): Promise<number>;
+  getResourceReviewCount(resourceId: number): Promise<number>;
+  updateReview(id: number, data: Partial<Review>): Promise<Review | undefined>;
+  deleteReview(id: number): Promise<boolean>;
+  
   // Resource Request operations
   createResourceRequest(request: InsertResourceRequest): Promise<ResourceRequest>;
   getResourceRequest(id: number): Promise<ResourceRequest | undefined>;
@@ -53,20 +64,24 @@ export class MemStorage implements IStorage {
   private categories: Map<number, Category>;
   private resources: Map<number, Resource>;
   private resourceRequests: Map<number, ResourceRequest>;
+  private reviews: Map<number, Review>;
   private userIdCounter: number;
   private categoryIdCounter: number;
   private resourceIdCounter: number;
   private resourceRequestIdCounter: number;
+  private reviewIdCounter: number;
 
   constructor() {
     this.users = new Map();
     this.categories = new Map();
     this.resources = new Map();
     this.resourceRequests = new Map();
+    this.reviews = new Map();
     this.userIdCounter = 1;
     this.categoryIdCounter = 1;
     this.resourceIdCounter = 1;
     this.resourceRequestIdCounter = 1;
+    this.reviewIdCounter = 1;
 
     // Initialize with some sample categories
     this.initializeDefaultData();
@@ -306,6 +321,66 @@ export class MemStorage implements IStorage {
     this.resourceRequests.set(id, updatedRequest);
     return updatedRequest;
   }
+
+  // Review methods
+  async createReview(reviewData: InsertReview): Promise<Review> {
+    const id = this.reviewIdCounter++;
+    const now = new Date();
+    const review: Review = { 
+      ...reviewData, 
+      id,
+      created_at: now,
+      updated_at: now
+    };
+    this.reviews.set(id, review);
+    return review;
+  }
+  
+  async getReview(id: number): Promise<Review | undefined> {
+    return this.reviews.get(id);
+  }
+  
+  async getReviewsByResource(resourceId: number): Promise<Review[]> {
+    return Array.from(this.reviews.values()).filter(
+      (review) => review.resource_id === resourceId
+    );
+  }
+  
+  async getReviewsByUser(userId: number): Promise<Review[]> {
+    return Array.from(this.reviews.values()).filter(
+      (review) => review.user_id === userId
+    );
+  }
+  
+  async getResourceAverageRating(resourceId: number): Promise<number> {
+    const reviews = await this.getReviewsByResource(resourceId);
+    if (reviews.length === 0) return 0;
+    
+    const sum = reviews.reduce((total, review) => total + review.rating, 0);
+    return sum / reviews.length;
+  }
+  
+  async getResourceReviewCount(resourceId: number): Promise<number> {
+    const reviews = await this.getReviewsByResource(resourceId);
+    return reviews.length;
+  }
+  
+  async updateReview(id: number, data: Partial<Review>): Promise<Review | undefined> {
+    const review = await this.getReview(id);
+    if (!review) return undefined;
+    
+    const updatedReview = { 
+      ...review, 
+      ...data,
+      updated_at: new Date()
+    };
+    this.reviews.set(id, updatedReview);
+    return updatedReview;
+  }
+  
+  async deleteReview(id: number): Promise<boolean> {
+    return this.reviews.delete(id);
+  }
 }
 
 import { db } from "./db";
@@ -513,6 +588,75 @@ export class DatabaseStorage implements IStorage {
       .where(eq(resourceRequests.id, id))
       .returning();
     return request || undefined;
+  }
+  
+  // Review methods
+  async createReview(insertReview: InsertReview): Promise<Review> {
+    const [review] = await db
+      .insert(reviews)
+      .values(insertReview)
+      .returning();
+    return review;
+  }
+  
+  async getReview(id: number): Promise<Review | undefined> {
+    const [review] = await db.select().from(reviews).where(eq(reviews.id, id));
+    return review || undefined;
+  }
+  
+  async getReviewsByResource(resourceId: number): Promise<Review[]> {
+    return await db
+      .select()
+      .from(reviews)
+      .where(eq(reviews.resource_id, resourceId))
+      .orderBy(desc(reviews.created_at));
+  }
+  
+  async getReviewsByUser(userId: number): Promise<Review[]> {
+    return await db
+      .select()
+      .from(reviews)
+      .where(eq(reviews.user_id, userId))
+      .orderBy(desc(reviews.created_at));
+  }
+  
+  async getResourceAverageRating(resourceId: number): Promise<number> {
+    const [result] = await db
+      .select({
+        average: sql`AVG(${reviews.rating})`.mapWith(Number)
+      })
+      .from(reviews)
+      .where(eq(reviews.resource_id, resourceId));
+    
+    return result?.average || 0;
+  }
+  
+  async getResourceReviewCount(resourceId: number): Promise<number> {
+    const [result] = await db
+      .select({
+        count: sql`COUNT(*)`.mapWith(Number)
+      })
+      .from(reviews)
+      .where(eq(reviews.resource_id, resourceId));
+    
+    return result?.count || 0;
+  }
+  
+  async updateReview(id: number, data: Partial<Review>): Promise<Review | undefined> {
+    const [review] = await db
+      .update(reviews)
+      .set({ ...data, updated_at: new Date() })
+      .where(eq(reviews.id, id))
+      .returning();
+    return review || undefined;
+  }
+  
+  async deleteReview(id: number): Promise<boolean> {
+    const result = await db
+      .delete(reviews)
+      .where(eq(reviews.id, id))
+      .returning({ id: reviews.id });
+    return result.length > 0;
   }
 
   // Initialize with default data if needed

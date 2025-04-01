@@ -23,6 +23,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import ReviewSection from "@/components/ReviewSection";
 
 export default function ResourceDetail() {
   const { id } = useParams();
@@ -100,7 +101,7 @@ export default function ResourceDetail() {
   // 确保price是数字
   const price = typeof resource.price === 'string' ? parseFloat(resource.price) : (resource.price || 0);
   const originalPrice = price * 1.5; // Just for display purposes
-  const rating = 4.8; // This would come from the API in a real app
+  // Now we get actual rating from the reviews API
   
   const handleDownload = () => {
     if (!user) {
@@ -245,7 +246,7 @@ export default function ResourceDetail() {
                 <Star className="h-4 w-4 fill-current" />
                 <Star className="h-4 w-4 fill-current" />
                 <StarHalf className="h-4 w-4 fill-current" />
-                <span className="ml-1 text-neutral-800 font-medium">{rating}</span>
+                <span className="ml-1 text-neutral-800 font-medium">4.5</span>
               </div>
               <span className="text-neutral-500 text-sm">(526 评价)</span>
             </div>
@@ -489,92 +490,7 @@ export default function ResourceDetail() {
           </TabsContent>
           
           <TabsContent value="reviews" className="p-6 md:p-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold">用户评价</h3>
-              <div className="flex items-center">
-                <div className="flex items-center text-amber-500 mr-2">
-                  <Star className="h-5 w-5 fill-current" />
-                  <Star className="h-5 w-5 fill-current" />
-                  <Star className="h-5 w-5 fill-current" />
-                  <Star className="h-5 w-5 fill-current" />
-                  <StarHalf className="h-5 w-5 fill-current" />
-                </div>
-                <span className="font-bold">{rating}</span>
-                <span className="text-neutral-500 ml-1">(526 评价)</span>
-              </div>
-            </div>
-            
-            <div className="space-y-6">
-              <div className="border-b border-neutral-200 pb-6">
-                <div className="flex justify-between mb-2">
-                  <div className="flex items-center">
-                    <Avatar className="h-10 w-10 mr-3">
-                      <AvatarFallback>王</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">王小明</div>
-                      <div className="text-sm text-neutral-500">2023-08-20</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center text-amber-500">
-                    <Star className="h-4 w-4 fill-current" />
-                    <Star className="h-4 w-4 fill-current" />
-                    <Star className="h-4 w-4 fill-current" />
-                    <Star className="h-4 w-4 fill-current" />
-                    <Star className="h-4 w-4 fill-current" />
-                  </div>
-                </div>
-                <p className="text-neutral-700">这是我学过最好的React课程，讲解非常详细，实例也很有实用价值。特别是Hooks部分的讲解，让我对状态管理有了更深入的理解。强烈推荐给所有想学React的人！</p>
-              </div>
-              
-              <div className="border-b border-neutral-200 pb-6">
-                <div className="flex justify-between mb-2">
-                  <div className="flex items-center">
-                    <Avatar className="h-10 w-10 mr-3">
-                      <AvatarFallback>李</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">李华</div>
-                      <div className="text-sm text-neutral-500">2023-08-15</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center text-amber-500">
-                    <Star className="h-4 w-4 fill-current" />
-                    <Star className="h-4 w-4 fill-current" />
-                    <Star className="h-4 w-4 fill-current" />
-                    <Star className="h-4 w-4 fill-current" />
-                    <Star className="h-4 w-4" />
-                  </div>
-                </div>
-                <p className="text-neutral-700">整体内容很棒，老师讲解清晰。唯一的缺点是有些高级主题讲解不够深入，希望能有进阶版本。</p>
-              </div>
-              
-              <div>
-                <div className="flex justify-between mb-2">
-                  <div className="flex items-center">
-                    <Avatar className="h-10 w-10 mr-3">
-                      <AvatarFallback>张</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">张伟</div>
-                      <div className="text-sm text-neutral-500">2023-08-10</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center text-amber-500">
-                    <Star className="h-4 w-4 fill-current" />
-                    <Star className="h-4 w-4 fill-current" />
-                    <Star className="h-4 w-4 fill-current" />
-                    <Star className="h-4 w-4 fill-current" />
-                    <Star className="h-4 w-4 fill-current" />
-                  </div>
-                </div>
-                <p className="text-neutral-700">作为一个完全的React新手，这门课程让我受益匪浅。项目实战部分特别有用，让我能够直接应用所学知识。老师的讲解风格也很容易理解，没有晦涩难懂的概念。谢谢分享这么好的课程！</p>
-              </div>
-            </div>
-            
-            <div className="mt-6 text-center">
-              <Button variant="outline">查看更多评价</Button>
-            </div>
+            <ReviewSection resourceId={id || 0} />
           </TabsContent>
           
           <TabsContent value="faq" className="p-6 md:p-8">

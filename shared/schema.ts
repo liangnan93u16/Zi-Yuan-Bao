@@ -2,6 +2,17 @@ import { pgTable, text, serial, integer, boolean, timestamp, decimal } from "dri
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Reviews table
+export const reviews = pgTable("reviews", {
+  id: serial("id").primaryKey(),
+  resource_id: integer("resource_id").notNull(),
+  user_id: integer("user_id").notNull(),
+  rating: integer("rating").notNull(),
+  content: text("content").notNull(),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow()
+});
+
 // Categories table
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
@@ -96,6 +107,12 @@ export const resourceRequests = pgTable("resource_requests", {
 });
 
 // Insert schemas
+export const insertReviewSchema = createInsertSchema(reviews).omit({
+  id: true,
+  created_at: true,
+  updated_at: true
+});
+
 export const insertResourceRequestSchema = createInsertSchema(resourceRequests).omit({
   id: true,
   status: true,
@@ -116,6 +133,9 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type ResourceRequest = typeof resourceRequests.$inferSelect;
 export type InsertResourceRequest = z.infer<typeof insertResourceRequestSchema>;
+
+export type Review = typeof reviews.$inferSelect;
+export type InsertReview = z.infer<typeof insertReviewSchema>;
 
 export type LoginCredentials = z.infer<typeof loginSchema>;
 export type RegisterData = z.infer<typeof registerSchema>;
