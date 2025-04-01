@@ -60,7 +60,7 @@ export default function ResourceRequests() {
   // 更新资源请求状态的mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status, notes }: { id: number; status: number; notes?: string }) => {
-      return apiRequest(`/api/admin/resource-requests/${id}/status`, "PATCH", { status, notes });
+      return apiRequest('PATCH', `/api/admin/resource-requests/${id}/status`, { status, notes });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/resource-requests"] });
