@@ -78,6 +78,10 @@ export default function ReviewSection({ resourceId }: ReviewSectionProps) {
         body: JSON.stringify(data),
       }).then(res => {
         if (!res.ok) throw new Error('Failed to submit review');
+        // 处理可能没有响应体的情况
+        if (res.status === 204) {
+          return { success: true };
+        }
         return res.json();
       });
     },
@@ -108,6 +112,10 @@ export default function ReviewSection({ resourceId }: ReviewSectionProps) {
         method: "DELETE"
       }).then(res => {
         if (!res.ok) throw new Error('Failed to delete review');
+        // 处理204 No Content响应，它不会有JSON内容
+        if (res.status === 204) {
+          return { success: true };
+        }
         return res.json();
       });
     },
