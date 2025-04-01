@@ -54,6 +54,7 @@ const resourceFormSchema = z.object({
   status: z.coerce.number().default(1),
   is_free: z.boolean().default(false),
   description: z.string().optional(),
+  contents: z.string().optional(), // 课程目录，Markdown格式
   resource_url: z.string().optional(),
   resource_type: z.string().optional(),
 });
@@ -122,6 +123,7 @@ export default function ResourceEdit() {
         status: resource.status || 1,
         is_free: resource.is_free || false,
         description: resource.description || "",
+        contents: resource.contents || "",
         resource_url: resource.resource_url || "",
       });
     }
@@ -616,6 +618,48 @@ export default function ResourceEdit() {
                         </Tabs>
                         <FormDescription>
                           支持Markdown语法，包括标题、列表、链接、表格等
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="contents"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          课程目录 (支持Markdown)
+                        </FormLabel>
+                        <Tabs defaultValue="edit" className="border rounded-md">
+                          <TabsList className="bg-muted">
+                            <TabsTrigger value="edit">编辑</TabsTrigger>
+                            <TabsTrigger value="preview">预览</TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="edit" className="p-4">
+                            <FormControl>
+                              <Textarea 
+                                {...field} 
+                                rows={12}
+                                placeholder="请输入课程目录内容，支持Markdown格式。例如：## 第一章：入门\n1. 章节1\n2. 章节2\n\n## 第二章：进阶"
+                                className="font-mono text-sm"
+                              />
+                            </FormControl>
+                          </TabsContent>
+                          <TabsContent value="preview" className="p-4 border-t prose max-w-none">
+                            {field.value ? (
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {field.value}
+                              </ReactMarkdown>
+                            ) : (
+                              <div className="text-neutral-500 italic">无内容预览</div>
+                            )}
+                          </TabsContent>
+                        </Tabs>
+                        <FormDescription>
+                          输入课程的章节目录，支持Markdown格式化
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

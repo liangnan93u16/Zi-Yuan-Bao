@@ -31,7 +31,7 @@ export default function ResourceDetail() {
   const [tab, setTab] = useState("details");
 
   // Fetch resource detail
-  const { data: resource, isLoading } = useQuery({
+  const { data: resource = {}, isLoading } = useQuery<any>({
     queryKey: [`/api/resources/${id}`],
   });
 
@@ -112,7 +112,7 @@ export default function ResourceDetail() {
       return;
     }
 
-    if (!isFree && (!user.membership_type || new Date(user.membership_expire_time) < new Date())) {
+    if (!isFree && (!user.membership_type || (user.membership_expire_time && new Date(user.membership_expire_time) < new Date()))) {
       toast({
         title: "需要购买",
         description: "此资源需要购买或成为会员才能下载。",
@@ -329,7 +329,7 @@ export default function ResourceDetail() {
                 {/* 资源链接类型已取消 */}
                 <div className="flex justify-between">
                   <span className="text-neutral-600">更新日期:</span>
-                  <span className="font-medium">{new Date(resource.updated_at).toLocaleDateString()}</span>
+                  <span className="font-medium">{resource.updated_at ? new Date(resource.updated_at).toLocaleDateString() : '未知'}</span>
                 </div>
               </div>
             </div>
@@ -418,65 +418,75 @@ export default function ResourceDetail() {
           
           <TabsContent value="contents" className="p-6 md:p-8">
             <h3 className="text-xl font-bold mb-4">课程目录</h3>
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">第1章：React 基础入门</h4>
-                <ul className="space-y-2 pl-4">
-                  <li className="flex justify-between">
-                    <span>1.1 课程介绍与环境搭建</span>
-                    <span className="text-sm text-neutral-500">15:20</span>
-                  </li>
-                  <li className="flex justify-between">
-                    <span>1.2 React 核心概念</span>
-                    <span className="text-sm text-neutral-500">22:45</span>
-                  </li>
-                  <li className="flex justify-between">
-                    <span>1.3 创建第一个 React 组件</span>
-                    <span className="text-sm text-neutral-500">18:30</span>
-                  </li>
-                </ul>
+            {resource.contents ? (
+              <div className="prose prose-blue max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {resource.contents}
+                </ReactMarkdown>
               </div>
-              
-              <div>
-                <h4 className="font-medium mb-2">第2章：React Hooks 详解</h4>
-                <ul className="space-y-2 pl-4">
-                  <li className="flex justify-between">
-                    <span>2.1 useState 状态管理</span>
-                    <span className="text-sm text-neutral-500">20:15</span>
-                  </li>
-                  <li className="flex justify-between">
-                    <span>2.2 useEffect 与生命周期</span>
-                    <span className="text-sm text-neutral-500">25:40</span>
-                  </li>
-                  <li className="flex justify-between">
-                    <span>2.3 useContext 全局状态</span>
-                    <span className="text-sm text-neutral-500">19:50</span>
-                  </li>
-                </ul>
-              </div>
-              
-              <div>
-                <h4 className="font-medium mb-2">第3章：React 路由</h4>
-                <ul className="space-y-2 pl-4">
-                  <li className="flex justify-between">
-                    <span>3.1 React Router 基础</span>
-                    <span className="text-sm text-neutral-500">22:10</span>
-                  </li>
-                  <li className="flex justify-between">
-                    <span>3.2 动态路由与参数</span>
-                    <span className="text-sm text-neutral-500">18:35</span>
-                  </li>
-                  <li className="flex justify-between">
-                    <span>3.3 嵌套路由与布局</span>
-                    <span className="text-sm text-neutral-500">24:20</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-            
-            <div className="mt-4 text-center">
-              <Button variant="outline">查看完整目录</Button>
-            </div>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-2">第1章：React 基础入门</h4>
+                    <ul className="space-y-2 pl-4">
+                      <li className="flex justify-between">
+                        <span>1.1 课程介绍与环境搭建</span>
+                        <span className="text-sm text-neutral-500">15:20</span>
+                      </li>
+                      <li className="flex justify-between">
+                        <span>1.2 React 核心概念</span>
+                        <span className="text-sm text-neutral-500">22:45</span>
+                      </li>
+                      <li className="flex justify-between">
+                        <span>1.3 创建第一个 React 组件</span>
+                        <span className="text-sm text-neutral-500">18:30</span>
+                      </li>
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium mb-2">第2章：React Hooks 详解</h4>
+                    <ul className="space-y-2 pl-4">
+                      <li className="flex justify-between">
+                        <span>2.1 useState 状态管理</span>
+                        <span className="text-sm text-neutral-500">20:15</span>
+                      </li>
+                      <li className="flex justify-between">
+                        <span>2.2 useEffect 与生命周期</span>
+                        <span className="text-sm text-neutral-500">25:40</span>
+                      </li>
+                      <li className="flex justify-between">
+                        <span>2.3 useContext 全局状态</span>
+                        <span className="text-sm text-neutral-500">19:50</span>
+                      </li>
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium mb-2">第3章：React 路由</h4>
+                    <ul className="space-y-2 pl-4">
+                      <li className="flex justify-between">
+                        <span>3.1 React Router 基础</span>
+                        <span className="text-sm text-neutral-500">22:10</span>
+                      </li>
+                      <li className="flex justify-between">
+                        <span>3.2 动态路由与参数</span>
+                        <span className="text-sm text-neutral-500">18:35</span>
+                      </li>
+                      <li className="flex justify-between">
+                        <span>3.3 嵌套路由与布局</span>
+                        <span className="text-sm text-neutral-500">24:20</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <div className="mt-4 text-center">
+                  <Button variant="outline">查看完整目录</Button>
+                </div>
+              </>
+            )}
           </TabsContent>
           
           <TabsContent value="reviews" className="p-6 md:p-8">

@@ -27,9 +27,12 @@ import { z } from "zod";
 import { insertResourceSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { 
   ImagePlus, 
-  FileVideo
+  FileVideo,
+  FileText
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -50,6 +53,7 @@ const resourceFormSchema = z.object({
   status: z.coerce.number().default(1),
   is_free: z.boolean().default(false),
   description: z.string().optional(),
+  contents: z.string().optional(), // 课程目录，Markdown格式
 });
 
 type ResourceFormValues = z.infer<typeof resourceFormSchema>;
@@ -62,7 +66,7 @@ export default function ResourceUpload() {
   // Fetch categories
   const { data: categories, isLoading: isCategoriesLoading } = useQuery({
     queryKey: ['/api/categories'],
-  });
+  }) as { data: any[], isLoading: boolean };
 
   // Form setup
   const form = useForm<ResourceFormValues>({
@@ -82,6 +86,7 @@ export default function ResourceUpload() {
       status: 1,
       is_free: false,
       description: "",
+      contents: "",
     },
   });
 
@@ -209,14 +214,14 @@ export default function ResourceUpload() {
                                 加载分类中...
                               </SelectItem>
                             ) : (
-                              categories?.map((category: any) => (
+                              Array.isArray(categories) ? categories.map((category: any) => (
                                 <SelectItem 
                                   key={category.id} 
                                   value={category.id.toString()}
                                 >
                                   {category.name}
                                 </SelectItem>
-                              ))
+                              )) : <SelectItem value="" disabled>没有可用分类</SelectItem>
                             )}
                           </SelectContent>
                         </Select>
@@ -517,14 +522,80 @@ export default function ResourceUpload() {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>资源描述</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          {...field} 
-                          rows={6}
-                          placeholder="请详细描述该资源的内容、特点和适用人群"
-                        />
-                      </FormControl>
+                      <FormLabel className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        资源描述 (支持Markdown)
+                      </FormLabel>
+                      <Tabs defaultValue="edit" className="border rounded-md">
+                        <TabsList className="bg-muted">
+                          <TabsTrigger value="edit">编辑</TabsTrigger>
+                          <TabsTrigger value="preview">预览</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="edit" className="p-4">
+                          <FormControl>
+                            <Textarea 
+                              {...field} 
+                              rows={12}
+                              placeholder="请详细描述该资源的内容、特点和适用人群，支持Markdown格式"
+                              className="font-mono text-sm"
+                            />
+                          </FormControl>
+                        </TabsContent>
+                        <TabsContent value="preview" className="p-4 border-t prose max-w-none">
+                          {field.value ? (
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {field.value}
+                            </ReactMarkdown>
+                          ) : (
+                            <div className="text-neutral-500 italic">无内容预览</div>
+                          )}
+                        </TabsContent>
+                      </Tabs>
+                      <FormDescription>
+                        支持Markdown语法，包括标题、列表、链接、表格等
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="contents"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        课程目录 (支持Markdown)
+                      </FormLabel>
+                      <Tabs defaultValue="edit" className="border rounded-md">
+                        <TabsList className="bg-muted">
+                          <TabsTrigger value="edit">编辑</TabsTrigger>
+                          <TabsTrigger value="preview">预览</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="edit" className="p-4">
+                          <FormControl>
+                            <Textarea 
+                              {...field} 
+                              rows={12}
+                              placeholder="请输入课程目录内容，支持Markdown格式。例如：## 第一章：入门\n1. 章节1\n2. 章节2\n\n## 第二章：进阶"
+                              className="font-mono text-sm"
+                            />
+                          </FormControl>
+                        </TabsContent>
+                        <TabsContent value="preview" className="p-4 border-t prose max-w-none">
+                          {field.value ? (
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {field.value}
+                            </ReactMarkdown>
+                          ) : (
+                            <div className="text-neutral-500 italic">无内容预览</div>
+                          )}
+                        </TabsContent>
+                      </Tabs>
+                      <FormDescription>
+                        输入课程的章节目录，支持Markdown格式化
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
