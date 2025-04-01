@@ -455,9 +455,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For TypeScript type compatibility, convert userData to any to handle date conversion
       const updatedUserData: any = { ...validationResult.data };
       
-      // Convert the string date to Date object if needed (handled by 'any' type)
-      if (updatedUserData.membership_expire_time) {
-        updatedUserData.membership_expire_time = new Date(updatedUserData.membership_expire_time);
+      // 处理会员到期时间
+      if (updatedUserData.membership_expire_time === null || updatedUserData.membership_expire_time === undefined) {
+        // 如果是null或undefined，保持为null（表示没有到期时间）
+        updatedUserData.membership_expire_time = null;
+      } else if (updatedUserData.membership_expire_time !== "") {
+        // 如果是非空字符串，转换为日期对象
+        try {
+          updatedUserData.membership_expire_time = new Date(updatedUserData.membership_expire_time);
+          // 检查是否为有效日期
+          if (isNaN(updatedUserData.membership_expire_time.getTime())) {
+            throw new Error("Invalid date");
+          }
+        } catch (e) {
+          console.error("Invalid date format:", updatedUserData.membership_expire_time);
+          res.status(400).json({ message: '无效的日期格式' });
+          return;
+        }
+      } else {
+        // 空字符串也设为null
+        updatedUserData.membership_expire_time = null;
       }
 
       const updatedUser = await storage.updateUser(userId, updatedUserData);

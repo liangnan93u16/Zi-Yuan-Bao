@@ -57,7 +57,7 @@ import { z } from "zod";
 // User edit form schema
 const userEditSchema = z.object({
   membership_type: z.string().optional(),
-  membership_expire_time: z.string().optional(),
+  membership_expire_time: z.string().nullable().optional(),
   coins: z.coerce.number().min(0, "金币数量不能为负数").optional(),
   email: z.string().email("请输入有效的邮箱地址").optional(),
   avatar: z.string().optional(),
@@ -128,7 +128,19 @@ export default function UserManagement() {
 
   const onSubmitEdit = (data: UserEditValues) => {
     if (!editingUser) return;
-    updateUserMutation.mutate({ id: editingUser.id, ...data });
+    
+    // 确保会员到期时间格式正确
+    const formattedData = { ...data };
+    
+    // 创建我们要发送到API的对象
+    const apiData: any = { ...formattedData };
+    
+    // 处理空字符串的会员到期时间
+    if (formattedData.membership_expire_time === "") {
+      apiData.membership_expire_time = null;
+    }
+    
+    updateUserMutation.mutate({ id: editingUser.id, ...apiData });
   };
 
   const handleSearch = (e: React.FormEvent) => {
