@@ -132,12 +132,18 @@ export default function Navbar() {
                       </DropdownMenuItem>
                     </>
                   )}
-                  {user.role !== "admin" && user.email === "1034936667@qq.com" && (
+                  {user.email === "1034936667@qq.com" && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => elevateToAdmin()}>
-                        升级为管理员
-                      </DropdownMenuItem>
+                      {user.role !== "admin" ? (
+                        <DropdownMenuItem onClick={() => elevateToAdmin()}>
+                          升级为管理员
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem disabled>
+                          已是管理员
+                        </DropdownMenuItem>
+                      )}
                     </>
                   )}
                   <DropdownMenuSeparator />
@@ -219,13 +225,22 @@ export default function Navbar() {
                             </Link>
                           </>
                         )}
-                        {user.role !== "admin" && user.email === "1034936667@qq.com" && (
-                          <button 
-                            onClick={() => elevateToAdmin()}
-                            className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-600 hover:bg-neutral-50"
-                          >
-                            升级为管理员
-                          </button>
+                        {user.email === "1034936667@qq.com" && (
+                          user.role !== "admin" ? (
+                            <button 
+                              onClick={() => elevateToAdmin()}
+                              className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-600 hover:bg-neutral-50"
+                            >
+                              升级为管理员
+                            </button>
+                          ) : (
+                            <button 
+                              disabled
+                              className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-400"
+                            >
+                              已是管理员
+                            </button>
+                          )
                         )}
                         <button 
                           onClick={() => logout()}
