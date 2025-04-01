@@ -29,10 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   ImagePlus, 
-  FileVideo,
-  Loader2,
-  CheckCircle,
-  XCircle
+  FileVideo
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -53,8 +50,6 @@ const resourceFormSchema = z.object({
   status: z.coerce.number().default(1),
   is_free: z.boolean().default(false),
   description: z.string().optional(),
-  resource_url: z.string().optional(),
-  resource_type: z.string().optional(),
 });
 
 type ResourceFormValues = z.infer<typeof resourceFormSchema>;
@@ -63,16 +58,11 @@ export default function ResourceUpload() {
   const [tab, setTab] = useState("upload");
   const [_, navigate] = useLocation();
   const { toast } = useToast();
-  const [isValidatingUrl, setIsValidatingUrl] = useState(false);
-  const [urlValidationResult, setUrlValidationResult] = useState<{
-    isAccessible?: boolean;
-    message?: string;
-  } | null>(null);
 
   // Fetch categories
-  const { data: categories = [], isLoading: isCategoriesLoading } = useQuery({
+  const { data: categories, isLoading: isCategoriesLoading } = useQuery({
     queryKey: ['/api/categories'],
-  }) as { data: any[], isLoading: boolean };
+  });
 
   // Form setup
   const form = useForm<ResourceFormValues>({
@@ -92,8 +82,6 @@ export default function ResourceUpload() {
       status: 1,
       is_free: false,
       description: "",
-      resource_url: "",
-      resource_type: "baidu",
     },
   });
 
@@ -119,35 +107,6 @@ export default function ResourceUpload() {
       });
     },
   });
-
-  // URL验证函数
-  const validateUrl = async (url: string | undefined) => {
-    if (!url) {
-      setUrlValidationResult({
-        isAccessible: false,
-        message: "请输入URL"
-      });
-      return;
-    }
-    
-    setIsValidatingUrl(true);
-    setUrlValidationResult(null);
-    
-    try {
-      const response = await apiRequest("POST", "/api/validate-url", { url });
-      setUrlValidationResult({
-        isAccessible: response.isAccessible,
-        message: response.message
-      });
-    } catch (error: any) {
-      setUrlValidationResult({
-        isAccessible: false,
-        message: error.message || "验证URL时出错"
-      });
-    } finally {
-      setIsValidatingUrl(false);
-    }
-  };
 
   // Handle form submission
   const onSubmit = (data: ResourceFormValues) => {
@@ -541,123 +500,13 @@ export default function ResourceUpload() {
                         <div>
                           <p className="text-sm text-neutral-500 mb-1">支持 MP4, MKV 格式</p>
                           <p className="text-sm text-neutral-500">或提供视频外链地址:</p>
-                          <div className="flex items-center mt-1 space-x-2">
-                            <Input 
-                              {...field} 
-                              placeholder="https://" 
-                              className="w-full sm:w-80" 
-                            />
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => validateUrl(field.value)}
-                              disabled={isValidatingUrl}
-                            >
-                              {isValidatingUrl ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                  验证中
-                                </>
-                              ) : (
-                                <>验证</>
-                              )}
-                            </Button>
-                          </div>
-                          {urlValidationResult && (
-                            <div className="flex items-center mt-2">
-                              {urlValidationResult.isAccessible ? (
-                                <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                              ) : (
-                                <XCircle className="h-4 w-4 text-red-500 mr-1" />
-                              )}
-                              <span className={urlValidationResult.isAccessible ? "text-sm text-green-500" : "text-sm text-red-500"}>
-                                {urlValidationResult.message}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="resource_url"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>资源下载链接</FormLabel>
-                      <div className="flex items-center space-x-2">
-                        <FormControl>
                           <Input 
                             {...field} 
                             placeholder="https://" 
-                            className="w-full" 
+                            className="mt-1 w-full sm:w-80" 
                           />
-                        </FormControl>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => validateUrl(field.value)}
-                          disabled={isValidatingUrl}
-                        >
-                          {isValidatingUrl ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                              验证中
-                            </>
-                          ) : (
-                            <>验证</>
-                          )}
-                        </Button>
-                      </div>
-                      {urlValidationResult && (
-                        <div className="flex items-center mt-2">
-                          {urlValidationResult.isAccessible ? (
-                            <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-red-500 mr-1" />
-                          )}
-                          <span className={urlValidationResult.isAccessible ? "text-sm text-green-500" : "text-sm text-red-500"}>
-                            {urlValidationResult.message}
-                          </span>
                         </div>
-                      )}
-                      <FormDescription>
-                        添加资源的网盘下载链接，用户购买后可见。
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="resource_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>资源链接类型</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="选择资源链接类型" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="baidu">百度网盘</SelectItem>
-                          <SelectItem value="aliyun">阿里云盘</SelectItem>
-                          <SelectItem value="other">其他</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        选择资源的网盘类型，帮助用户了解下载方式。
-                      </FormDescription>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}

@@ -30,9 +30,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   ImagePlus, 
   FileVideo,
-  Loader2,
-  CheckCircle,
-  XCircle
+  Loader2
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -65,11 +63,6 @@ export default function ResourceEdit() {
   const params = useParams();
   const resourceId = params.id;
   const { toast } = useToast();
-  const [isValidatingUrl, setIsValidatingUrl] = useState(false);
-  const [urlValidationResult, setUrlValidationResult] = useState<{
-    isAccessible?: boolean;
-    message?: string;
-  } | null>(null);
 
   // Fetch resource data
   const { data: resource, isLoading: isResourceLoading } = useQuery({
@@ -162,42 +155,6 @@ export default function ResourceEdit() {
       });
     },
   });
-
-  // URL验证函数
-  const validateUrl = async (url: string) => {
-    if (!url.trim()) {
-      setUrlValidationResult(null);
-      return;
-    }
-
-    try {
-      setIsValidatingUrl(true);
-      const response = await apiRequest(
-        "POST", 
-        "/api/validate-url", 
-        { url }
-      );
-      
-      // 使用类型断言确保响应有预期的属性
-      const typedResponse = response as { 
-        isAccessible: boolean;
-        message: string;
-      };
-      
-      setUrlValidationResult({
-        isAccessible: typedResponse.isAccessible,
-        message: typedResponse.message
-      });
-    } catch (error) {
-      setUrlValidationResult({
-        isAccessible: false,
-        message: "验证过程中发生错误，请稍后再试"
-      });
-      console.error("URL验证错误:", error);
-    } finally {
-      setIsValidatingUrl(false);
-    }
-  };
 
   // Handle form submission
   const onSubmit = (data: ResourceFormValues) => {
@@ -606,52 +563,13 @@ export default function ResourceEdit() {
                     <FormItem>
                       <FormLabel>资源下载链接</FormLabel>
                       <FormControl>
-                        <div className="flex items-center space-x-2">
-                          <div className="relative flex-1">
-                            <Input
-                              {...field}
-                              placeholder="请输入百度网盘或阿里云盘链接"
-                              onChange={(e) => {
-                                field.onChange(e);
-                                // 清除之前的验证结果
-                                if (urlValidationResult) {
-                                  setUrlValidationResult(null);
-                                }
-                              }}
-                            />
-                            {urlValidationResult && (
-                              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                {urlValidationResult.isAccessible ? (
-                                  <CheckCircle className="h-5 w-5 text-green-500" />
-                                ) : (
-                                  <XCircle className="h-5 w-5 text-red-500" />
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          <Button 
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => validateUrl(field.value || "")}
-                            disabled={isValidatingUrl || !field.value}
-                          >
-                            {isValidatingUrl ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                验证中
-                              </>
-                            ) : "验证链接"}
-                          </Button>
-                        </div>
+                        <Input
+                          {...field}
+                          placeholder="请输入百度网盘或阿里云盘链接"
+                        />
                       </FormControl>
-                      {urlValidationResult && (
-                        <div className={`text-sm mt-1 ${urlValidationResult.isAccessible ? 'text-green-600' : 'text-red-600'}`}>
-                          {urlValidationResult.message}
-                        </div>
-                      )}
                       <FormDescription>
-                        付费用户购买后可见的资源下载链接，建议验证链接是否可访问
+                        付费用户购买后可见的资源下载链接
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

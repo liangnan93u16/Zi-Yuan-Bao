@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import { storage, ResourceFilters } from "./storage";
 import session from "express-session";
 import { z } from "zod";
-import fetch from "node-fetch";
 import { 
   insertCategorySchema, 
   insertResourceSchema, 
@@ -618,61 +617,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating user profile:', error);
       res.status(500).json({ message: '更新资料失败，请稍后再试' });
-    }
-  });
-
-  // URL验证API - 检查资源链接是否可访问
-  app.post('/api/validate-url', async (req, res) => {
-    try {
-      // 验证请求体中是否包含url字段
-      const schema = z.object({
-        url: z.string().url('请提供有效的URL')
-      });
-      
-      const result = schema.safeParse(req.body);
-      if (!result.success) {
-        return res.status(400).json({ 
-          success: false, 
-          message: '无效的URL格式',
-          errors: result.error.format()
-        });
-      }
-      
-      const { url } = result.data;
-      let isAccessible = false;
-      
-      try {
-        // 添加超时设置防止长时间等待
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
-        
-        // 发送HEAD请求检查URL是否可访问
-        const response = await fetch(url, { 
-          method: 'HEAD',
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        // 检查响应状态码
-        isAccessible = response.ok; // 状态码在200-299范围内
-      } catch (error) {
-        console.error('URL访问检查失败:', error);
-        isAccessible = false;
-      }
-      
-      res.json({
-        success: true,
-        url,
-        isAccessible,
-        message: isAccessible ? '链接可以访问' : '链接无法访问'
-      });
-    } catch (error) {
-      console.error('URL验证过程出错:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: '验证URL时发生服务器错误' 
-      });
     }
   });
 
