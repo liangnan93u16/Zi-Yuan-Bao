@@ -76,26 +76,26 @@ export default function LoginLogs() {
   }
 
   return (
-    <div className="container py-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">管理员登录日志</h1>
-        <Button onClick={() => refetch()}>刷新</Button>
+    <div className="container py-6 max-w-5xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-2xl font-bold">管理员登录日志</h1>
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <Input
+              id="search"
+              placeholder="按邮箱或IP地址搜索..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          <Button onClick={() => refetch()} size="sm">刷新</Button>
+        </div>
       </div>
-      <Separator className="my-6" />
+      <Separator className="my-4" />
 
-      <div className="mb-6">
-        <Label htmlFor="search">搜索</Label>
-        <Input
-          id="search"
-          placeholder="按邮箱或IP地址搜索..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
-      </div>
-
-      <Card>
-        <CardContent className="p-0">
+      <Card className="shadow-sm">
+        <CardContent className="p-0 overflow-x-auto">
           {isLoading ? (
             <div className="flex justify-center items-center p-6">
               <p>加载中...</p>
@@ -109,40 +109,42 @@ export default function LoginLogs() {
               <p>没有找到登录日志</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>管理员邮箱</TableHead>
-                  <TableHead>IP地址</TableHead>
-                  <TableHead>登录时间</TableHead>
-                  <TableHead>浏览器</TableHead>
-                  <TableHead>状态</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLogs.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell>{log.id}</TableCell>
-                    <TableCell>{log.admin_email}</TableCell>
-                    <TableCell>{log.ip_address}</TableCell>
-                    <TableCell>
-                      {format(new Date(log.login_time), "yyyy-MM-dd HH:mm:ss")}
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate">
-                      {log.user_agent}
-                    </TableCell>
-                    <TableCell>
-                      {log.status ? (
-                        <span className="text-green-500">成功</span>
-                      ) : (
-                        <span className="text-red-500">失败</span>
-                      )}
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">ID</TableHead>
+                    <TableHead className="w-[200px]">管理员邮箱</TableHead>
+                    <TableHead className="w-[150px]">IP地址</TableHead>
+                    <TableHead className="w-[180px]">登录时间</TableHead>
+                    <TableHead>浏览器</TableHead>
+                    <TableHead className="w-[80px] text-center">状态</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredLogs.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="text-center">{log.id}</TableCell>
+                      <TableCell className="font-medium">{log.admin_email}</TableCell>
+                      <TableCell className="font-mono text-sm">{log.ip_address}</TableCell>
+                      <TableCell className="text-sm">
+                        {format(new Date(log.login_time), "yyyy-MM-dd HH:mm:ss")}
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                        {log.user_agent}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {log.status ? (
+                          <span className="text-green-500 font-medium">成功</span>
+                        ) : (
+                          <span className="text-red-500 font-medium">失败</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
