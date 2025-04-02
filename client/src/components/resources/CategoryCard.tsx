@@ -4,16 +4,21 @@ import { IconDisplay } from '@/components/IconSelector';
 
 // 分类图标主题颜色映射
 const categoryColorMap: Record<string, { bg: string, textColor: string }> = {
-  'code': { bg: 'bg-blue-100', textColor: 'text-primary' },
-  'palette': { bg: 'bg-green-100', textColor: 'text-green-600' },
-  'dollar-sign': { bg: 'bg-amber-100', textColor: 'text-amber-600' },
-  'video': { bg: 'bg-red-100', textColor: 'text-red-600' },
-  'book-open': { bg: 'bg-purple-100', textColor: 'text-purple-600' },
-  'music': { bg: 'bg-indigo-100', textColor: 'text-indigo-600' },
-  'heart': { bg: 'bg-pink-100', textColor: 'text-pink-600' },
-  'monitor': { bg: 'bg-sky-100', textColor: 'text-sky-600' },
-  'camera': { bg: 'bg-orange-100', textColor: 'text-orange-600' },
-  'database': { bg: 'bg-teal-100', textColor: 'text-teal-600' }
+  'blue': { bg: 'bg-blue-100', textColor: 'text-blue-600' },
+  'green': { bg: 'bg-green-100', textColor: 'text-green-600' },
+  'amber': { bg: 'bg-amber-100', textColor: 'text-amber-600' },
+  'red': { bg: 'bg-red-100', textColor: 'text-red-600' },
+  'purple': { bg: 'bg-purple-100', textColor: 'text-purple-600' },
+  'indigo': { bg: 'bg-indigo-100', textColor: 'text-indigo-600' },
+  'pink': { bg: 'bg-pink-100', textColor: 'text-pink-600' },
+  'sky': { bg: 'bg-sky-100', textColor: 'text-sky-600' },
+  'orange': { bg: 'bg-orange-100', textColor: 'text-orange-600' },
+  'teal': { bg: 'bg-teal-100', textColor: 'text-teal-600' },
+  'emerald': { bg: 'bg-emerald-100', textColor: 'text-emerald-600' },
+  'rose': { bg: 'bg-rose-100', textColor: 'text-rose-600' },
+  'violet': { bg: 'bg-violet-100', textColor: 'text-violet-600' },
+  'cyan': { bg: 'bg-cyan-100', textColor: 'text-cyan-600' },
+  'fuchsia': { bg: 'bg-fuchsia-100', textColor: 'text-fuchsia-600' }
 };
 
 // 默认图标映射（基于分类名称关键词）
@@ -58,8 +63,11 @@ export default function CategoryCard({ category, count }: CategoryCardProps) {
     iconId = defaultIconMap[iconType];
   }
   
-  // 获取图标颜色
-  const colorKey = Object.keys(categoryColorMap).find(key => iconId.includes(key)) || 'code';
+  // 根据分类 ID 分配不同的颜色
+  const categoryColorKeys = Object.keys(categoryColorMap);
+  // 使用分类ID模以颜色数量，确保每个分类有固定的颜色
+  const colorIndex = category.id % categoryColorKeys.length;
+  const colorKey = categoryColorKeys[colorIndex];
   const { bg, textColor } = categoryColorMap[colorKey];
 
   return (
