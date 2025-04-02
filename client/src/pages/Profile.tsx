@@ -121,24 +121,40 @@ export default function Profile() {
   }
   
   // 处理头像选择
-  const handleAvatarSelect = (avatarUrl: string) => {
+  const handleAvatarSelect = async (avatarUrl: string) => {
     form.setValue("avatar", avatarUrl);
     setIsAvatarDialogOpen(false);
     
-    // 自动提交表单以更新头像，强制页面刷新以更新头像显示
-    const formValues = form.getValues();
-    updateProfileMutation.mutate(formValues, {
-      onSuccess: () => {
-        // 强制刷新state以确保头像更新
-        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-        
-        // 显示成功消息
-        toast({
-          title: "头像更新成功",
-          description: "您的头像已成功更新",
-        });
+    try {
+      // 1. 首先更新头像
+      const formValues = form.getValues();
+      await updateProfileMutation.mutateAsync(formValues);
+      
+      // 2. 强制刷新用户数据
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      
+      // 3. 临时直接更新本地状态(如果useAuth没有立即响应)
+      if (user) {
+        const updatedUser = { ...user, avatar: avatarUrl };
+        // 触发重新渲染
+        window.setTimeout(() => {
+          // 使用setTimeout确保状态更新在React下一个渲染周期
+          window.location.reload();
+        }, 100);
       }
-    });
+      
+      // 4. 显示成功消息
+      toast({
+        title: "头像更新成功",
+        description: "您的头像已成功更新",
+      });
+    } catch (error: any) {
+      toast({
+        title: "头像更新失败",
+        description: error.message || "更新头像时发生错误，请重试",
+        variant: "destructive",
+      });
+    }
   }
 
   // Handle loading state and authentication redirect
