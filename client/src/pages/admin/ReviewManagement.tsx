@@ -209,15 +209,27 @@ export default function ReviewManagement() {
               >
                 评价审核
               </TabsTrigger>
-              <div className="px-6 py-4">
-                <a href="/admin/resources" className="text-neutral-600 hover:text-primary">资源管理</a>
-              </div>
-              <div className="px-6 py-4">
-                <a href="/admin/users" className="text-neutral-600 hover:text-primary">用户管理</a>
-              </div>
-              <div className="px-6 py-4">
-                <a href="/admin/resource-requests" className="text-neutral-600 hover:text-primary">资源请求</a>
-              </div>
+              <TabsTrigger 
+                value="resources" 
+                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
+                onClick={() => window.location.href = "/admin/resources"}
+              >
+                资源管理
+              </TabsTrigger>
+              <TabsTrigger 
+                value="users" 
+                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
+                onClick={() => window.location.href = "/admin/users"}
+              >
+                用户管理
+              </TabsTrigger>
+              <TabsTrigger 
+                value="requests" 
+                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
+                onClick={() => window.location.href = "/admin/resource-requests"}
+              >
+                资源请求
+              </TabsTrigger>
             </TabsList>
           </div>
           
