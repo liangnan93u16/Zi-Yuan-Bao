@@ -45,7 +45,7 @@ export default function ResourceCard({ resource }: ResourceCardProps) {
         )}
         
         {isNew && !isHot && (
-          <span className="absolute top-3 left-3 bg-secondary text-white text-xs font-medium px-2 py-1 rounded">
+          <span className="absolute top-3 left-3 bg-blue-600 text-white text-xs font-medium px-2 py-1 rounded">
             新课
           </span>
         )}
