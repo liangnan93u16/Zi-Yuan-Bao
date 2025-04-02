@@ -431,6 +431,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin user creation endpoint
+  app.post('/api/admin/users', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      // Create schema for new user creation
+      const createUserSchema = z.object({
+        email: z.string().email("邮箱格式不正确"),
+        password: z.string().min(6, "密码长度至少6位"),
+        membership_type: z.string().default("regular"),
+        coins: z.number().default(0),
+        avatar: z.string().optional()
+      });
+
+      const validationResult = createUserSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({ message: '用户数据无效', errors: validationResult.error.format() });
+        return;
+      }
+
+      // Check if email already exists
+      const existingUser = await storage.getUserByEmail(validationResult.data.email);
+      if (existingUser) {
+        res.status(400).json({ message: '该邮箱已被注册' });
+        return;
+      }
+
+      // Hash password
+      const bcrypt = await import('bcrypt');
+      const hashedPassword = await bcrypt.hash(validationResult.data.password, 10);
+
+      // Create user with hashed password
+      const userData = {
+        ...validationResult.data,
+        password: hashedPassword
+      };
+
+      const newUser = await storage.createUser(userData);
+
+      // Remove password from response
+      const { password, ...userWithoutPassword } = newUser;
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      res.status(500).json({ message: '创建用户失败' });
+    }
+  });
+
   app.patch('/api/admin/users/:id', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
     try {
       const userId = parseInt(req.params.id);

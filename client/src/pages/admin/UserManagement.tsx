@@ -65,7 +65,6 @@ const userEditSchema = z.object({
 
 // User create form schema
 const userCreateSchema = z.object({
-  username: z.string().min(2, "用户名至少需要2个字符"),
   email: z.string().email("请输入有效的邮箱地址"),
   password: z.string().min(6, "密码至少需要6个字符"),
   membership_type: z.string().default("regular"),
@@ -106,7 +105,6 @@ export default function UserManagement() {
   const createForm = useForm<UserCreateValues>({
     resolver: zodResolver(userCreateSchema),
     defaultValues: {
-      username: "",
       email: "",
       password: "",
       membership_type: "regular",
@@ -322,20 +320,6 @@ export default function UserManagement() {
                   
                   <Form {...createForm}>
                     <form onSubmit={createForm.handleSubmit(onSubmitCreate)} className="space-y-4 py-4">
-                      <FormField
-                        control={createForm.control}
-                        name="username"
-                        render={({ field }) => (
-                          <FormItem className="grid grid-cols-4 items-center gap-4">
-                            <FormLabel className="text-right">用户名</FormLabel>
-                            <FormControl>
-                              <Input className="col-span-3" placeholder="输入用户名" {...field} />
-                            </FormControl>
-                            <FormMessage className="col-span-3 col-start-2" />
-                          </FormItem>
-                        )}
-                      />
-                      
                       <FormField
                         control={createForm.control}
                         name="email"
