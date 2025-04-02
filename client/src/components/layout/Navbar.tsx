@@ -125,6 +125,9 @@ export default function Navbar() {
                         <Link href="/admin/resources">资源管理</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem>
+                        <Link href="/admin/reviews">评论审核</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
                         <Link href="/admin/resource-requests">资源需求管理</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem>
@@ -216,6 +219,9 @@ export default function Navbar() {
                           <>
                             <Link href="/admin/resources" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
                                 资源管理
+                            </Link>
+                            <Link href="/admin/reviews" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                                评论审核
                             </Link>
                             <Link href="/admin/resource-requests" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
                                 资源需求管理

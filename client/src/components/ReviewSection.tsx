@@ -1,9 +1,16 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Star, StarHalf, Edit, Trash2 } from "lucide-react";
+import { Star, StarHalf, Edit, Trash2, Info, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -14,6 +21,8 @@ interface Review {
   resource_id: number;
   rating: number;
   content: string;
+  status: number; // 0: 待审核, 1: 已通过, 2: 已拒绝
+  admin_notes?: string;
   created_at: string;
   updated_at: string;
   user?: {
@@ -324,8 +333,35 @@ export default function ReviewSection({ resourceId }: ReviewSectionProps) {
             <div className="flex-1">
               <div className="flex justify-between items-center mb-1">
                 <div>
-                  <div className="font-medium">
+                  <div className="font-medium flex items-center gap-2">
                     {user.email?.split('@')[0] || "匿名用户"}
+                    {userReview.status !== 1 && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge className={
+                              userReview.status === 0 
+                                ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                                : "bg-red-100 text-red-800 hover:bg-red-200"
+                            }>
+                              {userReview.status === 0 ? "待审核" : "已拒绝"}
+                              {userReview.status === 0 
+                                ? <Info className="h-3 w-3 ml-1" />
+                                : <AlertTriangle className="h-3 w-3 ml-1" />
+                              }
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {userReview.status === 0 
+                              ? "评论正在等待管理员审核，暂时只有您能看到。" 
+                              : (userReview.admin_notes 
+                                  ? `评论未通过审核: ${userReview.admin_notes}` 
+                                  : "评论未通过审核。")
+                            }
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                   </div>
                   <div className="text-xs text-neutral-500">
                     {formatDate(userReview.updated_at)}
@@ -357,6 +393,11 @@ export default function ReviewSection({ resourceId }: ReviewSectionProps) {
                 </div>
               </div>
               <p className="text-neutral-700">{userReview.content}</p>
+              {userReview.status === 2 && userReview.admin_notes && (
+                <div className="mt-2 text-sm bg-red-50 p-2 rounded-md border border-red-200 text-red-700">
+                  <strong>管理员备注:</strong> {userReview.admin_notes}
+                </div>
+              )}
             </div>
           </div>
         </div>

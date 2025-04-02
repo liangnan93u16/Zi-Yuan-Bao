@@ -9,7 +9,8 @@ import {
   insertResourceRequestSchema,
   insertReviewSchema,
   loginSchema, 
-  registerSchema 
+  registerSchema,
+  type Review
 } from "@shared/schema";
 import { 
   login, 
@@ -629,11 +630,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(400).json({ message: '无效的资源ID' });
         return;
       }
-
+      
+      // 获取当前用户ID（如果已登录）
+      const userId = (req as any).session?.userId;
+      const isAdmin = (req as any).user?.membership_type === 'admin';
+      
+      // 获取全部评论
       const reviews = await storage.getReviewsByResource(resourceId);
       
+      // 根据用户权限过滤评论
+      const filteredReviews = reviews.filter(review => {
+        // 管理员可以看到所有评论
+        if (isAdmin) return true;
+        
+        // 自己的评论自己可以看到
+        if (userId && review.user_id === userId) return true;
+        
+        // 其他用户只能看到已审核通过的评论
+        return review.status === 1;
+      });
+      
       // Enrich reviews with user data (excluding password)
-      const enrichedReviews = await Promise.all(reviews.map(async (review) => {
+      const enrichedReviews = await Promise.all(filteredReviews.map(async (review) => {
         const user = await storage.getUser(review.user_id);
         if (user) {
           const { password, ...userWithoutPassword } = user;
@@ -753,6 +771,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting review:', error);
       res.status(500).json({ message: '删除评价失败' });
+    }
+  });
+  
+  // 获取所有待审核的评论（管理员专用）
+  app.get('/api/admin/reviews', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      // 获取所有评论
+      const allReviews = await storage.getAllReviews();
+      
+      // 丰富评论数据，添加用户信息和资源信息
+      const enrichedReviews = await Promise.all(allReviews.map(async (review: Review) => {
+        // 添加用户信息
+        const user = await storage.getUser(review.user_id);
+        let userInfo = null;
+        if (user) {
+          const { password, ...userWithoutPassword } = user;
+          userInfo = userWithoutPassword;
+        }
+        
+        // 添加资源信息
+        const resource = await storage.getResource(review.resource_id);
+        
+        return { 
+          ...review, 
+          user: userInfo,
+          resource: resource || null
+        };
+      }));
+      
+      res.json(enrichedReviews);
+    } catch (error) {
+      console.error('Error fetching reviews for admin:', error);
+      res.status(500).json({ message: '获取评论列表失败' });
+    }
+  });
+  
+  // 审核评论
+  app.patch('/api/admin/reviews/:id', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const reviewId = parseInt(req.params.id);
+      if (isNaN(reviewId)) {
+        res.status(400).json({ message: '无效的评论ID' });
+        return;
+      }
+      
+      const review = await storage.getReview(reviewId);
+      if (!review) {
+        res.status(404).json({ message: '评论不存在' });
+        return;
+      }
+      
+      // 验证请求数据
+      const reviewUpdateSchema = z.object({
+        status: z.number().min(0).max(2),
+        admin_notes: z.string().optional()
+      });
+      
+      const validationResult = reviewUpdateSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({ 
+          message: '数据格式错误', 
+          errors: validationResult.error.format() 
+        });
+        return;
+      }
+      
+      // 更新评论状态
+      const updatedReview = await storage.updateReview(reviewId, validationResult.data);
+      if (!updatedReview) {
+        res.status(404).json({ message: '评论不存在' });
+        return;
+      }
+      
+      res.json(updatedReview);
+    } catch (error) {
+      console.error('Error reviewing comment:', error);
+      res.status(500).json({ message: '审核评论失败' });
     }
   });
 

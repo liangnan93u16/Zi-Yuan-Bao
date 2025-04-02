@@ -9,6 +9,8 @@ export const reviews = pgTable("reviews", {
   user_id: integer("user_id").notNull(),
   rating: integer("rating").notNull(),
   content: text("content").notNull(),
+  status: integer("status").default(0).notNull(), // 0: 待审核, 1: 已通过, 2: 已拒绝
+  admin_notes: text("admin_notes"), // 管理员备注
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow()
 });
@@ -110,6 +112,8 @@ export const resourceRequests = pgTable("resource_requests", {
 // Insert schemas
 export const insertReviewSchema = createInsertSchema(reviews).omit({
   id: true,
+  status: true,
+  admin_notes: true,
   created_at: true,
   updated_at: true
 });
