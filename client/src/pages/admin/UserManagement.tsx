@@ -63,7 +63,17 @@ const userEditSchema = z.object({
   avatar: z.string().optional(),
 });
 
+// User create form schema
+const userCreateSchema = z.object({
+  username: z.string().min(2, "用户名至少需要2个字符"),
+  email: z.string().email("请输入有效的邮箱地址"),
+  password: z.string().min(6, "密码至少需要6个字符"),
+  membership_type: z.string().default("regular"),
+  coins: z.coerce.number().min(0, "积分数量不能为负数").default(0),
+});
+
 type UserEditValues = z.infer<typeof userEditSchema>;
+type UserCreateValues = z.infer<typeof userCreateSchema>;
 
 export default function UserManagement() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,6 +82,7 @@ export default function UserManagement() {
   const [page, setPage] = useState(1);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Fetch users
@@ -88,6 +99,18 @@ export default function UserManagement() {
       coins: 0,
       email: "",
       avatar: "",
+    },
+  });
+  
+  // Form setup for creating user
+  const createForm = useForm<UserCreateValues>({
+    resolver: zodResolver(userCreateSchema),
+    defaultValues: {
+      username: "",
+      email: "",
+      password: "",
+      membership_type: "regular",
+      coins: 0,
     },
   });
 
@@ -109,6 +132,29 @@ export default function UserManagement() {
       toast({
         title: "更新失败",
         description: `更新用户信息时出错: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Create user mutation
+  const createUserMutation = useMutation({
+    mutationFn: async (data: UserCreateValues) => {
+      return apiRequest("POST", "/api/admin/users", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      setIsAddDialogOpen(false);
+      createForm.reset();
+      toast({
+        title: "用户创建成功",
+        description: "新用户已成功创建。",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "创建失败",
+        description: `创建用户时出错: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -141,6 +187,10 @@ export default function UserManagement() {
     }
     
     updateUserMutation.mutate({ id: editingUser.id, ...apiData });
+  };
+  
+  const onSubmitCreate = (data: UserCreateValues) => {
+    createUserMutation.mutate(data);
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -256,7 +306,7 @@ export default function UserManagement() {
                 </Select>
               </div>
               
-              <Dialog>
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="gap-2">
                     <UserPlus className="h-4 w-4" /> 添加用户
@@ -270,36 +320,102 @@ export default function UserManagement() {
                     </DialogDescription>
                   </DialogHeader>
                   
-                  <div className="space-y-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <FormLabel className="text-right">用户名</FormLabel>
-                      <Input className="col-span-3" placeholder="输入用户名" />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <FormLabel className="text-right">邮箱</FormLabel>
-                      <Input className="col-span-3" placeholder="user@example.com" type="email" />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <FormLabel className="text-right">密码</FormLabel>
-                      <Input className="col-span-3" type="password" />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <FormLabel className="text-right">会员类型</FormLabel>
-                      <Select>
-                        <SelectTrigger className="col-span-3">
-                          <SelectValue placeholder="选择会员类型" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="regular">普通用户</SelectItem>
-                          <SelectItem value="vip">VIP会员</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <DialogFooter>
-                    <Button type="submit">创建用户</Button>
-                  </DialogFooter>
+                  <Form {...createForm}>
+                    <form onSubmit={createForm.handleSubmit(onSubmitCreate)} className="space-y-4 py-4">
+                      <FormField
+                        control={createForm.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem className="grid grid-cols-4 items-center gap-4">
+                            <FormLabel className="text-right">用户名</FormLabel>
+                            <FormControl>
+                              <Input className="col-span-3" placeholder="输入用户名" {...field} />
+                            </FormControl>
+                            <FormMessage className="col-span-3 col-start-2" />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={createForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem className="grid grid-cols-4 items-center gap-4">
+                            <FormLabel className="text-right">邮箱</FormLabel>
+                            <FormControl>
+                              <Input className="col-span-3" placeholder="user@example.com" type="email" {...field} />
+                            </FormControl>
+                            <FormMessage className="col-span-3 col-start-2" />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={createForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem className="grid grid-cols-4 items-center gap-4">
+                            <FormLabel className="text-right">密码</FormLabel>
+                            <FormControl>
+                              <Input className="col-span-3" type="password" {...field} />
+                            </FormControl>
+                            <FormMessage className="col-span-3 col-start-2" />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={createForm.control}
+                        name="membership_type"
+                        render={({ field }) => (
+                          <FormItem className="grid grid-cols-4 items-center gap-4">
+                            <FormLabel className="text-right">会员类型</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="col-span-3">
+                                  <SelectValue placeholder="选择会员类型" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="regular">普通用户</SelectItem>
+                                <SelectItem value="vip">VIP会员</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage className="col-span-3 col-start-2" />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={createForm.control}
+                        name="coins"
+                        render={({ field }) => (
+                          <FormItem className="grid grid-cols-4 items-center gap-4">
+                            <FormLabel className="text-right">积分</FormLabel>
+                            <FormControl>
+                              <Input 
+                                className="col-span-3" 
+                                type="number" 
+                                min={0}
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value))}
+                              />
+                            </FormControl>
+                            <FormMessage className="col-span-3 col-start-2" />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <DialogFooter>
+                        <Button 
+                          type="submit" 
+                          disabled={createUserMutation.isPending}
+                        >
+                          {createUserMutation.isPending ? "创建中..." : "创建用户"}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
                 </DialogContent>
               </Dialog>
             </div>
