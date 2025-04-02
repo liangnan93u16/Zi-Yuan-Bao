@@ -1,6 +1,7 @@
 import { 
   users, type User, type InsertUser, 
   categories, type Category, type InsertCategory,
+  authors, type Author, type InsertAuthor,
   resources, type Resource, type InsertResource,
   resourceRequests, type ResourceRequest, type InsertResourceRequest,
   reviews, type Review, type InsertReview,
@@ -25,6 +26,13 @@ export interface IStorage {
   updateCategory(id: number, data: Partial<Category>): Promise<Category | undefined>;
   deleteCategory(id: number): Promise<boolean>;
   getAllCategories(): Promise<Category[]>;
+  
+  // Author operations
+  getAuthor(id: number): Promise<Author | undefined>;
+  createAuthor(author: InsertAuthor): Promise<Author>;
+  updateAuthor(id: number, data: Partial<Author>): Promise<Author | undefined>;
+  deleteAuthor(id: number): Promise<boolean>;
+  getAllAuthors(): Promise<Author[]>;
 
   // Resource operations
   getResource(id: number): Promise<Resource | undefined>;
@@ -140,6 +148,44 @@ export class DatabaseStorage implements IStorage {
 
   async getAllCategories(): Promise<Category[]> {
     return await db.select().from(categories);
+  }
+  
+  // Author methods
+  async getAuthor(id: number): Promise<Author | undefined> {
+    const [author] = await db.select().from(authors).where(eq(authors.id, id));
+    return author || undefined;
+  }
+  
+  async createAuthor(insertAuthor: InsertAuthor): Promise<Author> {
+    const [author] = await db
+      .insert(authors)
+      .values(insertAuthor)
+      .returning();
+    return author;
+  }
+  
+  async updateAuthor(id: number, data: Partial<Author>): Promise<Author | undefined> {
+    const [author] = await db
+      .update(authors)
+      .set({ ...data, updated_at: new Date() })
+      .where(eq(authors.id, id))
+      .returning();
+    return author || undefined;
+  }
+  
+  async deleteAuthor(id: number): Promise<boolean> {
+    const result = await db
+      .delete(authors)
+      .where(eq(authors.id, id))
+      .returning({ id: authors.id });
+    return result.length > 0;
+  }
+  
+  async getAllAuthors(): Promise<Author[]> {
+    return await db
+      .select()
+      .from(authors)
+      .orderBy(authors.name);
   }
 
   async getResource(id: number): Promise<Resource | undefined> {
@@ -426,6 +472,41 @@ export class DatabaseStorage implements IStorage {
           sort_order: cat.sort_order
         });
       }
+    }
+    
+    // Check if we already have authors
+    try {
+      const authorCount = await db.select({ count: sql`COUNT(*)`.mapWith(Number) }).from(authors);
+      if (authorCount[0]?.count === 0) {
+        // Create default authors
+        const defaultAuthors = [
+          { 
+            name: "陈开发", 
+            job_title: "资深前端工程师", 
+            bio: "拥有10年React开发经验，曾任职于多家知名互联网公司。",
+            avatar: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=facearea&facepad=2&w=300&h=300&q=80"
+          },
+          { 
+            name: "李数据", 
+            job_title: "数据科学家", 
+            bio: "Python专家，在大数据和机器学习领域有丰富经验，曾参与多个行业领先的数据分析项目。",
+            avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=facearea&facepad=2&w=300&h=300&q=80"
+          },
+          { 
+            name: "王设计", 
+            job_title: "UI/UX设计总监", 
+            bio: "拥有超过8年的设计经验，专注于用户体验和界面设计，擅长设计系统建立和设计团队管理。",
+            avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=facearea&facepad=2&w=300&h=300&q=80"
+          }
+        ];
+
+        for (const author of defaultAuthors) {
+          await this.createAuthor(author);
+        }
+      }
+    } catch (error) {
+      console.error("Error creating default authors:", error);
+      // Authors table might not exist yet, which is fine during initial setup
     }
   }
 }

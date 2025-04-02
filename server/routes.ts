@@ -8,10 +8,20 @@ import {
   insertResourceSchema, 
   insertResourceRequestSchema,
   insertReviewSchema,
+  insertAuthorSchema,
   loginSchema, 
   registerSchema,
-  type Review
+  type Review,
+  type Author,
+  type Resource,
+  type Category
 } from "@shared/schema";
+
+// 扩展Resource类型的接口，允许添加category和author属性
+interface EnrichedResource extends Resource {
+  category?: Category;
+  author?: Author;
+}
 import { 
   login, 
   register, 
@@ -215,14 +225,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const result = await storage.getAllResources(filters);
       
-      // Enrich resources with category data
+
+      // Enrich resources with category and author data
       const enrichedResources = await Promise.all(result.resources.map(async (resource) => {
+        const enrichedResource: EnrichedResource = { ...resource };
+        
+        // 获取分类信息
         if (resource.category_id) {
           const category = await storage.getCategory(resource.category_id);
-          return { ...resource, category };
+          if (category) {
+            enrichedResource.category = category;
+          }
         }
-        return resource;
+        
+        // 获取作者信息
+        if (resource.author_id) {
+          const author = await storage.getAuthor(resource.author_id);
+          if (author) {
+            enrichedResource.author = author;
+          }
+        }
+        
+        return enrichedResource;
       }));
+
+
+
+
+
+
+
 
       res.json({ ...result, resources: enrichedResources });
     } catch (error) {
@@ -245,11 +277,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      // Include category data if available
-      let result: any = resource;
+      // Include category and author data if available
+      const result: EnrichedResource = { ...resource };
+      
+      // 获取分类信息
       if (resource.category_id) {
         const category = await storage.getCategory(resource.category_id);
-        result = { ...resource, category };
+        if (category) {
+          result.category = category;
+        }
+      }
+      
+      // 获取作者信息
+      if (resource.author_id) {
+        const author = await storage.getAuthor(resource.author_id);
+        if (author) {
+          result.author = author;
+        }
       }
 
       res.json(result);
@@ -354,11 +398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.query.status) {
         filters.status = parseInt(req.query.status as string);
       }
-
-      if (req.query.is_free !== undefined) {
-        filters.is_free = req.query.is_free === 'true';
-      }
-
+      
       if (req.query.search) {
         filters.search = req.query.search as string;
       }
@@ -370,13 +410,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const result = await storage.getAllResources(filters);
       
-      // Enrich resources with category data
+      // Enrich resources with category and author data
       const enrichedResources = await Promise.all(result.resources.map(async (resource) => {
+        const enrichedResource: EnrichedResource = { ...resource };
+        
+        // 获取分类信息
         if (resource.category_id) {
           const category = await storage.getCategory(resource.category_id);
-          return { ...resource, category };
+          if (category) {
+            enrichedResource.category = category;
+          }
         }
-        return resource;
+        
+        // 获取作者信息
+        if (resource.author_id) {
+          const author = await storage.getAuthor(resource.author_id);
+          if (author) {
+            enrichedResource.author = author;
+          }
+        }
+        
+        return enrichedResource;
       }));
 
       res.json({ ...result, resources: enrichedResources });
@@ -969,6 +1023,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error reviewing comment:', error);
       res.status(500).json({ message: '审核评论失败' });
+    }
+  });
+
+  // 作者管理路由
+  // 获取所有作者
+  app.get('/api/authors', async (req, res) => {
+    try {
+      const authors = await storage.getAllAuthors();
+      res.json(authors);
+    } catch (error) {
+      console.error('Error fetching authors:', error);
+      res.status(500).json({ message: '获取作者列表失败' });
+    }
+  });
+
+  // 获取单个作者信息
+  app.get('/api/authors/:id', async (req, res) => {
+    try {
+      const authorId = parseInt(req.params.id);
+      if (isNaN(authorId)) {
+        res.status(400).json({ message: '无效的作者ID' });
+        return;
+      }
+
+      const author = await storage.getAuthor(authorId);
+      if (!author) {
+        res.status(404).json({ message: '作者不存在' });
+        return;
+      }
+
+      res.json(author);
+    } catch (error) {
+      console.error('Error fetching author:', error);
+      res.status(500).json({ message: '获取作者详情失败' });
+    }
+  });
+
+  // 创建作者（仅管理员）
+  app.post('/api/authors', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const validationResult = insertAuthorSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({ message: '作者数据无效', errors: validationResult.error.format() });
+        return;
+      }
+
+      const author = await storage.createAuthor(validationResult.data);
+      res.status(201).json(author);
+    } catch (error) {
+      console.error('Error creating author:', error);
+      res.status(500).json({ message: '创建作者失败' });
+    }
+  });
+
+  // 更新作者信息（仅管理员）
+  app.patch('/api/authors/:id', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const authorId = parseInt(req.params.id);
+      if (isNaN(authorId)) {
+        res.status(400).json({ message: '无效的作者ID' });
+        return;
+      }
+
+      const validationResult = insertAuthorSchema.partial().safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({ message: '作者数据无效', errors: validationResult.error.format() });
+        return;
+      }
+
+      const updatedAuthor = await storage.updateAuthor(authorId, validationResult.data);
+      if (!updatedAuthor) {
+        res.status(404).json({ message: '作者不存在' });
+        return;
+      }
+
+      res.json(updatedAuthor);
+    } catch (error) {
+      console.error('Error updating author:', error);
+      res.status(500).json({ message: '更新作者失败' });
+    }
+  });
+
+  // 删除作者（仅管理员）
+  app.delete('/api/authors/:id', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const authorId = parseInt(req.params.id);
+      if (isNaN(authorId)) {
+        res.status(400).json({ message: '无效的作者ID' });
+        return;
+      }
+
+      const deleted = await storage.deleteAuthor(authorId);
+      if (!deleted) {
+        res.status(404).json({ message: '作者不存在' });
+        return;
+      }
+
+      res.status(204).end();
+    } catch (error) {
+      console.error('Error deleting author:', error);
+      res.status(500).json({ message: '删除作者失败' });
     }
   });
 
