@@ -245,7 +245,7 @@ export function IconDisplay({ iconId, className = "h-5 w-5" }: IconDisplayProps)
   
   return (
     <div 
-      className={className}
+      className={`flex items-center justify-center ${className}`}
       dangerouslySetInnerHTML={{ __html: icon.svg }}
     />
   );

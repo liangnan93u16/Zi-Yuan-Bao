@@ -66,7 +66,7 @@ export default function CategoryCard({ category, count }: CategoryCardProps) {
     <Link href={`/resources?category=${category.id}`}>
       <a className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition flex flex-col items-center justify-center text-center">
         <div className={`w-12 h-12 ${bg} rounded-full flex items-center justify-center mb-3`}>
-          <div className={textColor}>
+          <div className={`${textColor} flex items-center justify-center`}>
             <IconDisplay iconId={iconId} className="h-5 w-5" />
           </div>
         </div>
