@@ -135,6 +135,37 @@ export default function UserManagement() {
     },
   });
   
+  // Toggle user status mutation
+  const toggleUserStatusMutation = useMutation({
+    mutationFn: async ({ userId, isActive }: { userId: number, isActive: boolean }) => {
+      // If user is active, set the membership_expire_time to yesterday to disable
+      // If user is disabled, set the membership_expire_time to null to enable
+      const now = new Date();
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      const userData = {
+        membership_expire_time: isActive ? yesterday.toISOString() : null
+      };
+      
+      return apiRequest("PATCH", `/api/admin/users/${userId}`, userData);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({
+        title: variables.isActive ? "用户已禁用" : "用户已启用",
+        description: variables.isActive ? "用户已成功禁用。" : "用户已成功启用。",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "操作失败",
+        description: `更改用户状态时出错: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (data: UserCreateValues) => {
@@ -499,6 +530,8 @@ export default function UserManagement() {
                             <Button
                               variant="ghost"
                               className={isActive ? "text-red-600 hover:text-red-800 h-auto p-0" : "text-green-600 hover:text-green-800 h-auto p-0"}
+                              onClick={() => toggleUserStatusMutation.mutate({ userId: user.id, isActive: isActive })}
+                              disabled={toggleUserStatusMutation.isPending}
                             >
                               {isActive ? '禁用' : '启用'}
                             </Button>
