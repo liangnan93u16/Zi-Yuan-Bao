@@ -178,84 +178,67 @@ export default function Profile() {
         <TabsContent value="overview">
           <Card>
             <CardHeader>
-              <CardTitle>基本信息</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                基本信息
+                <Badge variant="outline" className="bg-green-50 text-green-600 flex items-center gap-1 font-normal">
+                  <CheckCircle2 className="h-3 w-3" />
+                  账号状态正常
+                </Badge>
+              </CardTitle>
               <CardDescription>
                 查看您的账号基本信息
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-6">
-                <div className="sm:col-span-3 flex justify-center sm:justify-start">
+              <div className="mb-8">
+                <div className="flex justify-center mb-6">
                   <Avatar className="h-24 w-24">
                     <AvatarImage src={user?.avatar || ""} alt={user?.email} />
                     <AvatarFallback className="text-2xl">{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                 </div>
                 
-                <div className="sm:col-span-9 space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-y-8 gap-x-12">
+                  <div>
+                    <h3 className="text-base font-medium text-neutral-500 mb-1">
+                      邮箱
+                    </h3>
+                    <p className="text-neutral-800">
+                      {user?.email}
+                      {user?.role === "admin" && (
+                        <Badge variant="secondary" className="ml-2 flex items-center gap-1">
+                          <Shield className="h-3 w-3" />
+                          管理员
+                        </Badge>
+                      )}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-base font-medium text-neutral-500 mb-1">会员状态</h3>
                     <div>
-                      <h3 className="text-lg font-medium flex items-center gap-2 mb-1">
-                        邮箱
-                      </h3>
-                      <p className="text-neutral-700">
-                        {user?.email}
-                        {user?.role === "admin" && (
-                          <Badge variant="secondary" className="ml-2 flex items-center gap-1">
-                            <Shield className="h-3 w-3" />
-                            管理员
-                          </Badge>
-                        )}
-                      </p>
+                      {getMembershipBadge()}
                     </div>
-                    
-                    <div>
-                      <h3 className="text-lg font-medium mb-1">会员状态</h3>
-                      <div className="flex items-center">
-                        {getMembershipBadge()}
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h3 className="text-lg font-medium mb-1">注册时间</h3>
-                      <p className="text-neutral-700 flex items-center gap-1">
-                        <Clock className="h-4 w-4 opacity-70" />
-                        {user?.created_at ? formatExpirationDate(user.created_at) : "未知"}
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <h3 className="text-lg font-medium mb-1">积分</h3>
-                      <p className="text-neutral-700 flex items-center gap-1">
-                        <CoinsIcon className="h-4 w-4 opacity-70" />
-                        {user?.coins || 0}
-                      </p>
-                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-base font-medium text-neutral-500 mb-1">注册时间</h3>
+                    <p className="text-neutral-800 flex items-center gap-1">
+                      <Clock className="h-4 w-4 opacity-70" />
+                      {user?.created_at ? formatExpirationDate(user.created_at) : "未知"}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-base font-medium text-neutral-500 mb-1">积分</h3>
+                    <p className="text-neutral-800 flex items-center gap-1">
+                      <CoinsIcon className="h-4 w-4 opacity-70" />
+                      {user?.coins || 0}
+                    </p>
                   </div>
                 </div>
               </div>
-              
-              <Separator />
-              
-              <div>
-                <h4 className="font-medium mb-2">账号状态</h4>
-                <Alert variant="default" className="bg-green-50">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <AlertTitle>账号状态正常</AlertTitle>
-                  <AlertDescription>
-                    您的账号状态良好，可以正常使用所有功能。
-                  </AlertDescription>
-                </Alert>
-              </div>
             </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button 
-                variant="outline" 
-                onClick={() => setActiveTab("settings")}
-              >
-                编辑资料
-              </Button>
-            </CardFooter>
           </Card>
         </TabsContent>
 
