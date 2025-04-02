@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Search, ShoppingCart, Menu } from "lucide-react";
+import { Search, ShoppingCart, Menu, User, ShoppingBag, LogOut, BookOpen, Edit, CheckCircle, ClipboardCheck, Users, History, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -113,29 +113,50 @@ export default function Navbar() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem>
-                    <Link href="/profile">个人中心</Link>
+                    <Link href="/profile" className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      个人中心
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <Link href="/downloads">我的购买</Link>
+                    <Link href="/downloads" className="flex items-center gap-2">
+                      <ShoppingBag className="h-4 w-4" />
+                      我的购买
+                    </Link>
                   </DropdownMenuItem>
                   {user.role === "admin" && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem>
-                        <Link href="/admin/resources">资源管理</Link>
+                        <Link href="/admin/resources" className="flex items-center gap-2">
+                          <BookOpen className="h-4 w-4" />
+                          资源管理
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem>
-                        <Link href="/admin/reviews">评论审核</Link>
+                        <Link href="/admin/reviews" className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4" />
+                          评论审核
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem>
-                        <Link href="/admin/resource-requests">资源需求管理</Link>
+                        <Link href="/admin/resource-requests" className="flex items-center gap-2">
+                          <ClipboardCheck className="h-4 w-4" />
+                          资源需求管理
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem>
-                        <Link href="/admin/users">会员续费</Link>
+                        <Link href="/admin/users" className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          会员续费
+                        </Link>
                       </DropdownMenuItem>
                       {user.email === "1034936667@qq.com" && (
                         <DropdownMenuItem>
-                          <Link href="/admin/login-logs">登录日志</Link>
+                          <Link href="/admin/login-logs" className="flex items-center gap-2">
+                            <History className="h-4 w-4" />
+                            登录日志
+                          </Link>
                         </DropdownMenuItem>
                       )}
                     </>
@@ -144,18 +165,23 @@ export default function Navbar() {
                     <>
                       <DropdownMenuSeparator />
                       {user.role !== "admin" ? (
-                        <DropdownMenuItem onClick={() => elevateToAdmin()}>
+                        <DropdownMenuItem onClick={() => elevateToAdmin()} className="flex items-center gap-2">
+                          <Shield className="h-4 w-4" />
                           升级为管理员
                         </DropdownMenuItem>
                       ) : (
-                        <DropdownMenuItem disabled>
+                        <DropdownMenuItem disabled className="flex items-center gap-2">
+                          <Shield className="h-4 w-4" />
                           已是管理员
                         </DropdownMenuItem>
                       )}
                     </>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => logout()}>退出登录</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => logout()} className="flex items-center gap-2">
+                    <LogOut className="h-4 w-4" />
+                    退出登录
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
@@ -214,28 +240,35 @@ export default function Navbar() {
                   {user ? (
                     <>
                       <div className="border-t border-neutral-200 pt-4 mt-4">
-                        <Link href="/profile" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                        <Link href="/profile" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                            <User className="h-4 w-4" />
                             个人中心
                         </Link>
-                        <Link href="/downloads" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                        <Link href="/downloads" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                            <ShoppingBag className="h-4 w-4" />
                             我的购买
                         </Link>
                         {user.role === "admin" && (
                           <>
-                            <Link href="/admin/resources" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                            <Link href="/admin/resources" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                                <BookOpen className="h-4 w-4" />
                                 资源管理
                             </Link>
-                            <Link href="/admin/reviews" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                            <Link href="/admin/reviews" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                                <CheckCircle className="h-4 w-4" />
                                 评论审核
                             </Link>
-                            <Link href="/admin/resource-requests" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                            <Link href="/admin/resource-requests" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                                <ClipboardCheck className="h-4 w-4" />
                                 资源需求管理
                             </Link>
-                            <Link href="/admin/users" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                            <Link href="/admin/users" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                                <Users className="h-4 w-4" />
                                 会员续费
                             </Link>
                             {user.email === "1034936667@qq.com" && (
-                              <Link href="/admin/login-logs" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                              <Link href="/admin/login-logs" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                                  <History className="h-4 w-4" />
                                   登录日志
                               </Link>
                             )}
@@ -245,30 +278,34 @@ export default function Navbar() {
                           user.role !== "admin" ? (
                             <button 
                               onClick={() => elevateToAdmin()}
-                              className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-600 hover:bg-neutral-50"
+                              className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-600 hover:bg-neutral-50"
                             >
+                              <Shield className="h-4 w-4" />
                               升级为管理员
                             </button>
                           ) : (
                             <button 
                               disabled
-                              className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-400"
+                              className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-400"
                             >
+                              <Shield className="h-4 w-4" />
                               已是管理员
                             </button>
                           )
                         )}
                         <button 
                           onClick={() => logout()}
-                          className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-600 hover:bg-neutral-50"
+                          className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-600 hover:bg-neutral-50"
                         >
+                          <LogOut className="h-4 w-4" />
                           退出登录
                         </button>
                       </div>
                     </>
                   ) : (
                     <div className="border-t border-neutral-200 pt-4 mt-4">
-                      <Link href="/login" className="px-3 py-2 rounded-md text-base font-medium text-primary hover:bg-neutral-50">
+                      <Link href="/login" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-primary hover:bg-neutral-50">
+                          <User className="h-4 w-4" />
                           登录 / 注册
                       </Link>
                     </div>
