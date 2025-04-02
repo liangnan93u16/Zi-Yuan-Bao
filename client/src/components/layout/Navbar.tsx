@@ -153,7 +153,7 @@ export default function Navbar() {
                       <DropdownMenuItem>
                         <Link href="/admin/users" className="flex items-center gap-2">
                           <Users className="h-4 w-4" />
-                          会员续费
+                          会员管理
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem>
@@ -280,7 +280,7 @@ export default function Navbar() {
                             </Link>
                             <Link href="/admin/users" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
                                 <Users className="h-4 w-4" />
-                                会员续费
+                                会员管理
                             </Link>
                             <Link href="/admin/authors" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
                                 <Users className="h-4 w-4" />

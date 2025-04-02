@@ -259,7 +259,7 @@ export default function UserManagement() {
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
         <div className="border-b border-neutral-200 px-6 py-4">
-          <h2 className="text-xl font-bold">会员续费</h2>
+          <h2 className="text-xl font-bold">会员管理</h2>
         </div>
         
         <Tabs defaultValue="users">
