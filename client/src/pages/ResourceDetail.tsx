@@ -298,20 +298,16 @@ export default function ResourceDetail() {
           
           <div className="md:w-1/3 bg-neutral-50 p-6 md:p-8 border-t md:border-t-0 md:border-l border-neutral-200">
             <h3 className="font-semibold text-lg mb-3">关于作者</h3>
-            {resource.author ? (
-              <div className="flex">
-                <Avatar className="h-12 w-12 mr-4">
-                  <AvatarImage src={resource.author.avatar || ''} />
-                  <AvatarFallback>{resource.author.name?.[0] || '作'}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="font-medium">{resource.author.name}</div>
-                  <p className="text-sm text-neutral-600">{resource.author.bio || '无作者简介'}</p>
-                </div>
+            <div className="flex">
+              <Avatar className="h-12 w-12 mr-4">
+                <AvatarImage src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=facearea&facepad=2&w=300&h=300&q=80" />
+                <AvatarFallback>作者</AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="font-medium">陈开发</div>
+                <p className="text-sm text-neutral-600">资深前端工程师，拥有10年React开发经验，曾任职于多家知名互联网公司。</p>
               </div>
-            ) : (
-              <div className="text-neutral-600 text-sm">暂无作者信息</div>
-            )}
+            </div>
           </div>
         </div>
       </div>
