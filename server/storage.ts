@@ -211,20 +211,31 @@ export class DatabaseStorage implements IStorage {
     const total = countResult?.count || 0;
     
     // Get resources with pagination
-    const baseQuery = db
-      .select()
-      .from(resources)
-      .where(whereClause || sql`TRUE`)
-      .orderBy(desc(resources.created_at));
+    let resourcesList: Resource[] = [];
     
-    // Apply pagination if specified
-    let finalQuery = baseQuery;
-    if (filters.page !== undefined && filters.limit !== undefined) {
-      const offset = (filters.page - 1) * filters.limit;
-      finalQuery = baseQuery.limit(filters.limit).offset(offset);
+    try {
+      if (filters.page !== undefined && filters.limit !== undefined) {
+        const offset = (filters.page - 1) * filters.limit;
+        // 使用单个查询处理分页
+        resourcesList = await db
+          .select()
+          .from(resources)
+          .where(whereClause || sql`TRUE`)
+          .orderBy(desc(resources.created_at))
+          .limit(filters.limit)
+          .offset(offset);
+      } else {
+        // 无分页查询
+        resourcesList = await db
+          .select()
+          .from(resources)
+          .where(whereClause || sql`TRUE`)
+          .orderBy(desc(resources.created_at));
+      }
+    } catch (error) {
+      console.error("Error in getAllResources:", error);
+      resourcesList = [];
     }
-    
-    const resourcesList = await finalQuery;
     
     return { resources: resourcesList, total };
   }
@@ -361,22 +372,25 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getAdminLoginLogs(adminEmail?: string, limit?: number): Promise<AdminLoginLog[]> {
-    let query = db
-      .select()
-      .from(adminLoginLogs)
-      .orderBy(desc(adminLoginLogs.login_time));
-    
-    // 如果指定了管理员邮箱，筛选该管理员的记录
-    if (adminEmail) {
-      query = query.where(eq(adminLoginLogs.admin_email, adminEmail));
+    try {
+      // 创建一个更直接的查询，避免TypeScript警告
+      const baseQuery = db.select().from(adminLoginLogs);
+      
+      // 根据条件构建查询
+      if (adminEmail) {
+        const filteredQuery = baseQuery.where(eq(adminLoginLogs.admin_email, adminEmail));
+        const logs = await (limit ? filteredQuery.limit(limit) : filteredQuery)
+          .orderBy(desc(adminLoginLogs.login_time));
+        return logs;
+      } else {
+        const logs = await (limit ? baseQuery.limit(limit) : baseQuery)
+          .orderBy(desc(adminLoginLogs.login_time));
+        return logs;
+      }
+    } catch (error) {
+      console.error("Error in getAdminLoginLogs:", error);
+      return [];  // 错误时返回空数组而不是让错误冒泡
     }
-    
-    // 如果指定了限制数量，应用限制
-    if (limit) {
-      query = query.limit(limit);
-    }
-    
-    return await query;
   }
 
   // Initialize with default data if needed
