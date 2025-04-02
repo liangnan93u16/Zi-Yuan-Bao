@@ -58,7 +58,7 @@ import { z } from "zod";
 const userEditSchema = z.object({
   membership_type: z.string().optional(),
   membership_expire_time: z.string().nullable().optional(),
-  coins: z.coerce.number().min(0, "金币数量不能为负数").optional(),
+  coins: z.coerce.number().min(0, "积分数量不能为负数").optional(),
   email: z.string().email("请输入有效的邮箱地址").optional(),
   avatar: z.string().optional(),
 });
@@ -310,7 +310,7 @@ export default function UserManagement() {
                   <TableRow>
                     <TableHead>用户信息</TableHead>
                     <TableHead>会员类型</TableHead>
-                    <TableHead>金币</TableHead>
+                    <TableHead>积分</TableHead>
                     <TableHead>注册时间</TableHead>
                     <TableHead>状态</TableHead>
                     <TableHead className="text-right">操作</TableHead>
@@ -517,7 +517,7 @@ export default function UserManagement() {
                       name="coins"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>金币数量</FormLabel>
+                          <FormLabel>积分数量</FormLabel>
                           <FormControl>
                             <Input 
                               {...field} 
