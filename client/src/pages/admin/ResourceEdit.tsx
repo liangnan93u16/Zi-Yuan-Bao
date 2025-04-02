@@ -43,6 +43,7 @@ const resourceFormSchema = z.object({
   subtitle: z.string().optional(),
   cover_image: z.string().optional(),
   category_id: z.coerce.number().optional(),
+  author_id: z.coerce.number().optional(), // 作者ID
   price: z.coerce.number().min(0, "价格不能为负数").default(0),
   video_url: z.string().optional(),
   video_duration: z.coerce.number().optional(),
@@ -79,6 +80,11 @@ export default function ResourceEdit() {
   const { data: categories, isLoading: isCategoriesLoading } = useQuery({
     queryKey: ['/api/categories'],
   }) as { data: any[], isLoading: boolean };
+  
+  // Fetch authors
+  const { data: authors, isLoading: isAuthorsLoading } = useQuery({
+    queryKey: ['/api/authors'],
+  }) as { data: any[], isLoading: boolean };
 
   // Form setup
   const form = useForm<ResourceFormValues>({
@@ -113,6 +119,7 @@ export default function ResourceEdit() {
         subtitle: resource.subtitle || "",
         cover_image: resource.cover_image || "",
         category_id: resource.category_id,
+        author_id: resource.author_id,
         price: numericPrice,
         video_url: resource.video_url || "",
         video_duration: resource.video_duration || 0,
@@ -285,6 +292,43 @@ export default function ResourceEdit() {
                                   {category.name}
                                 </SelectItem>
                               )) : <SelectItem value="no_categories" disabled>没有可用分类</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="author_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>资源作者</FormLabel>
+                        <Select 
+                          onValueChange={(value) => field.onChange(parseInt(value))}
+                          value={field.value?.toString()}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="选择作者" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {isAuthorsLoading ? (
+                              <SelectItem value="loading" disabled>
+                                加载作者中...
+                              </SelectItem>
+                            ) : (
+                              Array.isArray(authors) ? authors.map((author: any) => (
+                                <SelectItem 
+                                  key={author.id} 
+                                  value={author.id.toString()}
+                                >
+                                  {author.name} - {author.title}
+                                </SelectItem>
+                              )) : <SelectItem value="no_authors" disabled>没有可用作者</SelectItem>
                             )}
                           </SelectContent>
                         </Select>
