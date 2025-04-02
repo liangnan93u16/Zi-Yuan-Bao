@@ -190,15 +190,15 @@ export default function Profile() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="mb-8">
-                <div className="flex justify-center mb-6">
+              <div className="flex flex-col sm:flex-row gap-8 mb-4">
+                <div className="flex justify-center sm:justify-start">
                   <Avatar className="h-24 w-24">
                     <AvatarImage src={user?.avatar || ""} alt={user?.email} />
                     <AvatarFallback className="text-2xl">{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-y-8 gap-x-12">
+                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-y-6">
                   <div>
                     <h3 className="text-base font-medium text-neutral-500 mb-1">
                       邮箱
