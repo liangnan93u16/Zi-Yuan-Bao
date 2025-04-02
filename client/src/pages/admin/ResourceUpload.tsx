@@ -103,7 +103,13 @@ export default function ResourceUpload() {
   // Create resource mutation
   const createResourceMutation = useMutation({
     mutationFn: async (data: ResourceFormValues) => {
-      return apiRequest("POST", "/api/resources", data);
+      // 将数字转为字符串以匹配后端期望格式
+      const formattedData = {
+        ...data,
+        price: data.price?.toString(),
+        video_size: data.video_size?.toString()
+      };
+      return apiRequest("POST", "/api/resources", formattedData);
     },
     onSuccess: () => {
       toast({
