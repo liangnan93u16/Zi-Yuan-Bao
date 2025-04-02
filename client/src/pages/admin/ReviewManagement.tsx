@@ -37,7 +37,7 @@ const formatDate = (dateString: string) => {
 };
 
 export default function ReviewManagement() {
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("0");
   const [selectedReview, setSelectedReview] = useState<any>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
@@ -137,7 +137,6 @@ export default function ReviewManagement() {
     reviewMutation.mutate({
       id: selectedReview.id,
       status: 1,
-      admin_notes: adminNotes
     });
   };
 
@@ -146,7 +145,6 @@ export default function ReviewManagement() {
     reviewMutation.mutate({
       id: selectedReview.id,
       status: 2,
-      admin_notes: adminNotes
     });
   };
 
@@ -412,19 +410,7 @@ export default function ReviewManagement() {
               </div>
             </div>
             
-            <div>
-              <label htmlFor="admin-notes" className="block text-sm font-medium mb-1">
-                管理员备注（可选）
-              </label>
-              <Textarea
-                id="admin-notes"
-                value={adminNotes}
-                onChange={(e) => setAdminNotes(e.target.value)}
-                placeholder="输入备注内容..."
-                className="resize-none"
-                rows={3}
-              />
-            </div>
+
           </div>
           
           <DialogFooter>
@@ -465,24 +451,10 @@ export default function ReviewManagement() {
               </div>
             </div>
             
-            <div>
-              <label htmlFor="admin-notes" className="block text-sm font-medium mb-1">
-                拒绝原因（可选）
-              </label>
-              <Textarea
-                id="admin-notes"
-                value={adminNotes}
-                onChange={(e) => setAdminNotes(e.target.value)}
-                placeholder="输入拒绝原因..."
-                className="resize-none"
-                rows={3}
-              />
-            </div>
-            
             <div className="flex items-start">
               <AlertTriangle className="text-amber-500 h-5 w-5 mr-2 mt-0.5" />
               <div className="text-sm text-neutral-600">
-                请确保拒绝理由充分。被拒绝的评论将只对评论作者和管理员可见。
+                被拒绝的评论将只对评论作者和管理员可见。
               </div>
             </div>
           </div>
