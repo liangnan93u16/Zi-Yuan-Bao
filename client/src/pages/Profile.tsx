@@ -184,37 +184,53 @@ export default function Profile() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={user?.avatar || ""} alt={user?.email} />
-                  <AvatarFallback className="text-2xl">{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
-                </Avatar>
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-6">
+                <div className="sm:col-span-3 flex justify-center sm:justify-start">
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage src={user?.avatar || ""} alt={user?.email} />
+                    <AvatarFallback className="text-2xl">{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </div>
                 
-                <div className="space-y-3 text-center sm:text-left">
-                  <div>
-                    <h3 className="text-lg font-medium flex items-center justify-center sm:justify-start gap-2">
-                      {user?.email}
-                      {user?.role === "admin" && (
-                        <Badge variant="secondary" className="ml-2 flex items-center gap-1">
-                          <Shield className="h-3 w-3" />
-                          管理员
-                        </Badge>
-                      )}
-                    </h3>
-                    <div className="flex items-center justify-center sm:justify-start mt-1">
-                      {getMembershipBadge()}
+                <div className="sm:col-span-9 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="text-lg font-medium flex items-center gap-2 mb-1">
+                        邮箱
+                      </h3>
+                      <p className="text-neutral-700">
+                        {user?.email}
+                        {user?.role === "admin" && (
+                          <Badge variant="secondary" className="ml-2 flex items-center gap-1">
+                            <Shield className="h-3 w-3" />
+                            管理员
+                          </Badge>
+                        )}
+                      </p>
                     </div>
-                  </div>
-                  
-                  <div className="text-sm text-neutral-600">
-                    <p className="flex items-center justify-center sm:justify-start gap-1 mb-1">
-                      <Clock className="h-4 w-4 opacity-70" />
-                      注册时间: {user?.created_at ? formatExpirationDate(user.created_at) : "未知"}
-                    </p>
-                    <p className="flex items-center justify-center sm:justify-start gap-1">
-                      <CoinsIcon className="h-4 w-4 opacity-70" />
-                      积分: {user?.coins || 0}
-                    </p>
+                    
+                    <div>
+                      <h3 className="text-lg font-medium mb-1">会员状态</h3>
+                      <div className="flex items-center">
+                        {getMembershipBadge()}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-lg font-medium mb-1">注册时间</h3>
+                      <p className="text-neutral-700 flex items-center gap-1">
+                        <Clock className="h-4 w-4 opacity-70" />
+                        {user?.created_at ? formatExpirationDate(user.created_at) : "未知"}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-lg font-medium mb-1">积分</h3>
+                      <p className="text-neutral-700 flex items-center gap-1">
+                        <CoinsIcon className="h-4 w-4 opacity-70" />
+                        {user?.coins || 0}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
