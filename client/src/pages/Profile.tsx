@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { AvatarSelector } from "@/components/AvatarSelector";
 
 // Icons
 import { User, Settings, Clock, Gift, CoinsIcon, Camera, AlertTriangle, CheckCircle2, Shield } from "lucide-react";
@@ -38,6 +39,7 @@ export default function Profile() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
 
   // We should handle the redirect in the rendered component
   // to avoid React hooks errors
@@ -116,6 +118,16 @@ export default function Profile() {
 
   async function onSubmit(data: UpdateProfileFormValues) {
     updateProfileMutation.mutate(data);
+  }
+  
+  // 处理头像选择
+  const handleAvatarSelect = (avatarUrl: string) => {
+    form.setValue("avatar", avatarUrl);
+    setIsAvatarDialogOpen(false);
+    
+    // 自动提交表单以更新头像
+    const formValues = form.getValues();
+    updateProfileMutation.mutate(formValues);
   }
 
   // Handle loading state and authentication redirect
@@ -379,9 +391,14 @@ export default function Profile() {
                           </FormItem>
                         )}
                       />
-                      <Button variant="outline" type="button" className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        type="button" 
+                        className="flex items-center gap-2" 
+                        onClick={() => setIsAvatarDialogOpen(true)}
+                      >
                         <Camera className="h-4 w-4" />
-                        更换头像
+                        选择头像
                       </Button>
                     </div>
                   </div>
@@ -452,6 +469,14 @@ export default function Profile() {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* 头像选择对话框 */}
+      <AvatarSelector
+        open={isAvatarDialogOpen}
+        onOpenChange={setIsAvatarDialogOpen}
+        onSelect={handleAvatarSelect}
+        currentAvatar={form.getValues().avatar}
+      />
     </div>
   );
 }
