@@ -313,13 +313,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const result = await storage.getAllResources(filters);
       
-      // Enrich resources with category data
+      // Enrich resources with category and author data
       const enrichedResources = await Promise.all(result.resources.map(async (resource) => {
+        const enrichedResource = { ...resource };
+        
+        // 添加分类信息
         if (resource.category_id) {
           const category = await storage.getCategory(resource.category_id);
-          return { ...resource, category };
+          enrichedResource.category = category;
         }
-        return resource;
+        
+        // 添加作者信息
+        if (resource.author_id) {
+          const author = await storage.getAuthor(resource.author_id);
+          enrichedResource.author = author;
+        }
+        
+        return enrichedResource;
       }));
 
       res.json({ ...result, resources: enrichedResources });
@@ -476,13 +486,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const result = await storage.getAllResources(filters);
       
-      // Enrich resources with category data
+      // Enrich resources with category and author data
       const enrichedResources = await Promise.all(result.resources.map(async (resource) => {
+        const enrichedResource = { ...resource };
+        
+        // 添加分类信息
         if (resource.category_id) {
           const category = await storage.getCategory(resource.category_id);
-          return { ...resource, category };
+          enrichedResource.category = category;
         }
-        return resource;
+        
+        // 添加作者信息
+        if (resource.author_id) {
+          const author = await storage.getAuthor(resource.author_id);
+          enrichedResource.author = author;
+        }
+        
+        return enrichedResource;
       }));
 
       res.json({ ...result, resources: enrichedResources });
@@ -519,152 +539,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User management routes
-  app.get('/api/admin/users', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+  // Resource Request routes
+  app.post('/api/resource-requests', authenticateUser as any, async (req, res) => {
     try {
-      const users = await storage.getAllUsers();
-      
-      // Remove passwords from response
-      const safeUsers = users.map(user => {
-        const { password, ...userWithoutPassword } = user;
-        return userWithoutPassword;
-      });
-      
-      res.json(safeUsers);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      res.status(500).json({ message: '获取用户列表失败' });
-    }
-  });
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期' });
+        return;
+      }
 
-  // Admin user creation endpoint
-  app.post('/api/admin/users', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
-    try {
-      // Create schema for new user creation
-      const createUserSchema = z.object({
-        email: z.string().email("邮箱格式不正确"),
-        password: z.string().min(6, "密码长度至少6位"),
-        membership_type: z.string().default("regular"),
-        coins: z.number().default(0),
-        avatar: z.string().optional()
+      const validationResult = insertResourceRequestSchema.safeParse({
+        ...req.body,
+        user_id: req.user.id,
+        status: 0 // 默认为待审核状态
       });
 
-      const validationResult = createUserSchema.safeParse(req.body);
       if (!validationResult.success) {
-        res.status(400).json({ message: '用户数据无效', errors: validationResult.error.format() });
+        res.status(400).json({ message: '请求数据无效', errors: validationResult.error.format() });
         return;
       }
 
-      // Check if email already exists
-      const existingUser = await storage.getUserByEmail(validationResult.data.email);
-      if (existingUser) {
-        res.status(400).json({ message: '该邮箱已被注册' });
-        return;
-      }
-
-      // Hash password
-      const bcrypt = await import('bcrypt');
-      const hashedPassword = await bcrypt.hash(validationResult.data.password, 10);
-
-      // Create user with hashed password
-      const userData = {
-        ...validationResult.data,
-        password: hashedPassword
-      };
-
-      const newUser = await storage.createUser(userData);
-
-      // Remove password from response
-      const { password, ...userWithoutPassword } = newUser;
-      res.status(201).json(userWithoutPassword);
-    } catch (error) {
-      console.error('Error creating user:', error);
-      res.status(500).json({ message: '创建用户失败' });
-    }
-  });
-
-  app.patch('/api/admin/users/:id', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
-    try {
-      const userId = parseInt(req.params.id);
-      if (isNaN(userId)) {
-        res.status(400).json({ message: '无效的用户ID' });
-        return;
-      }
-
-      // Create schema for updatable user fields
-      const updateUserSchema = z.object({
-        membership_type: z.string().optional(),
-        membership_expire_time: z.string().nullable().optional(),
-        coins: z.number().optional(),
-        email: z.string().email().optional(),
-        avatar: z.string().optional(),
-      });
-
-      const validationResult = updateUserSchema.safeParse(req.body);
-      if (!validationResult.success) {
-        res.status(400).json({ message: '用户数据无效', errors: validationResult.error.format() });
-        return;
-      }
-
-      // For TypeScript type compatibility, convert userData to any to handle date conversion
-      const updatedUserData: any = { ...validationResult.data };
-      
-      // 处理会员到期时间
-      if (updatedUserData.membership_expire_time === null || updatedUserData.membership_expire_time === undefined) {
-        // 如果是null或undefined，保持为null（表示没有到期时间）
-        updatedUserData.membership_expire_time = null;
-      } else if (updatedUserData.membership_expire_time !== "") {
-        // 如果是非空字符串，转换为日期对象
-        try {
-          updatedUserData.membership_expire_time = new Date(updatedUserData.membership_expire_time);
-          // 检查是否为有效日期
-          if (isNaN(updatedUserData.membership_expire_time.getTime())) {
-            throw new Error("Invalid date");
-          }
-        } catch (e) {
-          console.error("Invalid date format:", updatedUserData.membership_expire_time);
-          res.status(400).json({ message: '无效的日期格式' });
-          return;
-        }
-      } else {
-        // 空字符串也设为null
-        updatedUserData.membership_expire_time = null;
-      }
-
-      const updatedUser = await storage.updateUser(userId, updatedUserData);
-      if (!updatedUser) {
-        res.status(404).json({ message: '用户不存在' });
-        return;
-      }
-
-      // Remove password from response
-      const { password, ...userWithoutPassword } = updatedUser;
-      res.json(userWithoutPassword);
-    } catch (error) {
-      console.error('Error updating user:', error);
-      res.status(500).json({ message: '更新用户失败' });
-    }
-  });
-
-  // Resource Request routes - Publicly accessible for submission
-  app.post('/api/resource-requests', async (req, res) => {
-    try {
-      const validationResult = insertResourceRequestSchema.safeParse(req.body);
-      if (!validationResult.success) {
-        res.status(400).json({ message: '资源请求数据无效', errors: validationResult.error.format() });
-        return;
-      }
-
-      const resourceRequest = await storage.createResourceRequest(validationResult.data);
-      res.status(201).json(resourceRequest);
+      const request = await storage.createResourceRequest(validationResult.data);
+      res.status(201).json(request);
     } catch (error) {
       console.error('Error creating resource request:', error);
       res.status(500).json({ message: '提交资源请求失败' });
     }
   });
 
-  // Admin Resource Request routes
-  app.get('/api/admin/resource-requests', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+  app.get('/api/resource-requests', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
     try {
       const requests = await storage.getAllResourceRequests();
       res.json(requests);
@@ -674,50 +576,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/resource-requests/:id', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+  app.patch('/api/resource-requests/:id', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
     try {
       const requestId = parseInt(req.params.id);
       if (isNaN(requestId)) {
-        res.status(400).json({ message: '无效的资源请求ID' });
+        res.status(400).json({ message: '无效的请求ID' });
         return;
       }
 
-      const request = await storage.getResourceRequest(requestId);
-      if (!request) {
-        res.status(404).json({ message: '资源请求不存在' });
+      const { status, admin_notes } = req.body;
+      if (status === undefined) {
+        res.status(400).json({ message: '状态不能为空' });
         return;
       }
 
-      res.json(request);
-    } catch (error) {
-      console.error('Error fetching resource request:', error);
-      res.status(500).json({ message: '获取资源请求详情失败' });
-    }
-  });
-
-  app.patch('/api/admin/resource-requests/:id/status', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
-    try {
-      const requestId = parseInt(req.params.id);
-      if (isNaN(requestId)) {
-        res.status(400).json({ message: '无效的资源请求ID' });
-        return;
-      }
-
-      // Create schema for status update
-      const updateSchema = z.object({
-        status: z.number().min(0).max(3).int(),
-        notes: z.string().optional()
-      });
-
-      const validationResult = updateSchema.safeParse(req.body);
-      if (!validationResult.success) {
-        res.status(400).json({ message: '状态数据无效', errors: validationResult.error.format() });
-        return;
-      }
-
-      const { status, notes } = validationResult.data;
-      const updatedRequest = await storage.updateResourceRequestStatus(requestId, status, notes);
-      
+      const updatedRequest = await storage.updateResourceRequestStatus(requestId, status, admin_notes);
       if (!updatedRequest) {
         res.status(404).json({ message: '资源请求不存在' });
         return;
@@ -725,108 +598,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedRequest);
     } catch (error) {
-      console.error('Error updating resource request status:', error);
+      console.error('Error updating resource request:', error);
       res.status(500).json({ message: '更新资源请求状态失败' });
     }
   });
 
-  // 更新用户个人资料
+  // User routes
+  app.get('/api/users', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      // 移除敏感信息
+      const sanitizedUsers = users.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      
+      res.json(sanitizedUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ message: '获取用户列表失败' });
+    }
+  });
+
   app.patch('/api/users/:id', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = parseInt(req.params.id);
-      
-      // 检查权限：只能修改自己的资料，或者管理员可以修改任何人的资料
+      if (isNaN(userId)) {
+        res.status(400).json({ message: '无效的用户ID' });
+        return;
+      }
+
+      // 只允许用户修改自己的资料，或者管理员可以修改任何用户
       if (req.user?.id !== userId && req.user?.membership_type !== 'admin') {
-        return res.status(403).json({ message: '您没有权限修改此用户资料' });
+        res.status(403).json({ message: '权限不足' });
+        return;
       }
+
+      // 只允许更新特定字段
+      const allowedFields = ['avatar', 'nickname', 'gender', 'biography', 'location'];
+      const updateData: any = {};
       
-      // 创建Schema验证请求数据
-      const updateProfileSchema = z.object({
-        email: z.string().email("邮箱格式不正确").optional(),
-        avatar: z.string().optional(),
-      });
-      
-      const validationResult = updateProfileSchema.safeParse(req.body);
-      if (!validationResult.success) {
-        return res.status(400).json({ message: '数据格式错误', errors: validationResult.error.format() });
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          updateData[field] = req.body[field];
+        }
       }
-      
-      // 从验证结果中获取更新数据
-      const updateData = validationResult.data;
-      
-      // 更新用户资料
+
       const updatedUser = await storage.updateUser(userId, updateData);
-      
       if (!updatedUser) {
-        return res.status(404).json({ message: '用户不存在' });
+        res.status(404).json({ message: '用户不存在' });
+        return;
       }
-      
-      // 返回更新后的用户资料（不包含密码）
+
+      // 返回用户信息（不包含密码）
       const { password, ...userWithoutPassword } = updatedUser;
-      res.json({
-        ...userWithoutPassword,
-        role: req.user?.membership_type === 'admin' ? 'admin' : 'user'
-      });
-      
+      res.json(userWithoutPassword);
     } catch (error) {
-      console.error('Error updating user profile:', error);
-      res.status(500).json({ message: '更新资料失败，请稍后再试' });
+      console.error('Error updating user:', error);
+      res.status(500).json({ message: '更新用户信息失败' });
     }
   });
-  
-  // 修改用户密码
+
   app.patch('/api/users/:id/password', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = parseInt(req.params.id);
-      
-      // 检查权限：只能修改自己的密码，管理员也不能修改他人密码
-      if (req.user?.id !== userId) {
-        return res.status(403).json({ message: '您没有权限修改此用户密码' });
+      if (isNaN(userId)) {
+        res.status(400).json({ message: '无效的用户ID' });
+        return;
       }
-      
-      // 创建Schema验证请求数据
-      const changePasswordSchema = z.object({
-        currentPassword: z.string().min(6, "当前密码长度至少6位"),
-        newPassword: z.string().min(6, "新密码长度至少6位"),
-      });
-      
-      const validationResult = changePasswordSchema.safeParse(req.body);
-      if (!validationResult.success) {
-        return res.status(400).json({ message: '数据格式错误', errors: validationResult.error.format() });
+
+      // 只允许用户修改自己的密码，或者管理员可以修改任何用户的密码
+      if (req.user?.id !== userId && req.user?.membership_type !== 'admin') {
+        res.status(403).json({ message: '权限不足' });
+        return;
       }
-      
-      // 获取用户信息
+
+      const { oldPassword, newPassword } = req.body;
+      if (!oldPassword || !newPassword) {
+        res.status(400).json({ message: '旧密码和新密码不能为空' });
+        return;
+      }
+
+      // 判断旧密码是否正确
       const user = await storage.getUser(userId);
       if (!user) {
-        return res.status(404).json({ message: '用户不存在' });
+        res.status(404).json({ message: '用户不存在' });
+        return;
       }
-      
-      // 验证当前密码
+
+      // 管理员可以直接修改密码而无需验证旧密码
+      if (req.user?.membership_type !== 'admin') {
+        const bcrypt = await import('bcrypt');
+        const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+        if (!isPasswordValid) {
+          res.status(400).json({ message: '旧密码不正确' });
+          return;
+        }
+      }
+
+      // 对新密码进行哈希处理
       const bcrypt = await import('bcrypt');
-      const isPasswordValid = await bcrypt.compare(validationResult.data.currentPassword, user.password);
-      if (!isPasswordValid) {
-        return res.status(400).json({ message: '当前密码不正确' });
-      }
-      
-      // 哈希新密码
-      const hashedPassword = await bcrypt.hash(validationResult.data.newPassword, 10);
-      
-      // 更新密码
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // 更新用户密码
       const updatedUser = await storage.updateUser(userId, { password: hashedPassword });
-      
       if (!updatedUser) {
-        return res.status(500).json({ message: '密码更新失败' });
+        res.status(404).json({ message: '用户不存在' });
+        return;
       }
-      
+
       res.json({ message: '密码修改成功' });
-      
     } catch (error) {
-      console.error('Error changing password:', error);
-      res.status(500).json({ message: '修改密码失败，请稍后再试' });
+      console.error('Error updating user password:', error);
+      res.status(500).json({ message: '修改密码失败' });
     }
   });
 
   // Review routes
+  app.post('/api/resources/:resourceId/reviews', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期' });
+        return;
+      }
+
+      const resourceId = parseInt(req.params.resourceId);
+      if (isNaN(resourceId)) {
+        res.status(400).json({ message: '无效的资源ID' });
+        return;
+      }
+
+      // 检查资源是否存在
+      const resource = await storage.getResource(resourceId);
+      if (!resource) {
+        res.status(404).json({ message: '资源不存在' });
+        return;
+      }
+
+      // 构建评价数据
+      const reviewData = {
+        ...req.body,
+        user_id: req.user.id,
+        resource_id: resourceId,
+        status: 0, // 默认为待审核状态
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // 验证评价数据
+      const validationResult = insertReviewSchema.safeParse(reviewData);
+      if (!validationResult.success) {
+        res.status(400).json({ message: '评价数据无效', errors: validationResult.error.format() });
+        return;
+      }
+
+      // 创建评价
+      const review = await storage.createReview(validationResult.data);
+      res.status(201).json(review);
+    } catch (error) {
+      console.error('Error creating review:', error);
+      res.status(500).json({ message: '提交评价失败' });
+    }
+  });
+
   app.get('/api/resources/:resourceId/reviews', async (req, res) => {
     try {
       const resourceId = parseInt(req.params.resourceId);
@@ -834,114 +768,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(400).json({ message: '无效的资源ID' });
         return;
       }
-      
-      // 获取当前用户ID（如果已登录）
-      const userId = (req as any).session?.userId;
-      const isAdmin = (req as any).user?.membership_type === 'admin';
-      
-      // 获取全部评论
+
+      // 获取通过审核的评价
       const reviews = await storage.getReviewsByResource(resourceId);
-      
-      // 根据用户权限过滤评论
-      const filteredReviews = reviews.filter(review => {
-        // 管理员可以看到所有评论
-        if (isAdmin) return true;
-        
-        // 自己的评论自己可以看到
-        if (userId && review.user_id === userId) return true;
-        
-        // 其他用户只能看到已审核通过的评论
-        return review.status === 1;
-      });
-      
-      // Enrich reviews with user data (excluding password)
-      const enrichedReviews = await Promise.all(filteredReviews.map(async (review) => {
+      const approvedReviews = reviews.filter(review => review.status === 1);
+
+      // 获取资源的平均评分和评价数量
+      const averageRating = await storage.getResourceAverageRating(resourceId);
+      const reviewCount = await storage.getResourceReviewCount(resourceId);
+
+      // 查询评价作者信息
+      const enrichedReviews = await Promise.all(approvedReviews.map(async (review) => {
         const user = await storage.getUser(review.user_id);
         if (user) {
-          const { password, ...userWithoutPassword } = user;
-          return { ...review, user: userWithoutPassword };
+          // 移除敏感用户信息
+          const { password, ...safeUserData } = user;
+          return { ...review, user: safeUserData };
         }
         return review;
       }));
-      
-      res.json(enrichedReviews);
+
+      res.json({
+        reviews: enrichedReviews,
+        meta: {
+          average_rating: averageRating,
+          review_count: reviewCount
+        }
+      });
     } catch (error) {
-      console.error('Error fetching reviews:', error);
+      console.error('Error fetching resource reviews:', error);
       res.status(500).json({ message: '获取评价列表失败' });
-    }
-  });
-
-  app.get('/api/resources/:resourceId/rating', async (req, res) => {
-    try {
-      const resourceId = parseInt(req.params.resourceId);
-      if (isNaN(resourceId)) {
-        res.status(400).json({ message: '无效的资源ID' });
-        return;
-      }
-
-      const average = await storage.getResourceAverageRating(resourceId);
-      const count = await storage.getResourceReviewCount(resourceId);
-      
-      res.json({ average, count });
-    } catch (error) {
-      console.error('Error fetching rating:', error);
-      res.status(500).json({ message: '获取评分失败' });
-    }
-  });
-
-  app.post('/api/resources/:resourceId/reviews', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
-    try {
-      const resourceId = parseInt(req.params.resourceId);
-      if (isNaN(resourceId)) {
-        res.status(400).json({ message: '无效的资源ID' });
-        return;
-      }
-
-      // Check if the resource exists
-      const resource = await storage.getResource(resourceId);
-      if (!resource) {
-        res.status(404).json({ message: '资源不存在' });
-        return;
-      }
-
-      // 确保用户已登录
-      if (!req.user) {
-        res.status(401).json({ message: '必须登录才能提交评价' });
-        return;
-      }
-
-      // Add user_id to the review data
-      const reviewData = {
-        ...req.body,
-        user_id: req.user.id,
-        resource_id: resourceId
-      };
-
-      const validationResult = insertReviewSchema.safeParse(reviewData);
-      if (!validationResult.success) {
-        res.status(400).json({ 
-          message: '评价数据无效', 
-          errors: validationResult.error.format() 
-        });
-        return;
-      }
-
-      // Check if the user already reviewed this resource
-      const userReviews = await storage.getReviewsByUser(req.user.id);
-      const existingReview = userReviews.find(review => review.resource_id === resourceId);
-      
-      if (existingReview) {
-        // Update existing review
-        const updatedReview = await storage.updateReview(existingReview.id, validationResult.data);
-        res.json(updatedReview);
-      } else {
-        // Create new review
-        const review = await storage.createReview(validationResult.data);
-        res.status(201).json(review);
-      }
-    } catch (error) {
-      console.error('Error submitting review:', error);
-      res.status(500).json({ message: '提交评价失败' });
     }
   });
 
@@ -953,21 +809,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
+      // 获取评价信息
       const review = await storage.getReview(reviewId);
       if (!review) {
         res.status(404).json({ message: '评价不存在' });
         return;
       }
 
-      // 检查是否是评价的作者或管理员
+      // 只允许评价作者或管理员删除评价
       if (req.user?.id !== review.user_id && req.user?.membership_type !== 'admin') {
-        res.status(403).json({ message: '无权删除该评价' });
+        res.status(403).json({ message: '权限不足' });
         return;
       }
 
+      // 删除评价
       const deleted = await storage.deleteReview(reviewId);
       if (!deleted) {
-        res.status(404).json({ message: '评价不存在' });
+        res.status(404).json({ message: '评价不存在或已被删除' });
         return;
       }
 
@@ -977,104 +835,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: '删除评价失败' });
     }
   });
-  
-  // 获取所有待审核的评论（管理员专用）
+
+  // Admin review management routes
   app.get('/api/admin/reviews', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
     try {
-      // 获取所有评论
       const allReviews = await storage.getAllReviews();
       
-      // 丰富评论数据，添加用户信息和资源信息
+      // 查询评价作者和资源信息
       const enrichedReviews = await Promise.all(allReviews.map(async (review: Review) => {
-        // 添加用户信息
         const user = await storage.getUser(review.user_id);
-        let userInfo = null;
-        if (user) {
-          const { password, ...userWithoutPassword } = user;
-          userInfo = userWithoutPassword;
-        }
-        
-        // 添加资源信息
         const resource = await storage.getResource(review.resource_id);
         
-        return { 
-          ...review, 
-          user: userInfo,
-          resource: resource || null
-        };
+        let enhancedReview: any = { ...review };
+        
+        if (user) {
+          // 移除敏感用户信息
+          const { password, ...safeUserData } = user;
+          enhancedReview.user = safeUserData;
+        }
+        
+        if (resource) {
+          enhancedReview.resource = resource;
+        }
+        
+        return enhancedReview;
       }));
       
       res.json(enrichedReviews);
     } catch (error) {
-      console.error('Error fetching reviews for admin:', error);
-      res.status(500).json({ message: '获取评论列表失败' });
+      console.error('Error fetching admin reviews:', error);
+      res.status(500).json({ message: '获取评价列表失败' });
     }
   });
-  
-  // 获取管理员登录日志
-  app.get('/api/admin/login-logs', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
-    try {
-      // 验证请求用户是否为指定管理员
-      if (req.user?.email !== '1034936667@qq.com') {
-        return res.status(403).json({ message: '只有特定管理员可以查看登录日志' });
-      }
-      
-      // 获取管理员邮箱和限制参数
-      const { email, limit } = req.query;
-      const adminEmail = email as string || '1034936667@qq.com';
-      const logLimit = limit ? parseInt(limit as string) : undefined;
-      
-      // 获取登录日志
-      const logs = await storage.getAdminLoginLogs(adminEmail, logLimit);
-      
-      res.json(logs);
-    } catch (error) {
-      console.error('Error fetching admin login logs:', error);
-      res.status(500).json({ message: '获取管理员登录日志失败' });
-    }
-  });
-  
-  // 审核评论
+
   app.patch('/api/admin/reviews/:id', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
     try {
       const reviewId = parseInt(req.params.id);
       if (isNaN(reviewId)) {
-        res.status(400).json({ message: '无效的评论ID' });
+        res.status(400).json({ message: '无效的评价ID' });
         return;
       }
-      
-      const review = await storage.getReview(reviewId);
-      if (!review) {
-        res.status(404).json({ message: '评论不存在' });
+
+      const { status, admin_notes } = req.body;
+      if (status === undefined) {
+        res.status(400).json({ message: '状态不能为空' });
         return;
       }
-      
-      // 验证请求数据
-      const reviewUpdateSchema = z.object({
-        status: z.number().min(0).max(2),
-        admin_notes: z.string().optional()
+
+      // 更新评价状态
+      const updatedReview = await storage.updateReview(reviewId, { 
+        status, 
+        admin_notes,
+        updated_at: new Date().toISOString()
       });
       
-      const validationResult = reviewUpdateSchema.safeParse(req.body);
-      if (!validationResult.success) {
-        res.status(400).json({ 
-          message: '数据格式错误', 
-          errors: validationResult.error.format() 
-        });
-        return;
-      }
-      
-      // 更新评论状态
-      const updatedReview = await storage.updateReview(reviewId, validationResult.data);
       if (!updatedReview) {
-        res.status(404).json({ message: '评论不存在' });
+        res.status(404).json({ message: '评价不存在' });
         return;
       }
-      
+
       res.json(updatedReview);
     } catch (error) {
-      console.error('Error reviewing comment:', error);
-      res.status(500).json({ message: '审核评论失败' });
+      console.error('Error updating review status:', error);
+      res.status(500).json({ message: '更新评价状态失败' });
+    }
+  });
+
+  // Admin Login Log routes
+  app.get('/api/admin/login-logs', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const adminEmail = req.query.email as string | undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      
+      const logs = await storage.getAdminLoginLogs(adminEmail, limit);
+      res.json(logs);
+    } catch (error) {
+      console.error('Error fetching admin login logs:', error);
+      res.status(500).json({ message: '获取管理员登录日志失败' });
     }
   });
 
