@@ -16,7 +16,6 @@ import ResourceUpload from "./pages/admin/ResourceUpload";
 import ResourceEdit from "./pages/admin/ResourceEdit";
 import ResourceRequests from "./pages/admin/ResourceRequests";
 import UserManagement from "./pages/admin/UserManagement";
-import ReviewManagement from "./pages/admin/ReviewManagement";
 import { AuthProvider } from "./hooks/use-auth";
 
 function App() {
@@ -41,7 +40,6 @@ function App() {
               <Route path="/admin/resources/:id/edit" component={ResourceEdit} />
               <Route path="/admin/resource-requests" component={ResourceRequests} />
               <Route path="/admin/users" component={UserManagement} />
-              <Route path="/admin/reviews" component={ReviewManagement} />
               <Route component={NotFound} />
             </Switch>
           </main>

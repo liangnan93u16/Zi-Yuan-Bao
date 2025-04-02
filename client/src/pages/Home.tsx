@@ -56,9 +56,11 @@ export default function Home() {
       <div className="mb-12">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">热门分类</h2>
-          <Link href="/resources" className="text-primary hover:text-blue-700 text-sm font-medium flex items-center">
-            查看全部
-            <ArrowRight className="ml-1 h-4 w-4" />
+          <Link href="/resources">
+            <a className="text-primary hover:text-blue-700 text-sm font-medium flex items-center">
+              查看全部
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </a>
           </Link>
         </div>
         
@@ -113,9 +115,11 @@ export default function Home() {
                 付费
               </Button>
             </div>
-            <Link href="/resources" className="text-primary hover:text-blue-700 text-sm font-medium flex items-center">
-              查看全部
-              <ArrowRight className="ml-1 h-4 w-4" />
+            <Link href="/resources">
+              <a className="text-primary hover:text-blue-700 text-sm font-medium flex items-center">
+                查看全部
+                <ArrowRight className="ml-1 h-4 w-4" />
+              </a>
             </Link>
           </div>
         </div>
@@ -202,14 +206,10 @@ export default function Home() {
             
             <div className="flex flex-wrap gap-4">
               <Link href="/membership">
-                <div className="inline-block">
-                  <Button>查看会员计划</Button>
-                </div>
+                <Button>查看会员计划</Button>
               </Link>
               <Link href="/about">
-                <div className="inline-block">
-                  <Button variant="outline">了解更多</Button>
-                </div>
+                <Button variant="outline">了解更多</Button>
               </Link>
             </div>
           </div>

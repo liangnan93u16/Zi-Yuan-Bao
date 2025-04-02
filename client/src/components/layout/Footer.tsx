@@ -52,19 +52,29 @@ export default function Footer() {
             <h3 className="text-lg font-semibold mb-4">快速链接</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/" className="text-neutral-600 hover:text-primary">首页</Link>
+                <Link href="/">
+                  <a className="text-neutral-600 hover:text-primary">首页</a>
+                </Link>
               </li>
               <li>
-                <Link href="/resources" className="text-neutral-600 hover:text-primary">全部资源</Link>
+                <Link href="/resources">
+                  <a className="text-neutral-600 hover:text-primary">全部资源</a>
+                </Link>
               </li>
               <li>
-                <Link href="/categories" className="text-neutral-600 hover:text-primary">热门分类</Link>
+                <Link href="/categories">
+                  <a className="text-neutral-600 hover:text-primary">热门分类</a>
+                </Link>
               </li>
               <li>
-                <Link href="/membership" className="text-neutral-600 hover:text-primary">会员计划</Link>
+                <Link href="/membership">
+                  <a className="text-neutral-600 hover:text-primary">会员计划</a>
+                </Link>
               </li>
               <li>
-                <Link href="/admin/resources/upload" className="text-neutral-600 hover:text-primary">资源上传</Link>
+                <Link href="/admin/resources/upload">
+                  <a className="text-neutral-600 hover:text-primary">资源上传</a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -73,19 +83,29 @@ export default function Footer() {
             <h3 className="text-lg font-semibold mb-4">帮助支持</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/faq" className="text-neutral-600 hover:text-primary">常见问题</Link>
+                <Link href="/faq">
+                  <a className="text-neutral-600 hover:text-primary">常见问题</a>
+                </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-neutral-600 hover:text-primary">联系我们</Link>
+                <Link href="/contact">
+                  <a className="text-neutral-600 hover:text-primary">联系我们</a>
+                </Link>
               </li>
               <li>
-                <Link href="/feedback" className="text-neutral-600 hover:text-primary">意见反馈</Link>
+                <Link href="/feedback">
+                  <a className="text-neutral-600 hover:text-primary">意见反馈</a>
+                </Link>
               </li>
               <li>
-                <Link href="/terms" className="text-neutral-600 hover:text-primary">用户协议</Link>
+                <Link href="/terms">
+                  <a className="text-neutral-600 hover:text-primary">用户协议</a>
+                </Link>
               </li>
               <li>
-                <Link href="/privacy" className="text-neutral-600 hover:text-primary">隐私政策</Link>
+                <Link href="/privacy">
+                  <a className="text-neutral-600 hover:text-primary">隐私政策</a>
+                </Link>
               </li>
             </ul>
           </div>

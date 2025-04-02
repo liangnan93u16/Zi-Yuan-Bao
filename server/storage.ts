@@ -36,13 +36,11 @@ export interface IStorage {
   // Review operations
   createReview(review: InsertReview): Promise<Review>;
   getReview(id: number): Promise<Review | undefined>;
-  getReviewsByResource(resourceId: number, includeUnapproved?: boolean, userId?: number): Promise<Review[]>;
+  getReviewsByResource(resourceId: number): Promise<Review[]>;
   getReviewsByUser(userId: number): Promise<Review[]>;
-  getAllReviews(status?: number): Promise<Review[]>; // Get all reviews with optional status filter
   getResourceAverageRating(resourceId: number): Promise<number>;
   getResourceReviewCount(resourceId: number): Promise<number>;
   updateReview(id: number, data: Partial<Review>): Promise<Review | undefined>;
-  updateReviewStatus(id: number, status: number, adminNotes?: string): Promise<Review | undefined>; // Approve or reject review
   deleteReview(id: number): Promise<boolean>;
   
   // Resource Request operations
@@ -207,19 +205,20 @@ export class DatabaseStorage implements IStorage {
     const total = countResult?.count || 0;
     
     // Get resources with pagination
-    let query = db
+    const baseQuery = db
       .select()
       .from(resources)
       .where(whereClause || sql`TRUE`)
       .orderBy(desc(resources.created_at));
     
     // Apply pagination if specified
+    let finalQuery = baseQuery;
     if (filters.page !== undefined && filters.limit !== undefined) {
       const offset = (filters.page - 1) * filters.limit;
-      query = query.limit(filters.limit).offset(offset);
+      finalQuery = baseQuery.limit(filters.limit).offset(offset);
     }
     
-    const resourcesList = await query;
+    const resourcesList = await finalQuery;
     
     return { resources: resourcesList, total };
   }
@@ -229,155 +228,6 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(resources)
       .where(eq(resources.category_id, categoryId));
-  }
-  
-  // Review methods
-  async createReview(insertReview: InsertReview): Promise<Review> {
-    const [review] = await db
-      .insert(reviews)
-      .values(insertReview)
-      .returning();
-    return review;
-  }
-  
-  async getReview(id: number): Promise<Review | undefined> {
-    const [review] = await db.select().from(reviews).where(eq(reviews.id, id));
-    return review || undefined;
-  }
-  
-  async getReviewsByResource(resourceId: number, includeUnapproved: boolean = false, userId?: number): Promise<Review[]> {
-    // Base where conditions
-    let whereConditions = [eq(reviews.resource_id, resourceId)];
-    
-    // If not including unapproved reviews, filter to only approved ones
-    // Unless a userId is provided, in which case also include that user's pending reviews
-    if (!includeUnapproved) {
-      if (userId) {
-        whereConditions.push(
-          or(
-            eq(reviews.status, 1), // approved reviews
-            and(eq(reviews.user_id, userId), eq(reviews.status, 0)) // user's own pending reviews
-          )
-        );
-      } else {
-        whereConditions.push(eq(reviews.status, 1)); // only approved reviews
-      }
-    }
-    
-    return await db
-      .select()
-      .from(reviews)
-      .where(and(...whereConditions))
-      .orderBy(desc(reviews.created_at));
-  }
-  
-  async getReviewsByUser(userId: number): Promise<Review[]> {
-    return await db
-      .select()
-      .from(reviews)
-      .where(eq(reviews.user_id, userId))
-      .orderBy(desc(reviews.created_at));
-  }
-  
-  async getAllReviews(status?: number): Promise<Review[]> {
-    // Create a query to get all reviews
-    let query = db.select().from(reviews);
-    
-    // Add status filter if provided
-    if (status !== undefined) {
-      query = query.where(eq(reviews.status, status));
-    }
-    
-    // Include user information
-    const reviewsWithUsers = await query
-      .leftJoin(users, eq(reviews.user_id, users.id))
-      .orderBy(desc(reviews.created_at));
-    
-    // Convert join result to Review[] with user info
-    return reviewsWithUsers.map(row => {
-      const review = {
-        id: row.reviews.id,
-        resource_id: row.reviews.resource_id,
-        user_id: row.reviews.user_id,
-        rating: row.reviews.rating,
-        content: row.reviews.content,
-        status: row.reviews.status,
-        admin_notes: row.reviews.admin_notes,
-        created_at: row.reviews.created_at,
-        updated_at: row.reviews.updated_at,
-        user: row.users ? {
-          id: row.users.id,
-          email: row.users.email,
-          avatar: row.users.avatar,
-          membership_type: row.users.membership_type
-        } : undefined
-      };
-      return review;
-    });
-  }
-  
-  async getResourceAverageRating(resourceId: number): Promise<number> {
-    const [result] = await db
-      .select({
-        average: sql`AVG(${reviews.rating})`.mapWith(Number)
-      })
-      .from(reviews)
-      .where(and(
-        eq(reviews.resource_id, resourceId),
-        eq(reviews.status, 1) // Only count approved reviews
-      ));
-    
-    return result?.average || 0;
-  }
-  
-  async getResourceReviewCount(resourceId: number): Promise<number> {
-    const [result] = await db
-      .select({
-        count: sql`COUNT(*)`.mapWith(Number)
-      })
-      .from(reviews)
-      .where(and(
-        eq(reviews.resource_id, resourceId),
-        eq(reviews.status, 1) // Only count approved reviews
-      ));
-    
-    return result?.count || 0;
-  }
-  
-  async updateReview(id: number, data: Partial<Review>): Promise<Review | undefined> {
-    const [review] = await db
-      .update(reviews)
-      .set({ ...data, updated_at: new Date() })
-      .where(eq(reviews.id, id))
-      .returning();
-    return review || undefined;
-  }
-  
-  async updateReviewStatus(id: number, status: number, adminNotes?: string): Promise<Review | undefined> {
-    const updateData: Partial<Review> = { 
-      status, 
-      updated_at: new Date() 
-    };
-    
-    if (adminNotes !== undefined) {
-      updateData.admin_notes = adminNotes;
-    }
-    
-    const [review] = await db
-      .update(reviews)
-      .set(updateData)
-      .where(eq(reviews.id, id))
-      .returning();
-    
-    return review || undefined;
-  }
-  
-  async deleteReview(id: number): Promise<boolean> {
-    const result = await db
-      .delete(reviews)
-      .where(eq(reviews.id, id))
-      .returning({ id: reviews.id });
-    return result.length > 0;
   }
   
   // Resource Request methods
@@ -417,6 +267,75 @@ export class DatabaseStorage implements IStorage {
       .where(eq(resourceRequests.id, id))
       .returning();
     return request || undefined;
+  }
+  
+  // Review methods
+  async createReview(insertReview: InsertReview): Promise<Review> {
+    const [review] = await db
+      .insert(reviews)
+      .values(insertReview)
+      .returning();
+    return review;
+  }
+  
+  async getReview(id: number): Promise<Review | undefined> {
+    const [review] = await db.select().from(reviews).where(eq(reviews.id, id));
+    return review || undefined;
+  }
+  
+  async getReviewsByResource(resourceId: number): Promise<Review[]> {
+    return await db
+      .select()
+      .from(reviews)
+      .where(eq(reviews.resource_id, resourceId))
+      .orderBy(desc(reviews.created_at));
+  }
+  
+  async getReviewsByUser(userId: number): Promise<Review[]> {
+    return await db
+      .select()
+      .from(reviews)
+      .where(eq(reviews.user_id, userId))
+      .orderBy(desc(reviews.created_at));
+  }
+  
+  async getResourceAverageRating(resourceId: number): Promise<number> {
+    const [result] = await db
+      .select({
+        average: sql`AVG(${reviews.rating})`.mapWith(Number)
+      })
+      .from(reviews)
+      .where(eq(reviews.resource_id, resourceId));
+    
+    return result?.average || 0;
+  }
+  
+  async getResourceReviewCount(resourceId: number): Promise<number> {
+    const [result] = await db
+      .select({
+        count: sql`COUNT(*)`.mapWith(Number)
+      })
+      .from(reviews)
+      .where(eq(reviews.resource_id, resourceId));
+    
+    return result?.count || 0;
+  }
+  
+  async updateReview(id: number, data: Partial<Review>): Promise<Review | undefined> {
+    const [review] = await db
+      .update(reviews)
+      .set({ ...data, updated_at: new Date() })
+      .where(eq(reviews.id, id))
+      .returning();
+    return review || undefined;
+  }
+  
+  async deleteReview(id: number): Promise<boolean> {
+    const result = await db
+      .delete(reviews)
+      .where(eq(reviews.id, id))
+      .returning({ id: reviews.id });
+    return result.length > 0;
   }
 
   // Initialize with default data if needed
