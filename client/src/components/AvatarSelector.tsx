@@ -10,14 +10,14 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
-// 系统预设的头像列表
+// 系统预设的头像列表 - 使用静态SVG格式
 const DEFAULT_AVATARS = [
-  "https://api.dicebear.com/7.x/personas/svg?seed=avatar1",
-  "https://api.dicebear.com/7.x/personas/svg?seed=avatar2",
-  "https://api.dicebear.com/7.x/personas/svg?seed=avatar3",
-  "https://api.dicebear.com/7.x/personas/svg?seed=avatar4",
-  "https://api.dicebear.com/7.x/personas/svg?seed=avatar5",
-  "https://api.dicebear.com/7.x/personas/svg?seed=avatar6",
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%234f46e5' /><text x='50' y='65' font-size='40' text-anchor='middle' fill='white'>1</text></svg>",
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23f59e0b' /><text x='50' y='65' font-size='40' text-anchor='middle' fill='white'>2</text></svg>",
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%2310b981' /><text x='50' y='65' font-size='40' text-anchor='middle' fill='white'>3</text></svg>",
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23ef4444' /><text x='50' y='65' font-size='40' text-anchor='middle' fill='white'>4</text></svg>",
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%238b5cf6' /><text x='50' y='65' font-size='40' text-anchor='middle' fill='white'>5</text></svg>",
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23ec4899' /><text x='50' y='65' font-size='40' text-anchor='middle' fill='white'>6</text></svg>",
 ];
 
 interface AvatarSelectorProps {

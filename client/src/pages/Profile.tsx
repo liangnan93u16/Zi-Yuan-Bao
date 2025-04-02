@@ -125,9 +125,20 @@ export default function Profile() {
     form.setValue("avatar", avatarUrl);
     setIsAvatarDialogOpen(false);
     
-    // 自动提交表单以更新头像
+    // 自动提交表单以更新头像，强制页面刷新以更新头像显示
     const formValues = form.getValues();
-    updateProfileMutation.mutate(formValues);
+    updateProfileMutation.mutate(formValues, {
+      onSuccess: () => {
+        // 强制刷新state以确保头像更新
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+        
+        // 显示成功消息
+        toast({
+          title: "头像更新成功",
+          description: "您的头像已成功更新",
+        });
+      }
+    });
   }
 
   // Handle loading state and authentication redirect
@@ -205,8 +216,16 @@ export default function Profile() {
               <div className="flex flex-col sm:flex-row gap-8 mb-4">
                 <div className="flex justify-center sm:justify-start">
                   <Avatar className="h-24 w-24">
-                    <AvatarImage src={user?.avatar || ""} alt={user?.email} />
-                    <AvatarFallback className="text-2xl">{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                    {user?.avatar ? (
+                      <AvatarImage 
+                        src={user.avatar} 
+                        alt={user.email} 
+                        className="object-cover"
+                        key={user.avatar} // 强制在头像URL变化时重新渲染
+                      />
+                    ) : (
+                      <AvatarFallback className="text-2xl">{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                    )}
                   </Avatar>
                 </div>
                 
@@ -375,8 +394,16 @@ export default function Profile() {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <div className="flex flex-col items-center mb-6">
                     <Avatar className="h-24 w-24 mb-4">
-                      <AvatarImage src={user?.avatar || ""} alt={user?.email} />
-                      <AvatarFallback className="text-2xl">{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                      {user?.avatar ? (
+                        <AvatarImage 
+                          src={user.avatar} 
+                          alt={user.email} 
+                          className="object-cover"
+                          key={user.avatar} // 强制在头像URL变化时重新渲染
+                        />
+                      ) : (
+                        <AvatarFallback className="text-2xl">{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                      )}
                     </Avatar>
                     
                     <div className="flex gap-2">
