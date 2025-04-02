@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from "wouter";
 import { apiRequest } from '@/lib/queryClient';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Trash2, Edit, Plus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // 作者类型定义
 interface Author {
@@ -217,66 +219,103 @@ export default function AuthorManagement() {
     }
   };
 
-  return (
-    <div className="container max-w-5xl py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">作者管理</h1>
-        <Button onClick={openNewDialog}>
-          <Plus className="mr-2 h-4 w-4" />
-          添加作者
-        </Button>
-      </div>
+  const [tab, setTab] = useState("authors");
 
-      <Card>
-        <CardHeader>
-          <CardTitle>作者列表</CardTitle>
-          <CardDescription>管理平台上的所有作者信息</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="py-10 text-center">加载中...</div>
-          ) : authors && authors.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>头像</TableHead>
-                  <TableHead>姓名</TableHead>
-                  <TableHead>职称</TableHead>
-                  <TableHead>操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {authors.map((author) => (
-                  <TableRow key={author.id}>
-                    <TableCell>{author.id}</TableCell>
-                    <TableCell>
-                      <Avatar>
-                        <AvatarImage src={author.avatar} alt={author.name} />
-                        <AvatarFallback>{author.name.slice(0, 2)}</AvatarFallback>
-                      </Avatar>
-                    </TableCell>
-                    <TableCell className="font-medium">{author.name}</TableCell>
-                    <TableCell>{author.title || '暂无'}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openEditDialog(author)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant="destructive" onClick={() => confirmDelete(author)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="py-10 text-center">暂无作者数据</div>
-          )}
-        </CardContent>
-      </Card>
+  return (
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+        <div className="border-b border-neutral-200 px-6 py-4">
+          <h2 className="text-xl font-bold">资源管理后台</h2>
+        </div>
+        
+        <Tabs value={tab} onValueChange={setTab}>
+          <div className="border-b border-neutral-200">
+            <TabsList className="h-auto">
+              <TabsTrigger 
+                value="resources" 
+                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
+              >
+                <Link href="/admin/resources">资源列表</Link>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="categories" 
+                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
+              >
+                <Link href="/admin/categories">分类管理</Link>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="authors" 
+                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
+              >
+                作者管理
+              </TabsTrigger>
+            </TabsList>
+          </div>
+          
+          <TabsContent value="authors" className="p-6">
+            <div className="mb-6 flex justify-between items-center">
+              <h3 className="text-lg font-semibold">作者管理</h3>
+              <Button onClick={openNewDialog} size="sm" className="flex items-center gap-1">
+                <Plus className="h-4 w-4" />
+                添加作者
+              </Button>
+            </div>
+
+            {isLoading ? (
+              <div className="py-10 flex justify-center">
+                <div className="w-8 h-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[80px]">ID</TableHead>
+                      <TableHead className="w-[100px]">头像</TableHead>
+                      <TableHead className="w-[200px]">姓名</TableHead>
+                      <TableHead className="w-[200px]">职称</TableHead>
+                      <TableHead className="w-[150px]">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {authors.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-6">
+                          暂无作者数据
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      authors.map((author) => (
+                        <TableRow key={author.id}>
+                          <TableCell>{author.id}</TableCell>
+                          <TableCell>
+                            <Avatar>
+                              <AvatarImage src={author.avatar} alt={author.name} />
+                              <AvatarFallback>{author.name.slice(0, 2)}</AvatarFallback>
+                            </Avatar>
+                          </TableCell>
+                          <TableCell className="font-medium">{author.name}</TableCell>
+                          <TableCell>{author.title || '暂无'}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" onClick={() => openEditDialog(author)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button size="sm" variant="destructive" onClick={() => confirmDelete(author)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">

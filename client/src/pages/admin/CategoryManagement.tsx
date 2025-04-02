@@ -281,6 +281,12 @@ export default function CategoryManagement() {
               >
                 分类管理
               </TabsTrigger>
+              <TabsTrigger 
+                value="authors" 
+                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
+              >
+                <Link href="/admin/authors">作者管理</Link>
+              </TabsTrigger>
             </TabsList>
           </div>
           

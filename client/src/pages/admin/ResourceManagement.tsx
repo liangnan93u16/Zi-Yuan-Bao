@@ -107,6 +107,12 @@ export default function ResourceManagement() {
               >
                 <Link href="/admin/categories">分类管理</Link>
               </TabsTrigger>
+              <TabsTrigger 
+                value="authors" 
+                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
+              >
+                <Link href="/admin/authors">作者管理</Link>
+              </TabsTrigger>
             </TabsList>
           </div>
           
