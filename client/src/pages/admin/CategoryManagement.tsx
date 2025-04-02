@@ -39,7 +39,8 @@ import {
   Pencil,
   Trash2,
   Loader2,
-  Save
+  Save,
+  Edit3
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -48,6 +49,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Category, insertCategorySchema } from "@shared/schema";
 import { Link } from "wouter";
+import { IconSelector, IconDisplay } from "@/components/IconSelector";
 
 // Create form schema with client-side validation
 const categoryFormSchema = insertCategorySchema.extend({
@@ -64,6 +66,8 @@ export default function CategoryManagement() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [isCreateIconSelectorOpen, setIsCreateIconSelectorOpen] = useState(false);
+  const [isEditIconSelectorOpen, setIsEditIconSelectorOpen] = useState(false);
   const { toast } = useToast();
   const [tab, setTab] = useState("categories");
 
@@ -326,7 +330,8 @@ export default function CategoryManagement() {
                           <TableCell>
                             {category.icon ? (
                               <div className="flex items-center">
-                                <span className="text-gray-800">{category.icon}</span>
+                                <IconDisplay iconId={category.icon} className="h-5 w-5 text-gray-800" />
+                                <span className="ml-2 text-xs text-gray-500">{category.icon}</span>
                               </div>
                             ) : (
                               <span className="text-gray-400">-</span>
@@ -415,13 +420,41 @@ export default function CategoryManagement() {
                 name="icon"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>图标代码</FormLabel>
-                    <FormControl>
-                      <Input placeholder="输入图标代码" {...field} />
-                    </FormControl>
+                    <FormLabel>图标</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <FormControl>
+                        <div className="flex-1 flex items-center h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                          {field.value ? (
+                            <div className="flex items-center gap-2">
+                              <IconDisplay iconId={field.value} className="h-5 w-5" />
+                              <span className="text-sm">{field.value}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">未选择图标</span>
+                          )}
+                        </div>
+                      </FormControl>
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={() => setIsCreateIconSelectorOpen(true)}
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
+              />
+              
+              <IconSelector
+                open={isCreateIconSelectorOpen}
+                onOpenChange={setIsCreateIconSelectorOpen}
+                currentIcon={createForm.getValues("icon")}
+                onSelect={(iconId) => {
+                  createForm.setValue("icon", iconId);
+                  setIsCreateIconSelectorOpen(false);
+                }}
               />
               
               <FormField
@@ -518,13 +551,41 @@ export default function CategoryManagement() {
                 name="icon"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>图标代码</FormLabel>
-                    <FormControl>
-                      <Input placeholder="输入图标代码" {...field} />
-                    </FormControl>
+                    <FormLabel>图标</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <FormControl>
+                        <div className="flex-1 flex items-center h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                          {field.value ? (
+                            <div className="flex items-center gap-2">
+                              <IconDisplay iconId={field.value} className="h-5 w-5" />
+                              <span className="text-sm">{field.value}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">未选择图标</span>
+                          )}
+                        </div>
+                      </FormControl>
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={() => setIsEditIconSelectorOpen(true)}
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
+              />
+              
+              <IconSelector
+                open={isEditIconSelectorOpen}
+                onOpenChange={setIsEditIconSelectorOpen}
+                currentIcon={editForm.getValues("icon")}
+                onSelect={(iconId) => {
+                  editForm.setValue("icon", iconId);
+                  setIsEditIconSelectorOpen(false);
+                }}
               />
               
               <FormField
