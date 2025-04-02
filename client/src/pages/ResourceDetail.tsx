@@ -188,113 +188,115 @@ export default function ResourceDetail() {
       </div>
       
       <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-        <div className="p-6 md:p-8">
-          <div className="flex flex-wrap gap-2 mb-4">
-            {resource.category && (
-              <Badge variant="outline" className="bg-blue-100 text-primary border-0">
-                {resource.category.name}
+        <div className="md:flex">
+          <div className="md:w-2/3 p-6 md:p-8">
+            <div className="flex flex-wrap gap-2 mb-4">
+              {resource.category && (
+                <Badge variant="outline" className="bg-blue-100 text-primary border-0">
+                  {resource.category.name}
+                </Badge>
+              )}
+              <Badge variant="outline" className="bg-neutral-100 text-neutral-800 border-0">
+                前端开发
               </Badge>
-            )}
-            <Badge variant="outline" className="bg-neutral-100 text-neutral-800 border-0">
-              前端开发
-            </Badge>
-            <Badge variant="outline" className="bg-neutral-100 text-neutral-800 border-0">
-              React
-            </Badge>
-          </div>
-          
-          <h1 className="text-2xl md:text-3xl font-bold mb-2">{resource.title}</h1>
-          <p className="text-neutral-600 mb-4">{resource.subtitle || 'No description available'}</p>
-          
-          <div className="mb-4">
-            <div className="text-3xl font-bold text-neutral-900 mb-1">
-              {isFree ? '免费' : `${Math.round(price)} 积分`}
+              <Badge variant="outline" className="bg-neutral-100 text-neutral-800 border-0">
+                React
+              </Badge>
             </div>
-            {!isFree && (
-              <div className="text-neutral-500 line-through">原价: {Math.round(originalPrice)} 积分</div>
-            )}
-            {isFree && (
-              <div className="bg-green-100 text-green-800 text-sm px-2 py-0.5 rounded mt-2 inline-block">
-                限时免费，距结束还有 2 天
+            
+            <h1 className="text-2xl md:text-3xl font-bold mb-2">{resource.title}</h1>
+            <p className="text-neutral-600 mb-4">{resource.subtitle || 'No description available'}</p>
+            
+            <div className="mb-4">
+              <div className="text-3xl font-bold text-neutral-900 mb-1">
+                {isFree ? '免费' : `${Math.round(price)} 积分`}
               </div>
-            )}
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 text-sm">
-            {resource.video_duration && (
-              <span className="flex items-center">
-                <Clock className="h-4 w-4 mr-1" /> 总时长: {resource.video_duration} 分钟
-              </span>
-            )}
-            
-            {resource.video_url && (
-              <span className="flex items-center">
-                <FileText className="h-4 w-4 mr-1" /> 课时: {Math.floor(Math.random() * 180 + 20)} 讲
-              </span>
-            )}
-            
-            {resource.language && (
-              <span className="flex items-center">
-                <Globe className="h-4 w-4 mr-1" /> 语言: {resource.language}
-              </span>
-            )}
-            
-            {resource.subtitle_languages && (
-              <span className="flex items-center">
-                <Subtitles className="h-4 w-4 mr-1" /> 字幕: {resource.subtitle_languages}
-              </span>
-            )}
-            
-            {resource.resolution && (
-              <span className="flex items-center">
-                <MonitorSmartphone className="h-4 w-4 mr-1" /> 分辨率: {resource.resolution}
-              </span>
-            )}
-            
-            <span className="flex items-center">
-              <span className="text-neutral-600 mr-2">格式:</span>
-              <span className="font-medium">MP4, PDF</span>
-            </span>
-            
-            <span className="flex items-center">
-              <span className="text-neutral-600 mr-2">大小:</span>
-              <span className="font-medium">{resource.video_size ? `${resource.video_size} GB` : '4.20 GB'}</span>
-            </span>
-            
-            <span className="flex items-center">
-              <span className="text-neutral-600 mr-2">更新日期:</span>
-              <span className="font-medium">{resource.updated_at ? new Date(resource.updated_at).toLocaleDateString() : '2025/3/26'}</span>
-            </span>
-          </div>
-          
-          <div className="flex items-center mb-6">
-            <div className="flex items-center text-amber-500 mr-3">
-              <Star className="h-4 w-4 fill-current" />
-              <Star className="h-4 w-4 fill-current" />
-              <Star className="h-4 w-4 fill-current" />
-              <Star className="h-4 w-4 fill-current" />
-              <StarHalf className="h-4 w-4 fill-current" />
-              <span className="ml-1 text-neutral-800 font-medium">4.5</span>
+              {!isFree && (
+                <div className="text-neutral-500 line-through">原价: {Math.round(originalPrice)} 积分</div>
+              )}
+              {isFree && (
+                <div className="bg-green-100 text-green-800 text-sm px-2 py-0.5 rounded mt-2 inline-block">
+                  限时免费，距结束还有 2 天
+                </div>
+              )}
             </div>
-            <span className="text-neutral-500 text-sm">(526 评价)</span>
-          </div>
-          
-          <div className="flex flex-wrap gap-4 mb-8">
-            <Button onClick={handleDownload} className="gap-2">
-              <Download className="h-4 w-4" /> 立即下载
-            </Button>
-            <Button onClick={handleAddToCart} variant="secondary" className="gap-2">
-              <ShoppingCart className="h-4 w-4" /> 加入购物车
-            </Button>
-            <Button onClick={handleAddToFavorites} variant="outline" className="gap-2">
-              <Heart className="h-4 w-4" /> 收藏
-            </Button>
-            <div className="text-xs text-neutral-500 flex items-center">
-              已有 12,569 人下载此资源
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-sm">
+              {resource.video_duration && (
+                <span className="flex items-center">
+                  <Clock className="h-4 w-4 mr-1" /> 总时长: {resource.video_duration} 分钟
+                </span>
+              )}
+              
+              {resource.video_url && (
+                <span className="flex items-center">
+                  <FileText className="h-4 w-4 mr-1" /> 课时: {Math.floor(Math.random() * 180 + 20)} 讲
+                </span>
+              )}
+              
+              {resource.language && (
+                <span className="flex items-center">
+                  <Globe className="h-4 w-4 mr-1" /> 语言: {resource.language}
+                </span>
+              )}
+              
+              {resource.subtitle_languages && (
+                <span className="flex items-center">
+                  <Subtitles className="h-4 w-4 mr-1" /> 字幕: {resource.subtitle_languages}
+                </span>
+              )}
+              
+              {resource.resolution && (
+                <span className="flex items-center">
+                  <MonitorSmartphone className="h-4 w-4 mr-1" /> 分辨率: {resource.resolution}
+                </span>
+              )}
+              
+              <span className="flex items-center">
+                <span className="text-neutral-600 mr-2">格式:</span>
+                <span className="font-medium">MP4, PDF</span>
+              </span>
+              
+              <span className="flex items-center">
+                <span className="text-neutral-600 mr-2">大小:</span>
+                <span className="font-medium">{resource.video_size ? `${resource.video_size} GB` : '4.20 GB'}</span>
+              </span>
+              
+              <span className="flex items-center">
+                <span className="text-neutral-600 mr-2">更新日期:</span>
+                <span className="font-medium">{resource.updated_at ? new Date(resource.updated_at).toLocaleDateString() : '2025/3/26'}</span>
+              </span>
+            </div>
+            
+            <div className="flex items-center mb-6">
+              <div className="flex items-center text-amber-500 mr-3">
+                <Star className="h-4 w-4 fill-current" />
+                <Star className="h-4 w-4 fill-current" />
+                <Star className="h-4 w-4 fill-current" />
+                <Star className="h-4 w-4 fill-current" />
+                <StarHalf className="h-4 w-4 fill-current" />
+                <span className="ml-1 text-neutral-800 font-medium">4.5</span>
+              </div>
+              <span className="text-neutral-500 text-sm">(526 评价)</span>
+            </div>
+            
+            <div className="flex flex-wrap gap-4 mb-8">
+              <Button onClick={handleDownload} className="gap-2">
+                <Download className="h-4 w-4" /> 立即下载
+              </Button>
+              <Button onClick={handleAddToCart} variant="secondary" className="gap-2">
+                <ShoppingCart className="h-4 w-4" /> 加入购物车
+              </Button>
+              <Button onClick={handleAddToFavorites} variant="outline" className="gap-2">
+                <Heart className="h-4 w-4" /> 收藏
+              </Button>
+              <div className="text-xs text-neutral-500 flex items-center">
+                已有 12,569 人下载此资源
+              </div>
             </div>
           </div>
           
-          <div className="border-t border-neutral-200 pt-6">
+          <div className="md:w-1/3 bg-neutral-50 p-6 md:p-8 border-t md:border-t-0 md:border-l border-neutral-200">
             <h3 className="font-semibold text-lg mb-3">关于作者</h3>
             <div className="flex">
               <Avatar className="h-12 w-12 mr-4">
