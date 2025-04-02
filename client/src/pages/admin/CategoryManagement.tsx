@@ -272,28 +272,10 @@ export default function CategoryManagement() {
                 <Link href="/admin/resources">资源列表</Link>
               </TabsTrigger>
               <TabsTrigger 
-                value="upload" 
-                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
-              >
-                <Link href="/admin/resources/upload">上传资源</Link>
-              </TabsTrigger>
-              <TabsTrigger 
                 value="categories" 
                 className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
               >
                 分类管理
-              </TabsTrigger>
-              <TabsTrigger 
-                value="users" 
-                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
-              >
-                <Link href="/admin/users">会员续费</Link>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="stats" 
-                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
-              >
-                <Link href="/admin/login-logs">统计分析</Link>
               </TabsTrigger>
             </TabsList>
           </div>

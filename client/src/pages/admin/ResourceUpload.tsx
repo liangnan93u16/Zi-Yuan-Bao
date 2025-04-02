@@ -60,7 +60,7 @@ const resourceFormSchema = z.object({
 type ResourceFormValues = z.infer<typeof resourceFormSchema>;
 
 export default function ResourceUpload() {
-  const [tab, setTab] = useState("upload");
+  const [tab, setTab] = useState("resources");
   const [_, navigate] = useLocation();
   const { toast } = useToast();
 
@@ -131,12 +131,6 @@ export default function ResourceUpload() {
           <div className="border-b border-neutral-200">
             <TabsList className="h-auto">
               <TabsTrigger 
-                value="upload" 
-                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
-              >
-                上传资源
-              </TabsTrigger>
-              <TabsTrigger 
                 value="resources" 
                 className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
               >
@@ -146,24 +140,12 @@ export default function ResourceUpload() {
                 value="categories" 
                 className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
               >
-                分类管理
-              </TabsTrigger>
-              <TabsTrigger 
-                value="users" 
-                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
-              >
-                <a href="/admin/users">会员续费</a>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="stats" 
-                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
-              >
-                统计分析
+                <a href="/admin/categories">分类管理</a>
               </TabsTrigger>
             </TabsList>
           </div>
           
-          <TabsContent value="upload" className="p-6">
+          <TabsContent value="resources" className="p-6">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

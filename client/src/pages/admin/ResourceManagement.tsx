@@ -102,28 +102,10 @@ export default function ResourceManagement() {
                 资源列表
               </TabsTrigger>
               <TabsTrigger 
-                value="upload" 
-                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
-              >
-                <Link href="/admin/resources/upload">上传资源</Link>
-              </TabsTrigger>
-              <TabsTrigger 
                 value="categories" 
                 className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
               >
                 <Link href="/admin/categories">分类管理</Link>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="users" 
-                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
-              >
-                <Link href="/admin/users">会员续费</Link>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="stats" 
-                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
-              >
-                统计分析
               </TabsTrigger>
             </TabsList>
           </div>
