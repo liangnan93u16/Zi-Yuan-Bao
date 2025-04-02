@@ -306,6 +306,26 @@ export default function ReviewManagement() {
                                   </Button>
                                 </>
                               )}
+                              {review.status === 1 && (
+                                <Button 
+                                  onClick={() => handleReject(review)} 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                                >
+                                  <X className="h-4 w-4 mr-1" /> 拒绝
+                                </Button>
+                              )}
+                              {review.status === 2 && (
+                                <Button 
+                                  onClick={() => handleApprove(review)} 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                                >
+                                  <Check className="h-4 w-4 mr-1" /> 通过
+                                </Button>
+                              )}
                               <Button 
                                 onClick={() => handleViewResource(review)} 
                                 variant="outline" 
