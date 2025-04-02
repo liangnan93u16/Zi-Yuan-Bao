@@ -33,6 +33,18 @@ const updateProfileSchema = z.object({
 
 type UpdateProfileFormValues = z.infer<typeof updateProfileSchema>;
 
+// Define the change password schema
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(6, "密码长度至少6位"),
+  newPassword: z.string().min(6, "密码长度至少6位"),
+  confirmPassword: z.string().min(6, "密码长度至少6位"),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "两次输入的新密码不一致",
+  path: ["confirmPassword"], 
+});
+
+type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
+
 export default function Profile() {
   const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
@@ -40,6 +52,7 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState("overview");
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   // We should handle the redirect in the rendered component
   // to avoid React hooks errors
@@ -116,8 +129,47 @@ export default function Profile() {
     },
   });
 
+  // Change password form
+  const passwordForm = useForm<ChangePasswordFormValues>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  });
+
+  // Change password mutation
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: ChangePasswordFormValues) => {
+      return await apiRequest("PATCH", `/api/users/${user?.id}/password`, {
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "密码修改成功",
+        description: "您的密码已成功更新，请使用新密码登录。",
+      });
+      setIsChangePasswordOpen(false);
+      passwordForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "密码修改失败",
+        description: error.message || "修改密码时发生错误，请检查当前密码是否正确。",
+        variant: "destructive",
+      });
+    },
+  });
+
   async function onSubmit(data: UpdateProfileFormValues) {
     updateProfileMutation.mutate(data);
+  }
+
+  async function onSubmitChangePassword(data: ChangePasswordFormValues) {
+    changePasswordMutation.mutate(data);
   }
   
   // 处理头像选择
@@ -463,7 +515,7 @@ export default function Profile() {
                     )}
                   />
 
-                  <Dialog>
+                  <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
                     <DialogTrigger asChild>
                       <Button variant="outline" type="button" className="w-full">修改密码</Button>
                     </DialogTrigger>
@@ -475,25 +527,70 @@ export default function Profile() {
                         </DialogDescription>
                       </DialogHeader>
                       
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <FormLabel htmlFor="current-password">当前密码</FormLabel>
-                          <Input id="current-password" type="password" />
-                        </div>
-                        <div className="space-y-2">
-                          <FormLabel htmlFor="new-password">新密码</FormLabel>
-                          <Input id="new-password" type="password" />
-                        </div>
-                        <div className="space-y-2">
-                          <FormLabel htmlFor="confirm-password">确认新密码</FormLabel>
-                          <Input id="confirm-password" type="password" />
-                        </div>
-                      </div>
-                      
-                      <DialogFooter>
-                        <Button type="button" variant="outline">取消</Button>
-                        <Button type="button">确认修改</Button>
-                      </DialogFooter>
+                      <Form {...passwordForm}>
+                        <form onSubmit={passwordForm.handleSubmit(onSubmitChangePassword)} className="space-y-4 py-4">
+                          <FormField
+                            control={passwordForm.control}
+                            name="currentPassword"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>当前密码</FormLabel>
+                                <FormControl>
+                                  <Input {...field} type="password" autoComplete="current-password" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={passwordForm.control}
+                            name="newPassword"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>新密码</FormLabel>
+                                <FormControl>
+                                  <Input {...field} type="password" autoComplete="new-password" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={passwordForm.control}
+                            name="confirmPassword"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>确认新密码</FormLabel>
+                                <FormControl>
+                                  <Input {...field} type="password" autoComplete="new-password" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <DialogFooter className="mt-4">
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              onClick={() => {
+                                setIsChangePasswordOpen(false);
+                                passwordForm.reset();
+                              }}
+                            >
+                              取消
+                            </Button>
+                            <Button 
+                              type="submit" 
+                              disabled={changePasswordMutation.isPending}
+                            >
+                              {changePasswordMutation.isPending ? "处理中..." : "确认修改"}
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </Form>
                     </DialogContent>
                   </Dialog>
                   

@@ -667,6 +667,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: '更新资料失败，请稍后再试' });
     }
   });
+  
+  // 修改用户密码
+  app.patch('/api/users/:id/password', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // 检查权限：只能修改自己的密码，管理员也不能修改他人密码
+      if (req.user?.id !== userId) {
+        return res.status(403).json({ message: '您没有权限修改此用户密码' });
+      }
+      
+      // 创建Schema验证请求数据
+      const changePasswordSchema = z.object({
+        currentPassword: z.string().min(6, "当前密码长度至少6位"),
+        newPassword: z.string().min(6, "新密码长度至少6位"),
+      });
+      
+      const validationResult = changePasswordSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ message: '数据格式错误', errors: validationResult.error.format() });
+      }
+      
+      // 获取用户信息
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: '用户不存在' });
+      }
+      
+      // 验证当前密码
+      const bcrypt = await import('bcrypt');
+      const isPasswordValid = await bcrypt.compare(validationResult.data.currentPassword, user.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: '当前密码不正确' });
+      }
+      
+      // 哈希新密码
+      const hashedPassword = await bcrypt.hash(validationResult.data.newPassword, 10);
+      
+      // 更新密码
+      const updatedUser = await storage.updateUser(userId, { password: hashedPassword });
+      
+      if (!updatedUser) {
+        return res.status(500).json({ message: '密码更新失败' });
+      }
+      
+      res.json({ message: '密码修改成功' });
+      
+    } catch (error) {
+      console.error('Error changing password:', error);
+      res.status(500).json({ message: '修改密码失败，请稍后再试' });
+    }
+  });
 
   // Review routes
   app.get('/api/resources/:resourceId/reviews', async (req, res) => {
