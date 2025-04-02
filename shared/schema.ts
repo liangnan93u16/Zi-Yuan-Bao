@@ -142,5 +142,23 @@ export type InsertResourceRequest = z.infer<typeof insertResourceRequestSchema>;
 export type Review = typeof reviews.$inferSelect;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 
+// Admin Login Logs table
+export const adminLoginLogs = pgTable("admin_login_logs", {
+  id: serial("id").primaryKey(),
+  admin_email: text("admin_email").notNull(),
+  ip_address: text("ip_address").notNull(),
+  login_time: timestamp("login_time").defaultNow(),
+  user_agent: text("user_agent"),
+  status: boolean("status").default(true) // true: 成功, false: 失败
+});
+
+export const insertAdminLoginLogSchema = createInsertSchema(adminLoginLogs).omit({
+  id: true,
+  login_time: true
+});
+
+export type AdminLoginLog = typeof adminLoginLogs.$inferSelect;
+export type InsertAdminLoginLog = z.infer<typeof insertAdminLoginLogSchema>;
+
 export type LoginCredentials = z.infer<typeof loginSchema>;
 export type RegisterData = z.infer<typeof registerSchema>;

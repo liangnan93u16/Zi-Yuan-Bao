@@ -3,7 +3,8 @@ import {
   categories, type Category, type InsertCategory,
   resources, type Resource, type InsertResource,
   resourceRequests, type ResourceRequest, type InsertResourceRequest,
-  reviews, type Review, type InsertReview
+  reviews, type Review, type InsertReview,
+  adminLoginLogs, type AdminLoginLog, type InsertAdminLoginLog
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, or, desc, sql } from "drizzle-orm";
@@ -49,6 +50,10 @@ export interface IStorage {
   getResourceRequest(id: number): Promise<ResourceRequest | undefined>;
   getAllResourceRequests(): Promise<ResourceRequest[]>;
   updateResourceRequestStatus(id: number, status: number, notes?: string): Promise<ResourceRequest | undefined>;
+  
+  // Admin Login Log operations
+  createAdminLoginLog(log: InsertAdminLoginLog): Promise<AdminLoginLog>;
+  getAdminLoginLogs(adminEmail?: string, limit?: number): Promise<AdminLoginLog[]>;
   
   // Initialize default data
   initializeDefaultData(): Promise<void>;
@@ -344,6 +349,34 @@ export class DatabaseStorage implements IStorage {
       .where(eq(reviews.id, id))
       .returning({ id: reviews.id });
     return result.length > 0;
+  }
+  
+  // Admin Login Log 方法
+  async createAdminLoginLog(insertLog: InsertAdminLoginLog): Promise<AdminLoginLog> {
+    const [log] = await db
+      .insert(adminLoginLogs)
+      .values(insertLog)
+      .returning();
+    return log;
+  }
+  
+  async getAdminLoginLogs(adminEmail?: string, limit?: number): Promise<AdminLoginLog[]> {
+    let query = db
+      .select()
+      .from(adminLoginLogs)
+      .orderBy(desc(adminLoginLogs.login_time));
+    
+    // 如果指定了管理员邮箱，筛选该管理员的记录
+    if (adminEmail) {
+      query = query.where(eq(adminLoginLogs.admin_email, adminEmail));
+    }
+    
+    // 如果指定了限制数量，应用限制
+    if (limit) {
+      query = query.limit(limit);
+    }
+    
+    return await query;
   }
 
   // Initialize with default data if needed

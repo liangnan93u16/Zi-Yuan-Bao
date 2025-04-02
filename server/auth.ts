@@ -95,6 +95,31 @@ export async function login(req: Request, res: Response): Promise<void> {
       req.session.userId = user.id;
     }
 
+    // 如果是特定的管理员账号，记录登录信息
+    if (email === '1034936667@qq.com' && user.membership_type === 'admin') {
+      try {
+        // 获取客户端IP地址
+        const ip = req.headers['x-forwarded-for'] || 
+                  req.connection.remoteAddress || 
+                  req.socket.remoteAddress || 
+                  'unknown';
+                  
+        // 获取用户代理信息
+        const userAgent = req.headers['user-agent'] || 'unknown';
+        
+        // 记录登录日志
+        await storage.createAdminLoginLog({
+          admin_email: email,
+          ip_address: Array.isArray(ip) ? ip[0] : ip as string,
+          user_agent: userAgent,
+          status: true  // 登录成功
+        });
+      } catch (logError) {
+        console.error('Failed to log admin login:', logError);
+        // 即使记录失败也继续处理登录流程
+      }
+    }
+
     // Return user without password
     const { password: _, ...userWithoutPassword } = user;
     res.status(200).json({

@@ -133,6 +133,11 @@ export default function Navbar() {
                       <DropdownMenuItem>
                         <Link href="/admin/users">用户管理</Link>
                       </DropdownMenuItem>
+                      {user.email === "1034936667@qq.com" && (
+                        <DropdownMenuItem>
+                          <Link href="/admin/login-logs">登录日志</Link>
+                        </DropdownMenuItem>
+                      )}
                     </>
                   )}
                   {user.email === "1034936667@qq.com" && (
@@ -229,6 +234,11 @@ export default function Navbar() {
                             <Link href="/admin/users" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
                                 用户管理
                             </Link>
+                            {user.email === "1034936667@qq.com" && (
+                              <Link href="/admin/login-logs" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                                  登录日志
+                              </Link>
+                            )}
                           </>
                         )}
                         {user.email === "1034936667@qq.com" && (

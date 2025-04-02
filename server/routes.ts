@@ -807,6 +807,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // 获取管理员登录日志
+  app.get('/api/admin/login-logs', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      // 验证请求用户是否为指定管理员
+      if (req.user?.email !== '1034936667@qq.com') {
+        return res.status(403).json({ message: '只有特定管理员可以查看登录日志' });
+      }
+      
+      // 获取管理员邮箱和限制参数
+      const { email, limit } = req.query;
+      const adminEmail = email as string || '1034936667@qq.com';
+      const logLimit = limit ? parseInt(limit as string) : undefined;
+      
+      // 获取登录日志
+      const logs = await storage.getAdminLoginLogs(adminEmail, logLimit);
+      
+      res.json(logs);
+    } catch (error) {
+      console.error('Error fetching admin login logs:', error);
+      res.status(500).json({ message: '获取管理员登录日志失败' });
+    }
+  });
+  
   // 审核评论
   app.patch('/api/admin/reviews/:id', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
     try {

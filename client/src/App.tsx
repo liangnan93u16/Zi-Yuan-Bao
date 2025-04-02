@@ -17,6 +17,7 @@ import ResourceEdit from "./pages/admin/ResourceEdit";
 import ResourceRequests from "./pages/admin/ResourceRequests";
 import UserManagement from "./pages/admin/UserManagement";
 import ReviewManagement from "./pages/admin/ReviewManagement";
+import LoginLogs from "./pages/admin/LoginLogs";
 import { AuthProvider } from "./hooks/use-auth";
 
 function App() {
@@ -42,6 +43,7 @@ function App() {
               <Route path="/admin/resource-requests" component={ResourceRequests} />
               <Route path="/admin/users" component={UserManagement} />
               <Route path="/admin/reviews" component={ReviewManagement} />
+              <Route path="/admin/login-logs" component={LoginLogs} />
               <Route component={NotFound} />
             </Switch>
           </main>
