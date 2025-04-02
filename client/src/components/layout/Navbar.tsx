@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Search, ShoppingCart, Menu, User, ShoppingBag, LogOut, BookOpen, Edit, CheckCircle, ClipboardCheck, Users, History, Shield } from "lucide-react";
+import { Search, ShoppingCart, Menu, User, ShoppingBag, LogOut, BookOpen, Edit, CheckCircle, ClipboardCheck, Users, History, Shield, Home, Package, Crown, HelpCircle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -48,39 +48,44 @@ export default function Navbar() {
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-              <Link href="/" className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+              <Link href="/" className={`inline-flex items-center gap-1 px-1 pt-1 border-b-2 text-sm font-medium ${
                   isActive("/") 
                     ? "border-primary text-neutral-900" 
                     : "border-transparent text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
                 }`}>
+                  <Home className="h-4 w-4" />
                   首页
               </Link>
-              <Link href="/resources" className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+              <Link href="/resources" className={`inline-flex items-center gap-1 px-1 pt-1 border-b-2 text-sm font-medium ${
                   location.startsWith("/resources") && !location.includes("admin")
                     ? "border-primary text-neutral-900" 
                     : "border-transparent text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
                 }`}>
+                  <Package className="h-4 w-4" />
                   全部资源
               </Link>
-              <Link href="/membership" className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+              <Link href="/membership" className={`inline-flex items-center gap-1 px-1 pt-1 border-b-2 text-sm font-medium ${
                   isActive("/membership") 
                     ? "border-primary text-neutral-900" 
                     : "border-transparent text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
                 }`}>
+                  <Crown className="h-4 w-4" />
                   会员专区
               </Link>
-              <Link href="/resource-request" className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+              <Link href="/resource-request" className={`inline-flex items-center gap-1 px-1 pt-1 border-b-2 text-sm font-medium ${
                   isActive("/resource-request") 
                     ? "border-primary text-neutral-900" 
                     : "border-transparent text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
                 }`}>
+                  <HelpCircle className="h-4 w-4" />
                   资源求助
               </Link>
-              <Link href="/about" className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+              <Link href="/about" className={`inline-flex items-center gap-1 px-1 pt-1 border-b-2 text-sm font-medium ${
                   isActive("/about") 
                     ? "border-primary text-neutral-900" 
                     : "border-transparent text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
                 }`}>
+                  <Info className="h-4 w-4" />
                   关于我们
               </Link>
             </div>
@@ -201,39 +206,44 @@ export default function Navbar() {
               </SheetTrigger>
               <SheetContent side="right">
                 <div className="flex flex-col space-y-4 mt-4">
-                  <Link href="/" className={`px-3 py-2 rounded-md text-base font-medium ${
+                  <Link href="/" className={`flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium ${
                       isActive("/") 
                         ? "text-primary bg-neutral-50" 
                         : "text-neutral-700 hover:text-primary hover:bg-neutral-50"
                     }`}>
+                      <Home className="h-4 w-4" />
                       首页
                   </Link>
-                  <Link href="/resources" className={`px-3 py-2 rounded-md text-base font-medium ${
+                  <Link href="/resources" className={`flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium ${
                       location.startsWith("/resources") && !location.includes("admin")
                         ? "text-primary bg-neutral-50" 
                         : "text-neutral-700 hover:text-primary hover:bg-neutral-50"
                     }`}>
+                      <Package className="h-4 w-4" />
                       全部资源
                   </Link>
-                  <Link href="/membership" className={`px-3 py-2 rounded-md text-base font-medium ${
+                  <Link href="/membership" className={`flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium ${
                       isActive("/membership") 
                         ? "text-primary bg-neutral-50" 
                         : "text-neutral-700 hover:text-primary hover:bg-neutral-50"
                     }`}>
+                      <Crown className="h-4 w-4" />
                       会员专区
                   </Link>
-                  <Link href="/resource-request" className={`px-3 py-2 rounded-md text-base font-medium ${
+                  <Link href="/resource-request" className={`flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium ${
                       isActive("/resource-request") 
                         ? "text-primary bg-neutral-50" 
                         : "text-neutral-700 hover:text-primary hover:bg-neutral-50"
                     }`}>
+                      <HelpCircle className="h-4 w-4" />
                       资源求助
                   </Link>
-                  <Link href="/about" className={`px-3 py-2 rounded-md text-base font-medium ${
+                  <Link href="/about" className={`flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium ${
                       isActive("/about") 
                         ? "text-primary bg-neutral-50" 
                         : "text-neutral-700 hover:text-primary hover:bg-neutral-50"
                     }`}>
+                      <Info className="h-4 w-4" />
                       关于我们
                   </Link>
                   
