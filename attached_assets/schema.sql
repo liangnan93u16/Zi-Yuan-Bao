@@ -40,7 +40,7 @@ CREATE TABLE users (
     avatar VARCHAR(255) COMMENT '头像URL',
     membership_type VARCHAR(50) COMMENT '会员类型',
     membership_expire_time TIMESTAMP COMMENT '会员过期时间',
-    coins INTEGER DEFAULT 0 COMMENT '金币数量',
+    coins INTEGER DEFAULT 0 COMMENT '积分数量',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 );
