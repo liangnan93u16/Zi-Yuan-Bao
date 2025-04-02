@@ -207,8 +207,8 @@ export default function ResourceDetail() {
             <h1 className="text-2xl md:text-3xl font-bold mb-2">{resource.title}</h1>
             <p className="text-neutral-600 mb-4">{resource.subtitle || 'No description available'}</p>
             
-            <div className="mb-4">
-              <div className="text-3xl font-bold text-neutral-900 mb-1">
+            <div className="mb-6">
+              <div className="text-4xl font-bold text-neutral-900 mb-1">
                 {isFree ? '免费' : `${Math.round(price)} 积分`}
               </div>
               {!isFree && (
@@ -221,7 +221,46 @@ export default function ResourceDetail() {
               )}
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-sm">
+            {/* 课程内容要点 */}
+            <div className="mb-6 space-y-3">
+              <div className="flex items-center">
+                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                <span>终身访问所有课程内容</span>
+              </div>
+              <div className="flex items-center">
+                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                <span>源代码和项目文件下载</span>
+              </div>
+              <div className="flex items-center">
+                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                <span>完整中英双语字幕</span>
+              </div>
+              <div className="flex items-center">
+                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                <span>移动端和TV端支持</span>
+              </div>
+              <div className="flex items-center">
+                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                <span>课程完成证书</span>
+              </div>
+            </div>
+            
+            {/* 文件信息 */}
+            <div className="mb-6 bg-neutral-50 p-5 rounded-lg">
+              <h3 className="font-semibold text-lg mb-3">文件信息</h3>
+              <div className="grid grid-cols-2 gap-y-3">
+                <span className="text-neutral-600">格式:</span>
+                <span className="font-medium text-right">MP4, PDF</span>
+                
+                <span className="text-neutral-600">大小:</span>
+                <span className="font-medium text-right">{resource.video_size ? `${resource.video_size} GB` : '4.20 GB'}</span>
+                
+                <span className="text-neutral-600">更新日期:</span>
+                <span className="font-medium text-right">{resource.updated_at ? new Date(resource.updated_at).toLocaleDateString() : '2025/3/26'}</span>
+              </div>
+            </div>
+            
+            <div className="mb-4 hidden">
               {resource.video_duration && (
                 <span className="flex items-center">
                   <Clock className="h-4 w-4 mr-1" /> 总时长: {resource.video_duration} 分钟
@@ -251,21 +290,6 @@ export default function ResourceDetail() {
                   <MonitorSmartphone className="h-4 w-4 mr-1" /> 分辨率: {resource.resolution}
                 </span>
               )}
-              
-              <span className="flex items-center">
-                <span className="text-neutral-600 mr-2">格式:</span>
-                <span className="font-medium">MP4, PDF</span>
-              </span>
-              
-              <span className="flex items-center">
-                <span className="text-neutral-600 mr-2">大小:</span>
-                <span className="font-medium">{resource.video_size ? `${resource.video_size} GB` : '4.20 GB'}</span>
-              </span>
-              
-              <span className="flex items-center">
-                <span className="text-neutral-600 mr-2">更新日期:</span>
-                <span className="font-medium">{resource.updated_at ? new Date(resource.updated_at).toLocaleDateString() : '2025/3/26'}</span>
-              </span>
             </div>
             
             <div className="flex items-center mb-6">
@@ -280,18 +304,20 @@ export default function ResourceDetail() {
               <span className="text-neutral-500 text-sm">(526 评价)</span>
             </div>
             
-            <div className="flex flex-wrap gap-4 mb-8">
-              <Button onClick={handleDownload} className="gap-2">
-                <Download className="h-4 w-4" /> 立即下载
+            <div className="flex flex-col gap-4 mb-8">
+              <Button onClick={handleDownload} size="lg" className="w-full text-base py-6">
+                立即获取
               </Button>
-              <Button onClick={handleAddToCart} variant="secondary" className="gap-2">
-                <ShoppingCart className="h-4 w-4" /> 加入购物车
-              </Button>
-              <Button onClick={handleAddToFavorites} variant="outline" className="gap-2">
-                <Heart className="h-4 w-4" /> 收藏
-              </Button>
-              <div className="text-xs text-neutral-500 flex items-center">
+              <div className="text-center text-sm text-neutral-500">
                 已有 12,569 人下载此资源
+              </div>
+              <div className="flex justify-center gap-4 mt-2 hidden">
+                <Button onClick={handleAddToCart} variant="secondary" className="gap-2">
+                  <ShoppingCart className="h-4 w-4" /> 加入购物车
+                </Button>
+                <Button onClick={handleAddToFavorites} variant="outline" className="gap-2">
+                  <Heart className="h-4 w-4" /> 收藏
+                </Button>
               </div>
             </div>
           </div>

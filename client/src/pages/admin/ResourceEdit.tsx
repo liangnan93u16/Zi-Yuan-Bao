@@ -273,7 +273,7 @@ export default function ResourceEdit() {
                           </FormControl>
                           <SelectContent>
                             {isCategoriesLoading ? (
-                              <SelectItem value="" disabled>
+                              <SelectItem value="loading" disabled>
                                 加载分类中...
                               </SelectItem>
                             ) : (
@@ -284,7 +284,7 @@ export default function ResourceEdit() {
                                 >
                                   {category.name}
                                 </SelectItem>
-                              )) : <SelectItem value="" disabled>没有可用分类</SelectItem>
+                              )) : <SelectItem value="no_categories" disabled>没有可用分类</SelectItem>
                             )}
                           </SelectContent>
                         </Select>
