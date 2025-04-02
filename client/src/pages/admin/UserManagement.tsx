@@ -259,7 +259,7 @@ export default function UserManagement() {
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
         <div className="border-b border-neutral-200 px-6 py-4">
-          <h2 className="text-xl font-bold">用户管理</h2>
+          <h2 className="text-xl font-bold">会员续费</h2>
         </div>
         
         <Tabs defaultValue="users">
@@ -269,7 +269,7 @@ export default function UserManagement() {
                 value="users" 
                 className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
               >
-                用户列表
+                会员列表
               </TabsTrigger>
               <TabsTrigger 
                 value="resources" 

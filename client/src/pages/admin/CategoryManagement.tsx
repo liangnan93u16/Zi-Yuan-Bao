@@ -287,7 +287,7 @@ export default function CategoryManagement() {
                 value="users" 
                 className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
               >
-                <Link href="/admin/users">用户管理</Link>
+                <Link href="/admin/users">会员续费</Link>
               </TabsTrigger>
               <TabsTrigger 
                 value="stats" 

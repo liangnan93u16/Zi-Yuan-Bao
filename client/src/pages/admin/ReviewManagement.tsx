@@ -201,7 +201,7 @@ export default function ReviewManagement() {
                 value="users" 
                 className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
               >
-                <a href="/admin/users">用户管理</a>
+                <a href="/admin/users">会员续费</a>
               </TabsTrigger>
             </TabsList>
           </div>

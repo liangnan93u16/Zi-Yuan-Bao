@@ -131,7 +131,7 @@ export default function Navbar() {
                         <Link href="/admin/resource-requests">资源需求管理</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem>
-                        <Link href="/admin/users">用户管理</Link>
+                        <Link href="/admin/users">会员续费</Link>
                       </DropdownMenuItem>
                       {user.email === "1034936667@qq.com" && (
                         <DropdownMenuItem>
@@ -232,7 +232,7 @@ export default function Navbar() {
                                 资源需求管理
                             </Link>
                             <Link href="/admin/users" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
-                                用户管理
+                                会员续费
                             </Link>
                             {user.email === "1034936667@qq.com" && (
                               <Link href="/admin/login-logs" className="px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
