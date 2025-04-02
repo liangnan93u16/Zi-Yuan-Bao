@@ -19,6 +19,7 @@ import UserManagement from "./pages/admin/UserManagement";
 import ReviewManagement from "./pages/admin/ReviewManagement";
 import LoginLogs from "./pages/admin/LoginLogs";
 import CategoryManagement from "./pages/admin/CategoryManagement";
+import AuthorManagement from "./pages/admin/AuthorManagement";
 import { AuthProvider } from "./hooks/use-auth";
 
 function App() {
@@ -46,6 +47,7 @@ function App() {
               <Route path="/admin/reviews" component={ReviewManagement} />
               <Route path="/admin/login-logs" component={LoginLogs} />
               <Route path="/admin/categories" component={CategoryManagement} />
+              <Route path="/admin/authors" component={AuthorManagement} />
               <Route component={NotFound} />
             </Switch>
           </main>

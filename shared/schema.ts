@@ -2,6 +2,17 @@ import { pgTable, text, serial, integer, boolean, timestamp, decimal } from "dri
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Authors table
+export const authors = pgTable("authors", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  avatar: text("avatar"),
+  title: text("title"), // 职称，如"资深前端工程师"
+  bio: text("bio"), // 简介
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow()
+});
+
 // Reviews table
 export const reviews = pgTable("reviews", {
   id: serial("id").primaryKey(),
@@ -33,6 +44,7 @@ export const resources = pgTable("resources", {
   subtitle: text("subtitle"),
   cover_image: text("cover_image"),
   category_id: integer("category_id").references(() => categories.id),
+  author_id: integer("author_id").references(() => authors.id), // 关联到作者表
   price: decimal("price", { precision: 10, scale: 2 }).default("0"),
   video_url: text("video_url"),
   video_duration: integer("video_duration"),
@@ -69,6 +81,12 @@ export const users = pgTable("users", {
 });
 
 // Insert schemas
+export const insertAuthorSchema = createInsertSchema(authors).omit({
+  id: true,
+  created_at: true,
+  updated_at: true
+});
+
 export const insertCategorySchema = createInsertSchema(categories).omit({
   id: true,
   created_at: true,
@@ -127,6 +145,9 @@ export const insertResourceRequestSchema = createInsertSchema(resourceRequests).
 });
 
 // Types
+export type Author = typeof authors.$inferSelect;
+export type InsertAuthor = z.infer<typeof insertAuthorSchema>;
+
 export type Category = typeof categories.$inferSelect;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 

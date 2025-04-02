@@ -4,7 +4,8 @@ import { Client } from 'pg';
 import { 
   users, type User, type InsertUser, 
   categories, type Category, type InsertCategory,
-  resources, type Resource, type InsertResource
+  resources, type Resource, type InsertResource,
+  authors, type Author, type InsertAuthor
 } from "@shared/schema";
 import { IStorage, ResourceFilters } from './storage';
 
@@ -221,5 +222,42 @@ export class PgStorage implements IStorage {
       .select()
       .from(resources)
       .where(eq(resources.category_id, categoryId));
+  }
+
+  // Author methods
+  async getAuthor(id: number): Promise<Author | undefined> {
+    const result = await this.db.select().from(authors).where(eq(authors.id, id));
+    return result[0];
+  }
+
+  async getAuthorByName(name: string): Promise<Author | undefined> {
+    const result = await this.db.select().from(authors).where(eq(authors.name, name));
+    return result[0];
+  }
+
+  async createAuthor(authorData: InsertAuthor): Promise<Author> {
+    const result = await this.db.insert(authors).values(authorData).returning();
+    return result[0];
+  }
+
+  async updateAuthor(id: number, data: Partial<Author>): Promise<Author | undefined> {
+    const result = await this.db
+      .update(authors)
+      .set({ ...data, updated_at: new Date() })
+      .where(eq(authors.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteAuthor(id: number): Promise<boolean> {
+    const result = await this.db
+      .delete(authors)
+      .where(eq(authors.id, id))
+      .returning({ id: authors.id });
+    return result.length > 0;
+  }
+
+  async getAllAuthors(): Promise<Author[]> {
+    return await this.db.select().from(authors);
   }
 }

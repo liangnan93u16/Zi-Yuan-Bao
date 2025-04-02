@@ -4,7 +4,8 @@ import {
   resources, type Resource, type InsertResource,
   resourceRequests, type ResourceRequest, type InsertResourceRequest,
   reviews, type Review, type InsertReview,
-  adminLoginLogs, type AdminLoginLog, type InsertAdminLoginLog
+  adminLoginLogs, type AdminLoginLog, type InsertAdminLoginLog,
+  authors, type Author, type InsertAuthor
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, or, desc, sql } from "drizzle-orm";
@@ -17,6 +18,14 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, data: Partial<User>): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
+
+  // Author operations
+  getAuthor(id: number): Promise<Author | undefined>;
+  getAuthorByName(name: string): Promise<Author | undefined>;
+  createAuthor(author: InsertAuthor): Promise<Author>;
+  updateAuthor(id: number, data: Partial<Author>): Promise<Author | undefined>;
+  deleteAuthor(id: number): Promise<boolean>;
+  getAllAuthors(): Promise<Author[]>;
 
   // Category operations
   getCategory(id: number): Promise<Category | undefined>;
@@ -101,6 +110,46 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
+  }
+  
+  // Author 方法
+  async getAuthor(id: number): Promise<Author | undefined> {
+    const [author] = await db.select().from(authors).where(eq(authors.id, id));
+    return author || undefined;
+  }
+
+  async getAuthorByName(name: string): Promise<Author | undefined> {
+    const [author] = await db.select().from(authors).where(eq(authors.name, name));
+    return author || undefined;
+  }
+
+  async createAuthor(insertAuthor: InsertAuthor): Promise<Author> {
+    const [author] = await db
+      .insert(authors)
+      .values(insertAuthor)
+      .returning();
+    return author;
+  }
+
+  async updateAuthor(id: number, data: Partial<Author>): Promise<Author | undefined> {
+    const [author] = await db
+      .update(authors)
+      .set({ ...data, updated_at: new Date() })
+      .where(eq(authors.id, id))
+      .returning();
+    return author || undefined;
+  }
+
+  async deleteAuthor(id: number): Promise<boolean> {
+    const result = await db
+      .delete(authors)
+      .where(eq(authors.id, id))
+      .returning({ id: authors.id });
+    return result.length > 0;
+  }
+
+  async getAllAuthors(): Promise<Author[]> {
+    return await db.select().from(authors).orderBy(authors.name);
   }
 
   async getCategory(id: number): Promise<Category | undefined> {
@@ -426,6 +475,34 @@ export class DatabaseStorage implements IStorage {
           sort_order: cat.sort_order
         });
       }
+    }
+    
+    // 检查是否已有作者
+    try {
+      const authorCount = await db.select({ count: sql`COUNT(*)`.mapWith(Number) }).from(authors);
+      if (authorCount[0]?.count === 0) {
+        // 创建默认作者
+        const defaultAuthors = [
+          { 
+            name: "陈开发", 
+            title: "资深前端工程师", 
+            bio: "拥有10年React开发经验，曾任职于多家知名互联网公司。",
+            avatar: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=facearea&facepad=2&w=300&h=300&q=80"
+          },
+          { 
+            name: "李数据", 
+            title: "数据分析专家", 
+            bio: "专注于Python数据分析和机器学习，拥有丰富的教学和实战经验。",
+            avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=facearea&facepad=2&w=300&h=300&q=80"
+          }
+        ];
+
+        for (const author of defaultAuthors) {
+          await this.createAuthor(author);
+        }
+      }
+    } catch (error) {
+      console.log("Authors table may not exist yet, skipping author initialization");
     }
   }
 }

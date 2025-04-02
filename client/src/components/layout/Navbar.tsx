@@ -156,6 +156,12 @@ export default function Navbar() {
                           会员续费
                         </Link>
                       </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Link href="/admin/authors" className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          作者管理
+                        </Link>
+                      </DropdownMenuItem>
                       {user.email === "1034936667@qq.com" && (
                         <DropdownMenuItem>
                           <Link href="/admin/login-logs" className="flex items-center gap-2">
@@ -275,6 +281,10 @@ export default function Navbar() {
                             <Link href="/admin/users" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
                                 <Users className="h-4 w-4" />
                                 会员续费
+                            </Link>
+                            <Link href="/admin/authors" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                                <Users className="h-4 w-4" />
+                                作者管理
                             </Link>
                             {user.email === "1034936667@qq.com" && (
                               <Link href="/admin/login-logs" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
