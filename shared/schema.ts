@@ -221,6 +221,8 @@ export type InsertFeifeiCategory = z.infer<typeof insertFeifeiCategorySchema>;
 export const feifeiResources = pgTable("feifei_resources", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(), // 资源标题
+  chinese_title: text("chinese_title"), // 中文标题
+  english_title: text("english_title"), // 英文标题
   url: text("url").notNull(), // 资源URL
   category_id: integer("category_id").notNull().references(() => feifeiCategories.id), // 所属分类
   icon: text("icon"), // 资源图标

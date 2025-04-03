@@ -642,9 +642,11 @@ export default function FeifeiManagement() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[60px]">ID</TableHead>
-                      <TableHead className="w-[250px]">标题</TableHead>
+                      <TableHead className="w-[180px]">标题</TableHead>
+                      <TableHead className="w-[150px]">中文标题</TableHead>
+                      <TableHead className="w-[150px]">英文标题</TableHead>
                       <TableHead>URL</TableHead>
-                      <TableHead className="w-[150px]">标签</TableHead>
+                      <TableHead className="w-[120px]">标签</TableHead>
                       <TableHead className="w-[150px]">创建时间</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -653,8 +655,10 @@ export default function FeifeiManagement() {
                       <TableRow key={resource.id}>
                         <TableCell>{resource.id}</TableCell>
                         <TableCell>{resource.title}</TableCell>
+                        <TableCell>{resource.chinese_title || '-'}</TableCell>
+                        <TableCell>{resource.english_title || '-'}</TableCell>
                         <TableCell>
-                          <div className="flex items-center space-x-2 max-w-[320px] truncate">
+                          <div className="flex items-center space-x-2 max-w-[250px] truncate">
                             <LinkIcon className="h-4 w-4 flex-shrink-0 text-neutral-400" />
                             <a 
                               href={resource.url} 

@@ -1304,7 +1304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const $ = load(html);
       
       // 找到所有container内的链接
-      const links: { title: string, url: string, tags: string[] }[] = [];
+      const links: { title: string, url: string, tags: string[], chineseTitle: string | null, englishTitle: string | null }[] = [];
       $('section.container a').each((idx: number, element: any) => {
         const url = $(element).attr('href');
         
@@ -1330,9 +1330,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 移除标题中的标签，获得干净的标题
         cleanTitle = cleanTitle.replace(/\[.*?\]/g, '').trim();
         
+        // 处理标题中的中英文分隔（使用|符号分隔）
+        let chineseTitle: string | null = null;
+        let englishTitle: string | null = null;
+        
+        if (cleanTitle.includes('|')) {
+          const titleParts = cleanTitle.split('|');
+          chineseTitle = titleParts[0].trim();
+          englishTitle = titleParts[1].trim();
+          // 如果分割后发现某部分为空，则设为null
+          if (chineseTitle === '') chineseTitle = null;
+          if (englishTitle === '') englishTitle = null;
+        }
+        
         if (url && url.startsWith('http')) {
           links.push({ 
-            title: cleanTitle || url, 
+            title: cleanTitle || url,
+            chineseTitle,
+            englishTitle,
             url,
             tags 
           });
@@ -1351,6 +1366,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // 不存在则创建新资源
           resource = await storage.createFeifeiResource({
             title: link.title,
+            chinese_title: link.chineseTitle,
+            english_title: link.englishTitle,
             url: link.url,
             category_id: categoryId,
             description: null,
@@ -1359,7 +1376,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           // 存在则更新标题并加入结果列表
           const updatedResource = await storage.updateFeifeiResource(existingResources[0].id, {
-            title: link.title
+            title: link.title,
+            chinese_title: link.chineseTitle,
+            english_title: link.englishTitle
           });
           resource = updatedResource || existingResources[0];
         }
