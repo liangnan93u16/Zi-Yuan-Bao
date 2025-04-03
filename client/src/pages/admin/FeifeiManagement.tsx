@@ -642,8 +642,7 @@ export default function FeifeiManagement() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[60px]">ID</TableHead>
-                      <TableHead className="w-[180px]">标题</TableHead>
-                      <TableHead className="w-[150px]">中文标题</TableHead>
+                      <TableHead className="w-[180px]">中文标题</TableHead>
                       <TableHead className="w-[150px]">英文标题</TableHead>
                       <TableHead>URL</TableHead>
                       <TableHead className="w-[120px]">标签</TableHead>
@@ -654,8 +653,7 @@ export default function FeifeiManagement() {
                     {categoryResources.map((resource) => (
                       <TableRow key={resource.id}>
                         <TableCell>{resource.id}</TableCell>
-                        <TableCell>{resource.title}</TableCell>
-                        <TableCell>{resource.chinese_title || '-'}</TableCell>
+                        <TableCell>{resource.chinese_title}</TableCell>
                         <TableCell>{resource.english_title || '-'}</TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-2 max-w-[250px] truncate">

@@ -1304,9 +1304,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const $ = load(html);
       
       // 找到所有container内的链接
-      const links: { title: string, url: string, tags: string[], chineseTitle: string | null, englishTitle: string | null }[] = [];
+      const links: { url: string, tags: string[], chineseTitle: string, englishTitle: string | null }[] = [];
       $('section.container a').each((idx: number, element: any) => {
         const url = $(element).attr('href');
+        if (!url || !url.startsWith('http')) return;
         
         // 首先尝试获取title属性，如果没有则使用<a>标签中的文本内容
         let title = $(element).attr('title');
@@ -1331,27 +1332,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cleanTitle = cleanTitle.replace(/\[.*?\]/g, '').trim();
         
         // 处理标题中的中英文分隔（使用|符号分隔）
-        let chineseTitle: string | null = null;
+        let chineseTitle: string = cleanTitle || url;
         let englishTitle: string | null = null;
         
         if (cleanTitle.includes('|')) {
           const titleParts = cleanTitle.split('|');
           chineseTitle = titleParts[0].trim();
           englishTitle = titleParts[1].trim();
-          // 如果分割后发现某部分为空，则设为null
-          if (chineseTitle === '') chineseTitle = null;
+          
+          // 如果中文部分为空，则使用URL
+          if (chineseTitle === '') chineseTitle = url;
+          
+          // 如果分割后发现英文部分为空，则设为null
           if (englishTitle === '') englishTitle = null;
         }
         
-        if (url && url.startsWith('http')) {
-          links.push({ 
-            title: cleanTitle || url,
-            chineseTitle,
-            englishTitle,
-            url,
-            tags 
-          });
-        }
+        links.push({ 
+          chineseTitle,
+          englishTitle,
+          url,
+          tags 
+        });
       });
       
       // 保存找到的链接到数据库
@@ -1365,7 +1366,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (existingResources.length === 0) {
           // 不存在则创建新资源
           resource = await storage.createFeifeiResource({
-            title: link.title,
             chinese_title: link.chineseTitle,
             english_title: link.englishTitle,
             url: link.url,
@@ -1376,7 +1376,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           // 存在则更新标题并加入结果列表
           const updatedResource = await storage.updateFeifeiResource(existingResources[0].id, {
-            title: link.title,
             chinese_title: link.chineseTitle,
             english_title: link.englishTitle
           });
