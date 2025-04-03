@@ -7,8 +7,7 @@ import {
   adminLoginLogs, type AdminLoginLog, type InsertAdminLoginLog,
   authors, type Author, type InsertAuthor,
   userPurchases, type UserPurchase, type InsertUserPurchase,
-  feifeiCategories, type FeifeiCategory, type InsertFeifeiCategory,
-  feifeiResources, type FeifeiResource, type InsertFeifeiResource
+  feifeiCategories, type FeifeiCategory, type InsertFeifeiCategory
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, or, desc, sql } from "drizzle-orm";
@@ -78,15 +77,6 @@ export interface IStorage {
   updateFeifeiCategory(id: number, data: Partial<FeifeiCategory>): Promise<FeifeiCategory | undefined>;
   deleteFeifeiCategory(id: number): Promise<boolean>;
   getAllFeifeiCategories(): Promise<FeifeiCategory[]>;
-  
-  // Feifei Resource operations
-  getFeifeiResource(id: number): Promise<FeifeiResource | undefined>;
-  getFeifeiResourcesByCategory(categoryId: number): Promise<FeifeiResource[]>;
-  createFeifeiResource(resource: InsertFeifeiResource): Promise<FeifeiResource>;
-  createManyFeifeiResources(resources: InsertFeifeiResource[]): Promise<FeifeiResource[]>;
-  updateFeifeiResource(id: number, data: Partial<FeifeiResource>): Promise<FeifeiResource | undefined>;
-  deleteFeifeiResource(id: number): Promise<boolean>;
-  deleteFeifeiResourcesByCategory(categoryId: number): Promise<boolean>;
   
   // Initialize default data
   initializeDefaultData(): Promise<void>;
@@ -630,64 +620,6 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(feifeiCategories)
       .orderBy(feifeiCategories.sort_order);
-  }
-
-  // 菲菲资源操作方法
-  async getFeifeiResource(id: number): Promise<FeifeiResource | undefined> {
-    const [resource] = await db.select().from(feifeiResources).where(eq(feifeiResources.id, id));
-    return resource || undefined;
-  }
-  
-  async getFeifeiResourcesByCategory(categoryId: number): Promise<FeifeiResource[]> {
-    return await db
-      .select()
-      .from(feifeiResources)
-      .where(eq(feifeiResources.category_id, categoryId))
-      .orderBy(feifeiResources.title);
-  }
-  
-  async createFeifeiResource(resource: InsertFeifeiResource): Promise<FeifeiResource> {
-    const [newResource] = await db
-      .insert(feifeiResources)
-      .values(resource)
-      .returning();
-    return newResource;
-  }
-  
-  async createManyFeifeiResources(resources: InsertFeifeiResource[]): Promise<FeifeiResource[]> {
-    if (resources.length === 0) {
-      return [];
-    }
-    const newResources = await db
-      .insert(feifeiResources)
-      .values(resources)
-      .returning();
-    return newResources;
-  }
-  
-  async updateFeifeiResource(id: number, data: Partial<FeifeiResource>): Promise<FeifeiResource | undefined> {
-    const [resource] = await db
-      .update(feifeiResources)
-      .set({ ...data, updated_at: new Date() })
-      .where(eq(feifeiResources.id, id))
-      .returning();
-    return resource || undefined;
-  }
-  
-  async deleteFeifeiResource(id: number): Promise<boolean> {
-    const result = await db
-      .delete(feifeiResources)
-      .where(eq(feifeiResources.id, id))
-      .returning({ id: feifeiResources.id });
-    return result.length > 0;
-  }
-  
-  async deleteFeifeiResourcesByCategory(categoryId: number): Promise<boolean> {
-    const result = await db
-      .delete(feifeiResources)
-      .where(eq(feifeiResources.category_id, categoryId))
-      .returning({ id: feifeiResources.id });
-    return result.length > 0;
   }
 }
 

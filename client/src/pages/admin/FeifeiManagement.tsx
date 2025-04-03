@@ -31,16 +31,14 @@ import {
   Trash2,
   Loader2,
   Link as LinkIcon,
-  ExternalLink,
-  ListFilter,
-  Download
+  ExternalLink
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { FeifeiCategory, FeifeiResource, insertFeifeiCategorySchema } from "@shared/schema";
+import { FeifeiCategory, insertFeifeiCategorySchema } from "@shared/schema";
 import { Link } from "wouter";
 
 // 创建表单验证模式
@@ -55,10 +53,7 @@ export default function FeifeiManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isResourceDialogOpen, setIsResourceDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<FeifeiCategory | null>(null);
-  const [resources, setResources] = useState<FeifeiResource[]>([]);
-  const [isParsingUrl, setIsParsingUrl] = useState(false);
   const { toast } = useToast();
 
   // 获取所有菲菲网分类
@@ -167,36 +162,6 @@ export default function FeifeiManagement() {
       });
     }
   });
-  
-  // 解析URL
-  const parseUrlMutation = useMutation<
-    { message: string, resources: FeifeiResource[] },
-    Error,
-    number
-  >({
-    mutationFn: (categoryId: number) => {
-      return apiRequest<{ message: string, resources: FeifeiResource[] }>(
-        "POST", 
-        `/api/feifei-categories/${categoryId}/parse`
-      );
-    },
-    onSuccess: (data) => {
-      setResources(data.resources || []);
-      toast({
-        title: "URL解析成功",
-        description: data.message || `成功解析并保存了 ${data.resources?.length || 0} 个链接`,
-      });
-      setIsParsingUrl(false);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "URL解析失败",
-        description: error.message || "解析URL时出错，请重试。",
-        variant: "destructive",
-      });
-      setIsParsingUrl(false);
-    }
-  });
 
   // 提交创建表单
   const onCreateSubmit = (data: FeifeiCategoryFormValues) => {
@@ -238,17 +203,6 @@ export default function FeifeiManagement() {
   const openDeleteDialog = (category: FeifeiCategory) => {
     setSelectedCategory(category);
     setIsDeleteDialogOpen(true);
-  };
-  
-  // 打开资源对话框，同时开始解析URL
-  const openResourceDialog = async (category: FeifeiCategory) => {
-    setSelectedCategory(category);
-    setResources([]);
-    setIsResourceDialogOpen(true);
-    setIsParsingUrl(true);
-    
-    // 触发URL解析
-    parseUrlMutation.mutate(category.id);
   };
 
   // 格式化日期
@@ -330,15 +284,6 @@ export default function FeifeiManagement() {
                         <TableCell>{formatDate(category.updated_at)}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button 
-                              onClick={() => openResourceDialog(category)} 
-                              size="sm" 
-                              variant="outline"
-                              className="bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200"
-                              title="解析URL"
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
                             <Button 
                               onClick={() => openEditDialog(category)} 
                               size="sm" 
@@ -522,83 +467,6 @@ export default function FeifeiManagement() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               删除
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* 资源解析对话框 */}
-      <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
-        <DialogContent className="sm:max-w-[800px]">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedCategory ? (
-                <span>
-                  <span className="mr-2">解析资源</span>
-                  <span className="text-sm font-normal text-neutral-500">
-                    {selectedCategory.title}
-                  </span>
-                </span>
-              ) : (
-                "解析资源"
-              )}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="py-2">
-            {isParsingUrl ? (
-              <div className="py-10 text-center">
-                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
-                <p className="text-neutral-600">正在解析URL中，请稍候...</p>
-              </div>
-            ) : resources.length === 0 ? (
-              <div className="py-6 text-center text-neutral-500">
-                <ListFilter className="w-12 h-12 mx-auto mb-2 text-neutral-300" />
-                <p>未找到任何资源链接</p>
-              </div>
-            ) : (
-              <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-                <div className="flex justify-between items-center py-2 px-4 bg-neutral-50 sticky top-0 rounded-md">
-                  <p className="text-sm font-medium text-neutral-500">
-                    共解析到 {resources.length} 个链接
-                  </p>
-                </div>
-                
-                {resources.map((resource) => (
-                  <div 
-                    key={resource.id} 
-                    className="p-3 border border-neutral-200 rounded-md transition-colors hover:bg-neutral-50"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex-grow min-w-0">
-                        <h4 className="font-medium text-neutral-800 mb-1">{resource.title || "无标题"}</h4>
-                        <div className="flex items-center text-sm space-x-2 text-blue-600">
-                          <LinkIcon className="h-3.5 w-3.5 flex-shrink-0" />
-                          <a 
-                            href={resource.url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="hover:underline truncate"
-                          >
-                            {resource.url}
-                          </a>
-                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => setIsResourceDialogOpen(false)}
-            >
-              关闭
             </Button>
           </DialogFooter>
         </DialogContent>

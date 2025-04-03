@@ -7,11 +7,11 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-export async function apiRequest<T = Response>(
+export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
-): Promise<T> {
+): Promise<Response> {
   const res = await fetch(url, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
@@ -20,25 +20,7 @@ export async function apiRequest<T = Response>(
   });
 
   await throwIfResNotOk(res);
-  
-  // 对于 HEAD 请求，不尝试解析响应体
-  if (method.toUpperCase() === 'HEAD') {
-    return res as unknown as T;
-  }
-  
-  try {
-    // 尝试解析 JSON 响应
-    const contentType = res.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      return await res.json() as T;
-    }
-    // 非 JSON 响应，返回原始响应对象
-    return res as unknown as T;
-  } catch (error) {
-    // 如果解析失败，返回原始响应对象
-    console.warn('Failed to parse response as JSON:', error);
-    return res as unknown as T;
-  }
+  return res;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
