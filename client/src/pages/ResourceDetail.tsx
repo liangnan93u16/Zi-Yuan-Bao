@@ -539,6 +539,12 @@ export default function ResourceDetail() {
           </TabsContent>
         </Tabs>
       </div>
+      
+      {/* 版权免责声明 */}
+      <div className="bg-neutral-50 p-5 rounded-lg mb-6 text-sm text-neutral-600">
+        <h4 className="font-semibold text-base mb-2 text-neutral-800">版权免责声明：</h4>
+        <p>本站所有文章，如无特殊说明或标注，均为本站原创发布。任何个人或组织，在未征得本站同意时，禁止复制、盗用、采集、发布本站内容到任何网站、书籍等各类媒体平台。如若本站内容侵犯了原著者的合法权益，可联系我们进行处理。</p>
+      </div>
     </div>
   );
 }
