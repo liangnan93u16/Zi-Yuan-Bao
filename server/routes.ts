@@ -1467,5 +1467,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 解析单个菲菲资源页面内容的API
+  app.post('/api/feifei-resources/:id/parse', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const resourceId = parseInt(req.params.id);
+      if (isNaN(resourceId)) {
+        return res.status(400).json({ message: '无效的资源ID' });
+      }
+
+      // 获取资源信息
+      const resource = await storage.getFeifeiResource(resourceId);
+      if (!resource) {
+        return res.status(404).json({ message: '资源不存在' });
+      }
+
+      const { url } = resource;
+      if (!url) {
+        return res.status(400).json({ message: '资源URL不存在' });
+      }
+      
+      // 导入所需模块
+      const axios = require('axios');
+      const cheerio = require('cheerio');
+      
+      try {
+        // 发送请求获取页面内容
+        const response = await axios.get(url);
+        const html = response.data;
+        const $ = cheerio.load(html);
+        
+        // 解析页面内容
+        const detailsBox = $('.details-box');
+        
+        // 提取资源信息
+        const infoItems: Record<string, string> = {};
+        detailsBox.find('.infos-box .item').each((i: number, elem: any) => {
+          const label = $(elem).find('.label').text().trim();
+          const value = $(elem).find('.value').text().trim();
+          infoItems[label] = value;
+        });
+        
+        // 提取详情介绍
+        const details = $('.introduction-box .content').html() || '';
+        
+        // 更新资源信息
+        const updateData = {
+          resource_category: infoItems['资源分类'] || null,
+          popularity: infoItems['浏览'] || null,
+          publish_date: infoItems['发布时间'] || null,
+          last_update: infoItems['最近更新'] || null,
+          content_info: infoItems['文件内容'] || null,
+          video_size: infoItems['视频尺寸'] || null,
+          file_size: infoItems['视频大小'] || null,
+          duration: infoItems['课时'] || null,
+          language: infoItems['语言'] || null,
+          subtitle: infoItems['字幕'] || null,
+          details: details,
+        };
+        
+        // 提取页面中的标签
+        const tagNames: string[] = [];
+        $('.tag-box .tag').each((i: number, elem: any) => {
+          const tagName = $(elem).text().trim();
+          if (tagName) {
+            tagNames.push(tagName);
+          }
+        });
+        
+        // 更新资源信息
+        const updatedResource = await storage.updateFeifeiResource(resourceId, updateData);
+        
+        // 处理标签
+        for (const tagName of tagNames) {
+          // 查找或创建标签
+          let tag = await storage.getFeifeiTagByName(tagName);
+          if (!tag) {
+            tag = await storage.createFeifeiTag({ name: tagName });
+          }
+          
+          // 检查关联是否存在
+          const existingTagRelation = await storage.getFeifeiResourceTagRelation(resourceId, tag.id);
+          if (!existingTagRelation) {
+            // 创建资源与标签的关联
+            await storage.createFeifeiResourceTag({
+              resource_id: resourceId,
+              tag_id: tag.id
+            });
+          }
+        }
+        
+        // 获取更新后的完整资源数据（包括标签）
+        const updatedTags = await storage.getFeifeiResourceTags(resourceId);
+        
+        res.json({
+          message: '资源页面解析成功',
+          resource: {
+            ...updatedResource,
+            tags: updatedTags
+          }
+        });
+      } catch (error) {
+        console.error('Error parsing resource page:', error);
+        res.status(500).json({ message: '解析页面失败: ' + (error instanceof Error ? error.message : String(error)) });
+      }
+    } catch (error) {
+      console.error('Error processing parse request:', error);
+      res.status(500).json({ message: '处理解析请求失败: ' + (error instanceof Error ? error.message : String(error)) });
+    }
+  });
+
   return httpServer;
 }

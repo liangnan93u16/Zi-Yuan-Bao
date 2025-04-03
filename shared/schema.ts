@@ -226,6 +226,20 @@ export const feifeiResources = pgTable("feifei_resources", {
   category_id: integer("category_id").notNull().references(() => feifeiCategories.id), // 所属分类
   icon: text("icon"), // 资源图标
   description: text("description"), // 资源描述
+  
+  // 新增网页解析字段
+  resource_category: text("resource_category"), // 资源分类
+  popularity: text("popularity"), // 浏览热度
+  publish_date: text("publish_date"), // 发布时间
+  last_update: text("last_update"), // 最近更新
+  content_info: text("content_info"), // 文件内容
+  video_size: text("video_size"), // 视频尺寸
+  file_size: text("file_size"), // 视频大小
+  duration: text("duration"), // 课时
+  language: text("language"), // 视频语言
+  subtitle: text("subtitle"), // 视频字幕
+  details: text("details"), // 详情介绍
+  
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow()
 });

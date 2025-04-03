@@ -103,6 +103,7 @@ export interface IStorage {
   getFeifeiResourceTags(resourceId: number): Promise<FeifeiTag[]>;
   getFeifeiTagResources(tagId: number): Promise<FeifeiResource[]>;
   deleteFeifeiResourceTag(resourceId: number, tagId: number): Promise<boolean>;
+  getFeifeiResourceTagRelation(resourceId: number, tagId: number): Promise<FeifeiResourceTag | undefined>;
   
   // Initialize default data
   initializeDefaultData(): Promise<void>;
@@ -656,7 +657,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(feifeiResources.id, id));
     return resource || undefined;
   }
-  
+
   async getFeifeiResourcesByCategory(categoryId: number): Promise<FeifeiResource[]> {
     return await db
       .select()
@@ -798,6 +799,20 @@ export class DatabaseStorage implements IStorage {
       .returning({ id: feifeiResourceTags.id });
     
     return result.length > 0;
+  }
+  
+  async getFeifeiResourceTagRelation(resourceId: number, tagId: number): Promise<FeifeiResourceTag | undefined> {
+    const [relation] = await db
+      .select()
+      .from(feifeiResourceTags)
+      .where(
+        and(
+          eq(feifeiResourceTags.resource_id, resourceId),
+          eq(feifeiResourceTags.tag_id, tagId)
+        )
+      );
+    
+    return relation || undefined;
   }
 }
 

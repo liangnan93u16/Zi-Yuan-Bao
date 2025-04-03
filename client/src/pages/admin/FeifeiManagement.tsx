@@ -68,6 +68,7 @@ export default function FeifeiManagement() {
   const [selectedCategory, setSelectedCategory] = useState<FeifeiCategory | null>(null);
   const [categoryResources, setCategoryResources] = useState<EnrichedFeifeiResource[]>([]);
   const [isResourcesLoading, setIsResourcesLoading] = useState(false);
+  const [selectedResourceId, setSelectedResourceId] = useState<number | null>(null);
   const { toast } = useToast();
 
   // 获取所有菲菲网分类
@@ -236,6 +237,38 @@ export default function FeifeiManagement() {
       });
       setIsResourcesLoading(false);
     }
+  };
+  
+  // 解析单个资源页面
+  const parseResourcePageMutation = useMutation({
+    mutationFn: async (resourceId: number) => {
+      return apiRequest<{ message: string, resource: EnrichedFeifeiResource }>("POST", `/api/feifei-resources/${resourceId}/parse`);
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "页面解析成功",
+        description: data.message || "成功解析资源页面内容。",
+      });
+      
+      // 更新列表中的资源
+      if (selectedCategory) {
+        fetchCategoryResources(selectedCategory.id);
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "页面解析失败",
+        description: error.message || "解析页面内容时出错，请重试。",
+        variant: "destructive",
+      });
+      setSelectedResourceId(null);
+    }
+  });
+  
+  // 解析资源页面
+  const parseResourcePage = (resource: EnrichedFeifeiResource) => {
+    setSelectedResourceId(resource.id);
+    parseResourcePageMutation.mutate(resource.id);
   };
 
   // 解析分类URL
@@ -642,6 +675,7 @@ export default function FeifeiManagement() {
                       <TableHead className="w-[250px]">英文标题</TableHead>
                       <TableHead className="w-[120px]">标签</TableHead>
                       <TableHead className="w-[150px]">创建时间</TableHead>
+                      <TableHead className="w-[120px]">操作</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -683,6 +717,26 @@ export default function FeifeiManagement() {
                           </div>
                         </TableCell>
                         <TableCell>{formatDate(resource.created_at)}</TableCell>
+                        <TableCell>
+                          <Button
+                            onClick={() => parseResourcePage(resource)}
+                            size="sm"
+                            variant="outline"
+                            disabled={parseResourcePageMutation.isPending && selectedResourceId === resource.id}
+                          >
+                            {parseResourcePageMutation.isPending && selectedResourceId === resource.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                解析中
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                解析页面
+                              </>
+                            )}
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
