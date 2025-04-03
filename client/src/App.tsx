@@ -23,6 +23,19 @@ import CategoryManagement from "./pages/admin/CategoryManagement";
 import AuthorManagement from "./pages/admin/AuthorManagement";
 import FeifeiManagement from "./pages/admin/FeifeiManagement";
 import { AuthProvider } from "./hooks/use-auth";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+
+// 创建受保护的管理员路由组件
+const AdminRoute = ({ component: Component, ...rest }: any) => (
+  <Route
+    {...rest}
+    component={(props: any) => (
+      <ProtectedRoute adminOnly={true}>
+        <Component {...props} />
+      </ProtectedRoute>
+    )}
+  />
+);
 
 function App() {
   return (
@@ -42,16 +55,19 @@ function App() {
               <Route path="/register" component={Register} />
               <Route path="/profile" component={Profile} />
               <Route path="/user/purchases" component={UserPurchases} />
-              <Route path="/admin/resources" component={ResourceManagement} />
-              <Route path="/admin/resources/upload" component={ResourceUpload} />
-              <Route path="/admin/resources/:id/edit" component={ResourceEdit} />
-              <Route path="/admin/resource-requests" component={ResourceRequests} />
-              <Route path="/admin/users" component={UserManagement} />
-              <Route path="/admin/reviews" component={ReviewManagement} />
-              <Route path="/admin/login-logs" component={LoginLogs} />
-              <Route path="/admin/categories" component={CategoryManagement} />
-              <Route path="/admin/authors" component={AuthorManagement} />
-              <Route path="/admin/feifei" component={FeifeiManagement} />
+              
+              {/* 管理员路由 - 所有/admin路径都需要管理员权限 */}
+              <AdminRoute path="/admin/resources" component={ResourceManagement} />
+              <AdminRoute path="/admin/resources/upload" component={ResourceUpload} />
+              <AdminRoute path="/admin/resources/:id/edit" component={ResourceEdit} />
+              <AdminRoute path="/admin/resource-requests" component={ResourceRequests} />
+              <AdminRoute path="/admin/users" component={UserManagement} />
+              <AdminRoute path="/admin/reviews" component={ReviewManagement} />
+              <AdminRoute path="/admin/login-logs" component={LoginLogs} />
+              <AdminRoute path="/admin/categories" component={CategoryManagement} />
+              <AdminRoute path="/admin/authors" component={AuthorManagement} />
+              <AdminRoute path="/admin/feifei" component={FeifeiManagement} />
+              
               <Route component={NotFound} />
             </Switch>
           </main>

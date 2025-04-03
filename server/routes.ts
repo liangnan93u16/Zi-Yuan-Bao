@@ -109,7 +109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const resource = await storage.getResource(purchase.resource_id);
         return {
           ...purchase,
-          resource: resource || { title: '未知资源', subtitle: '' }
+          resource: resource || { chinese_title: '未知资源', english_title: null, subtitle: '' }
         };
       }));
       

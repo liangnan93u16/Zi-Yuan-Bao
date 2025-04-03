@@ -53,7 +53,15 @@ export default function Login() {
         title: '登录成功',
         description: '欢迎回来！'
       });
-      setLocation('/');
+      
+      // 检查URL是否有redirect参数，如果有则跳转到该URL
+      const searchParams = new URLSearchParams(window.location.search);
+      const redirectUrl = searchParams.get('redirect');
+      if (redirectUrl) {
+        setLocation(decodeURIComponent(redirectUrl));
+      } else {
+        setLocation('/');
+      }
     } catch (error: any) {
       // 判断是否是账号锁定错误
       if (error.message && error.message.includes('账号已被锁定')) {
