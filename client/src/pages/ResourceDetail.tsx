@@ -209,7 +209,11 @@ export default function ResourceDetail() {
       }
       
       // 如果是普通用户且资源不免费，弹出确认对话框
-      if (!isFree && (!user.membership_type || (user.membership_expire_time && new Date(user.membership_expire_time) < new Date()))) {
+      // 检查会员是否有效（没有会员类型或会员已过期）
+      const isMembershipValid = user.membership_type && 
+                                (!user.membership_expire_time || new Date(user.membership_expire_time) > new Date());
+      
+      if (!isFree && !isMembershipValid) {
         // API返回成功但不是"已购买过"的消息，说明需要购买
         if (!response.ok || !data.success) {
           // 确认是否购买

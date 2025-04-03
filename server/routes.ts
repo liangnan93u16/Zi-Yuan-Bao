@@ -139,19 +139,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // 如果是会员且会员没有过期，可以免费获取资源
-      if (
-        req.user.membership_type && 
-        (!req.user.membership_expire_time || new Date(req.user.membership_expire_time) > new Date())
-      ) {
-        // 记录购买信息（会员免费获取）
-        await storage.createUserPurchase(req.user.id, resourceId, 0);
-        
-        res.json({ 
-          success: true, 
-          message: '会员资源获取成功',
-          resource_url: resource.resource_url
-        });
-        return;
+      if (req.user.membership_type) {
+        // 检查会员是否有效（没有到期时间或当前时间小于到期时间）
+        const membershipValid = !req.user.membership_expire_time || 
+                               new Date(req.user.membership_expire_time) > new Date();
+                               
+        if (membershipValid) {
+          // 记录购买信息（会员免费获取）
+          await storage.createUserPurchase(req.user.id, resourceId, 0);
+          
+          res.json({ 
+            success: true, 
+            message: '会员资源获取成功',
+            resource_url: resource.resource_url
+          });
+          return;
+        }
       }
       
       // 计算资源价格（确保是数字）
