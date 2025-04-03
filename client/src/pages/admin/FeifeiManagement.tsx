@@ -36,7 +36,8 @@ import {
   Download,
   RefreshCw,
   Search,
-  AlertCircle
+  AlertCircle,
+  FileSearch
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -65,8 +66,10 @@ export default function FeifeiManagement() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isResourcesDialogOpen, setIsResourcesDialogOpen] = useState(false);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<FeifeiCategory | null>(null);
   const [categoryResources, setCategoryResources] = useState<EnrichedFeifeiResource[]>([]);
+  const [selectedResource, setSelectedResource] = useState<EnrichedFeifeiResource | null>(null);
   const [isResourcesLoading, setIsResourcesLoading] = useState(false);
   const [selectedResourceId, setSelectedResourceId] = useState<number | null>(null);
   const { toast } = useToast();
@@ -718,24 +721,39 @@ export default function FeifeiManagement() {
                         </TableCell>
                         <TableCell>{formatDate(resource.created_at)}</TableCell>
                         <TableCell>
-                          <Button
-                            onClick={() => parseResourcePage(resource)}
-                            size="sm"
-                            variant="outline"
-                            disabled={parseResourcePageMutation.isPending && selectedResourceId === resource.id}
-                          >
-                            {parseResourcePageMutation.isPending && selectedResourceId === resource.id ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                解析中
-                              </>
-                            ) : (
-                              <>
-                                <RefreshCw className="mr-2 h-4 w-4" />
-                                解析页面
-                              </>
-                            )}
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => parseResourcePage(resource)}
+                              size="sm"
+                              variant="outline"
+                              disabled={parseResourcePageMutation.isPending && selectedResourceId === resource.id}
+                            >
+                              {parseResourcePageMutation.isPending && selectedResourceId === resource.id ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  解析中
+                                </>
+                              ) : (
+                                <>
+                                  <RefreshCw className="mr-2 h-4 w-4" />
+                                  解析页面
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                setSelectedResource(resource);
+                                setIsDetailsDialogOpen(true);
+                              }}
+                              size="sm"
+                              variant="outline"
+                              disabled={!resource.resource_category && !resource.details}
+                              title={!resource.resource_category && !resource.details ? "未解析详情" : "查看详情"}
+                            >
+                              <FileSearch className="mr-2 h-4 w-4" />
+                              查看详情
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -749,6 +767,115 @@ export default function FeifeiManagement() {
             <Button 
               type="button" 
               onClick={() => setIsResourcesDialogOpen(false)}
+            >
+              关闭
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 资源详情对话框 */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>资源详情信息</DialogTitle>
+          </DialogHeader>
+          
+          {selectedResource ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">基本信息</h4>
+                  <div className="space-y-2 bg-gray-50 p-3 rounded-md">
+                    <p><strong>中文标题：</strong> {selectedResource.chinese_title}</p>
+                    <p><strong>英文标题：</strong> {selectedResource.english_title || '-'}</p>
+                    <p><strong>资源分类：</strong> {selectedResource.resource_category || '-'}</p>
+                    <p><strong>热度：</strong> {selectedResource.popularity || '-'}</p>
+                    <p><strong>发布时间：</strong> {selectedResource.publish_date || '-'}</p>
+                    <p><strong>最近更新：</strong> {selectedResource.last_update || '-'}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">内容规格</h4>
+                  <div className="space-y-2 bg-gray-50 p-3 rounded-md">
+                    <p><strong>文件内容：</strong> {selectedResource.content_info || '-'}</p>
+                    <p><strong>视频尺寸：</strong> {selectedResource.video_size || '-'}</p>
+                    <p><strong>文件大小：</strong> {selectedResource.file_size || '-'}</p>
+                    <p><strong>课时：</strong> {selectedResource.duration || '-'}</p>
+                    <p><strong>语言：</strong> {selectedResource.language || '-'}</p>
+                    <p><strong>字幕：</strong> {selectedResource.subtitle || '-'}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="text-sm font-medium text-gray-500 mb-2">标签</h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedResource.tags && selectedResource.tags.length > 0 ? (
+                    selectedResource.tags.map((tag: FeifeiTag) => (
+                      <Badge key={tag.id} variant="secondary">
+                        {tag.name}
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 italic">暂无标签</p>
+                  )}
+                </div>
+              </div>
+              
+              {selectedResource.details && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">详情介绍</h4>
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <div 
+                      className="prose max-w-none" 
+                      dangerouslySetInnerHTML={{ __html: selectedResource.details }}
+                    />
+                  </div>
+                </div>
+              )}
+              
+              <div className="pt-4 flex justify-between items-center">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => window.open(selectedResource.url, '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  访问原始页面
+                </Button>
+                
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => parseResourcePage(selectedResource)}
+                  disabled={parseResourcePageMutation.isPending}
+                >
+                  {parseResourcePageMutation.isPending && selectedResourceId === selectedResource.id ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      更新中
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      更新详情
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="py-8 text-center">
+              <p className="text-gray-500">未选择资源</p>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              type="button" 
+              onClick={() => setIsDetailsDialogOpen(false)}
             >
               关闭
             </Button>
