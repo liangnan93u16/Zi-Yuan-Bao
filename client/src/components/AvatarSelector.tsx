@@ -10,26 +10,26 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
-// 系统预设的头像列表 - 使用静态SVG格式，提供30个不同风格的卡通头像
-// 包括不同的性别、年龄段和风格，覆盖男女老幼各种风格
+// 系统预设的头像列表 - 使用静态SVG格式，提供多种不同风格的卡通头像
+// 新设计的现代风格头像
 const DEFAULT_AVATARS = [
-  // 男性成人卡通头像 - 商务风格
-  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%234b5563' /><path d='M50,25 C40,25 35,35 35,40 C35,45 40,55 50,55 C60,55 65,45 65,40 C65,35 60,25 50,25 Z' fill='%23f3f4f6' /><path d='M30,85 C30,65 40,60 50,60 C60,60 70,65 70,85 Z' fill='%23f3f4f6' /><circle cx='42' cy='40' r='2' fill='%23000' /><circle cx='58' cy='40' r='2' fill='%23000' /></svg>",
+  // 淡绿色商务风格头像
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23047857' /><path d='M30,35 C30,25 40,20 50,20 C60,20 70,25 70,35 L70,50 L30,50 Z' fill='%23d1fae5' /><path d='M30,50 L30,90 L70,90 L70,50' fill='%2310b981' /><circle cx='40' cy='35' r='3' fill='%23000' /><circle cx='60' cy='35' r='3' fill='%23000' /><path d='M43,42 C43,42 50,49 57,42' fill='none' stroke='%23000' stroke-width='2' /></svg>",
   
-  // 女性成人卡通头像 - 商务风格
-  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23be185d' /><path d='M50,27 C38,27 30,35 30,43 C30,51 38,59 50,59 C62,59 70,51 70,43 C70,35 62,27 50,27 Z' fill='%23fbcfe8' /><path d='M30,90 C30,70 40,65 50,65 C60,65 70,70 70,90 Z' fill='%23fbcfe8' /><circle cx='43' cy='42' r='2' fill='%23000' /><circle cx='57' cy='42' r='2' fill='%23000' /><path d='M50,50 Q55,52 50,54 Q45,52 50,50' fill='%23881337' /></svg>",
+  // 紫色艺术风格头像
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%236d28d9' /><path d='M25,40 L30,10 L70,10 L75,40 L65,60 L35,60 Z' fill='%23e9d5ff' /><path d='M35,60 L30,100 L70,100 L65,60' fill='%23e9d5ff' /><circle cx='40' cy='35' r='4' fill='%23000' /><circle cx='60' cy='35' r='4' fill='%23000' /><path d='M45,45 Q50,50 55,45' fill='none' stroke='%23000' stroke-width='2' /><path d='M30,20 L40,15 L60,15 L70,20' fill='none' stroke='%238b5cf6' stroke-width='3' /></svg>",
   
-  // 老年男性卡通头像
-  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23475569' /><path d='M30,33 C30,20 40,15 50,15 C60,15 70,20 70,33 L70,35 C70,40 65,43 65,43 L35,43 C35,43 30,40 30,35 Z' fill='%23e2e8f0' /><path d='M30,85 C30,65 40,60 50,60 C60,60 70,65 70,85 Z' fill='%23cbd5e1' /><circle cx='42' cy='40' r='2' fill='%23000' /><circle cx='58' cy='40' r='2' fill='%23000' /><path d='M42,32 C42,32 46,28 50,28 C54,28 58,32 58,32' fill='none' stroke='%23e2e8f0' stroke-width='2' /></svg>",
+  // 青色科技风格头像
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23155e75' /><rect x='35' y='30' width='30' height='30' rx='5' fill='%2367e8f9' /><circle cx='42' cy='40' r='3' fill='%23000' /><circle cx='58' cy='40' r='3' fill='%23000' /><rect x='40' y='50' width='20' height='3' fill='%23000' /><rect x='45' y='60' width='10' height='15' fill='%2367e8f9' /><path d='M35,25 C35,25 50,20 65,25' fill='none' stroke='%2367e8f9' stroke-width='3' /></svg>",
   
-  // 老年女性卡通头像
-  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23a855f7' /><path d='M50,25 C38,25 30,33 30,45 L30,50 L70,50 L70,45 C70,33 62,25 50,25 Z' fill='%23e9d5ff' /><path d='M30,85 C30,65 40,60 50,60 C60,60 70,65 70,85 Z' fill='%23e9d5ff' /><circle cx='42' cy='40' r='2' fill='%23000' /><circle cx='58' cy='40' r='2' fill='%23000' /><path d='M50,50 Q55,52 50,54 Q45,52 50,50' fill='%239333ea' /></svg>",
+  // 深青色商务风格头像
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23164e63' /><path d='M35,40 C35,30 40,25 50,25 C60,25 65,30 65,40 L65,50 L35,50 Z' fill='%23a5f3fc' /><path d='M35,50 L35,90 L65,90 L65,50' fill='%2306b6d4' /><circle cx='43' cy='35' r='3' fill='%23000' /><circle cx='57' cy='35' r='3' fill='%23000' /><path d='M45,42 L55,42' fill='none' stroke='%23000' stroke-width='2' /><path d='M40,30 C40,30 50,25 60,30' fill='none' stroke='%2367e8f9' stroke-width='2' /></svg>",
   
-  // 男孩卡通头像
-  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%232563eb' /><path d='M50,25 C40,25 35,32 35,40 C35,48 40,55 50,55 C60,55 65,48 65,40 C65,32 60,25 50,25 Z' fill='%23dbeafe' /><path d='M35,85 C35,65 40,60 50,60 C60,60 65,65 65,85 Z' fill='%23dbeafe' /><circle cx='42' cy='40' r='2' fill='%23000' /><circle cx='58' cy='40' r='2' fill='%23000' /><path d='M50,48 Q54,50 50,52 Q46,50 50,48' fill='%231e40af' /></svg>",
+  // 琥珀色动漫风格头像
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23b45309' /><path d='M25,45 L35,20 L65,20 L75,45 L65,65 L35,65 Z' fill='%23fef3c7' /><path d='M35,65 L35,95 L65,95 L65,65' fill='%23fbbf24' /><ellipse cx='40' cy='40' rx='5' ry='7' fill='%23fff' /><ellipse cx='60' cy='40' rx='5' ry='7' fill='%23fff' /><circle cx='40' cy='40' r='2.5' fill='%23000' /><circle cx='60' cy='40' r='2.5' fill='%23000' /><path d='M45,50 Q50,55 55,50' fill='none' stroke='%23000' stroke-width='2' /></svg>",
   
-  // 女孩卡通头像
-  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23ec4899' /><path d='M50,22 C37,22 28,30 28,43 C28,56 37,64 50,64 C63,64 72,56 72,43 C72,30 63,22 50,22 Z' fill='%23fce7f3' /><path d='M35,85 C35,65 42,60 50,60 C58,60 65,65 65,85 Z' fill='%23fce7f3' /><circle cx='42' cy='40' r='2' fill='%23000' /><circle cx='58' cy='40' r='2' fill='%23000' /><path d='M50,48 Q55,51 50,54 Q45,51 50,48' fill='%23db2777' /></svg>",
+  // 深蓝色太空风格头像
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23083344' /><path d='M35,40 L35,20 L65,20 L65,40 L70,60 L30,60 Z' fill='%23bae6fd' /><path d='M30,60 L40,90 L60,90 L70,60' fill='%230ea5e9' /><rect x='43' y='35' width='4' height='8' fill='%23000' /><rect x='53' y='35' width='4' height='8' fill='%23000' /><path d='M40,50 L60,50' fill='none' stroke='%23000' stroke-width='2' /><polygon points='35,20 50,10 65,20' fill='%2338bdf8' /></svg>",
   
   // 科技风男性头像
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%2303071e' /><path d='M30,40 L40,30 L60,30 L70,40 L70,60 L60,70 L40,70 L30,60 Z' fill='%233a86ff' /><rect x='45' y='40' width='10' height='10' fill='%23fff' /><rect x='48' y='50' width='4' height='15' fill='%23fff' /><rect x='40' y='54' width='20' height='4' fill='%23fff' /></svg>",
