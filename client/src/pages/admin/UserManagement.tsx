@@ -35,7 +35,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Search, UserPlus } from "lucide-react";
+import { Search, UserPlus, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -53,6 +53,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { AvatarSelector } from "@/components/AvatarSelector";
 
 // User edit form schema
 const userEditSchema = z.object({
@@ -82,6 +83,7 @@ export default function UserManagement() {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Fetch users
@@ -236,6 +238,17 @@ export default function UserManagement() {
     e.preventDefault();
     // Implement search functionality
     console.log("Searching for:", searchQuery);
+  };
+  
+  // 处理头像选择
+  const handleAvatarSelect = (avatarUrl: string) => {
+    form.setValue("avatar", avatarUrl);
+    setIsAvatarDialogOpen(false);
+    
+    toast({
+      title: "头像已选择",
+      description: "请保存更改以更新用户头像",
+    });
   };
 
   // Filter users based on membership type and status
@@ -665,10 +678,36 @@ export default function UserManagement() {
                       name="avatar"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>头像URL</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
+                          <FormLabel>用户头像</FormLabel>
+                          <div className="flex flex-col items-center mb-4">
+                            <Avatar className="h-16 w-16 mb-4">
+                              {field.value ? (
+                                <AvatarImage 
+                                  src={field.value} 
+                                  alt={editingUser?.email} 
+                                  className="object-cover"
+                                  key={field.value} // 强制在头像URL变化时重新渲染
+                                />
+                              ) : (
+                                <AvatarFallback className="text-2xl">{editingUser?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                              )}
+                            </Avatar>
+                            
+                            <div className="flex gap-2">
+                              <FormControl>
+                                <Input {...field} id="avatar-input" type="hidden" />
+                              </FormControl>
+                              <Button 
+                                variant="outline" 
+                                type="button" 
+                                className="flex items-center gap-2" 
+                                onClick={() => setIsAvatarDialogOpen(true)}
+                              >
+                                <Camera className="h-4 w-4" />
+                                选择头像
+                              </Button>
+                            </div>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -695,6 +734,14 @@ export default function UserManagement() {
             </Dialog>
         </div>
       </div>
+      
+      {/* 头像选择器对话框 */}
+      <AvatarSelector
+        open={isAvatarDialogOpen}
+        onOpenChange={setIsAvatarDialogOpen}
+        onSelect={handleAvatarSelect}
+        currentAvatar={form.getValues().avatar}
+      />
     </div>
   );
 }

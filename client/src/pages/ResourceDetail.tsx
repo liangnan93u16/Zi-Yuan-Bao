@@ -187,10 +187,12 @@ export default function ResourceDetail() {
         </Link>
       </div>
       
-      <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12">
-          {/* 主内容区域 */}
-          <div className="p-6 lg:col-span-9">
+      {/* 使用grid grid-cols-12系统进行9:3比例布局 */}
+      <div className="grid grid-cols-12 gap-6">
+        {/* 左侧主内容区域 - 9/12比例 */}
+        <div className="col-span-12 lg:col-span-9 space-y-6">
+          {/* 资源基本信息卡片 */}
+          <div className="bg-white rounded-xl shadow-md overflow-hidden p-6">
             <div className="flex flex-wrap gap-2 mb-3">
               {resource.category && (
                 <Badge variant="outline" className="bg-blue-100 text-primary border-0">
@@ -333,8 +335,205 @@ export default function ResourceDetail() {
             </div>
           </div>
           
-          {/* 右侧边栏 - 作者信息 */}
-          <div className="lg:col-span-3 bg-neutral-50 p-5 border-t lg:border-t-0 lg:border-l border-neutral-200">
+          {/* 详情选项卡区域 */}
+          <div className="bg-white rounded-xl shadow-md overflow-hidden">
+            <Tabs value={tab} onValueChange={setTab}>
+              <div className="border-b border-neutral-200">
+                <TabsList className="h-auto px-5">
+                  <TabsTrigger value="details" className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary">
+                    课程详情
+                  </TabsTrigger>
+                  <TabsTrigger value="contents" className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary">
+                    课程目录
+                  </TabsTrigger>
+                  <TabsTrigger value="reviews" className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary">
+                    用户评价
+                  </TabsTrigger>
+                  <TabsTrigger value="faq" className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary">
+                    常见问题
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              
+              <TabsContent value="details" className="p-5 md:p-8 mx-auto">
+                {resource.description ? (
+                  <div className="prose prose-blue max-w-none">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {resource.description}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <>
+                    <p className="mb-4">本课程是一个完整的 React.js 学习指南，从基础概念到高级应用，全面覆盖 React 开发所需的各项技能。无论你是完全的初学者还是想提升 React 技能的开发者，这门课程都能满足你的需求。</p>
+                    
+                    <p className="mb-4">课程使用最新的 React 18 版本，深入讲解了函数式组件、Hooks、Context API、Redux 状态管理以及现代 React 应用的性能优化技巧。通过实践项目，你将学会如何构建专业、可扩展的 React 应用程序。</p>
+                    
+                    <div className="mb-6">
+                      <h4 className="font-semibold mb-2">你将学到什么:</h4>
+                      <ul className="list-disc pl-5 space-y-1">
+                        <li>React 基础概念与工作原理</li>
+                        <li>组件化开发与重用</li>
+                        <li>React Hooks 的全面应用</li>
+                        <li>状态管理策略 (Context API, Redux, Zustand)</li>
+                        <li>React 路由与 SPA 应用开发</li>
+                        <li>处理表单与用户输入</li>
+                        <li>API 集成与数据获取</li>
+                        <li>性能优化与最佳实践</li>
+                        <li>测试 React 应用</li>
+                        <li>3 个完整的实战项目</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="mb-6">
+                      <h4 className="font-semibold mb-2">适合人群:</h4>
+                      <ul className="list-disc pl-5 space-y-1">
+                        <li>想要学习 React 的前端开发初学者</li>
+                        <li>希望提升 React 技能的开发者</li>
+                        <li>需要更新到 React 18 知识的开发人员</li>
+                        <li>前端开发或全栈开发工程师</li>
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-semibold mb-2">先决条件:</h4>
+                      <ul className="list-disc pl-5 space-y-1">
+                        <li>基本的 HTML, CSS 和 JavaScript 知识</li>
+                        <li>了解 ES6+ 语法会有所帮助</li>
+                        <li>不需要任何 React 经验，课程从基础开始讲解</li>
+                      </ul>
+                    </div>
+                  </>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="contents" className="p-5 md:p-8 mx-auto">
+                {resource.contents ? (
+                  <div className="prose prose-blue max-w-none">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {resource.contents}
+                    </ReactMarkdown>
+                    
+                    <div className="mt-12 pt-6 border-t border-neutral-200">
+                      <div className="text-sm text-neutral-600 bg-neutral-50 p-4 rounded-lg">
+                        <h4 className="font-medium text-neutral-800 mb-2">版权免责声明：</h4>
+                        <p>本站所有文章，如无特殊说明或标注，均为本站原创发布。任何个人或组织，在未征得本站同意时，禁止复制、盗用、采集、发布本站内容到任何网站、书籍等各类媒体平台。如若本站内容侵犯了原著者的合法权益，可联系我们进行处理。</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium mb-2">第1章：React 基础入门</h4>
+                        <ul className="space-y-2 pl-4">
+                          <li className="flex justify-between">
+                            <span>1.1 课程介绍与环境搭建</span>
+                            <span className="text-sm text-neutral-500">15:20</span>
+                          </li>
+                          <li className="flex justify-between">
+                            <span>1.2 React 核心概念</span>
+                            <span className="text-sm text-neutral-500">22:45</span>
+                          </li>
+                          <li className="flex justify-between">
+                            <span>1.3 创建第一个 React 组件</span>
+                            <span className="text-sm text-neutral-500">18:30</span>
+                          </li>
+                        </ul>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium mb-2">第2章：React Hooks 详解</h4>
+                        <ul className="space-y-2 pl-4">
+                          <li className="flex justify-between">
+                            <span>2.1 useState 状态管理</span>
+                            <span className="text-sm text-neutral-500">20:15</span>
+                          </li>
+                          <li className="flex justify-between">
+                            <span>2.2 useEffect 与生命周期</span>
+                            <span className="text-sm text-neutral-500">25:40</span>
+                          </li>
+                          <li className="flex justify-between">
+                            <span>2.3 useContext 全局状态</span>
+                            <span className="text-sm text-neutral-500">19:50</span>
+                          </li>
+                        </ul>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium mb-2">第3章：React 路由</h4>
+                        <ul className="space-y-2 pl-4">
+                          <li className="flex justify-between">
+                            <span>3.1 React Router 基础</span>
+                            <span className="text-sm text-neutral-500">22:10</span>
+                          </li>
+                          <li className="flex justify-between">
+                            <span>3.2 动态路由与参数</span>
+                            <span className="text-sm text-neutral-500">18:35</span>
+                          </li>
+                          <li className="flex justify-between">
+                            <span>3.3 嵌套路由与布局</span>
+                            <span className="text-sm text-neutral-500">24:20</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 text-center">
+                      <Button variant="outline">查看完整目录</Button>
+                    </div>
+                  </>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="reviews" className="p-5 md:p-8 mx-auto">
+                <ReviewSection resourceId={id || 0} />
+              </TabsContent>
+              
+              <TabsContent value="faq" className="p-5 md:p-8 mx-auto">
+                <h3 className="text-xl font-bold mb-5">常见问题</h3>
+                {resource.faq_content ? (
+                  <div className="prose prose-blue max-w-none prose-headings:mt-6 prose-headings:mb-3 prose-p:my-2 prose-li:my-1 prose-hr:my-6">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {resource.faq_content}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    <div>
+                      <h4 className="font-medium mb-2">1. 这门课程适合完全没有React经验的人吗？</h4>
+                      <p className="text-neutral-700">是的，这门课程是从零基础开始讲解的，即使你之前没有React经验也可以学习。不过，建议你至少具备基本的HTML、CSS和JavaScript知识。</p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-medium mb-2">2. 购买后我可以永久访问课程内容吗？</h4>
+                      <p className="text-neutral-700">是的，一旦购买，你将获得课程的终身访问权限，包括未来的内容更新。</p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-medium mb-2">3. 课程包含源代码和项目文件吗？</h4>
+                      <p className="text-neutral-700">是的，课程包含所有讲解中使用的源代码和项目文件，你可以直接下载并在本地运行。</p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-medium mb-2">4. 如果我对课程有疑问，可以获得支持吗？</h4>
+                      <p className="text-neutral-700">当然可以，你可以在课程评论区提问，老师和助教会定期回复学员的问题。VIP会员还可以获得优先回复和一对一指导。</p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-medium mb-2">5. 课程内容会定期更新吗？</h4>
+                      <p className="text-neutral-700">是的，我们会根据React的版本更新和前端技术发展，定期更新课程内容，确保学员学习的是最新的知识和技能。</p>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
+        
+        {/* 右侧边栏 - 3/12比例 */}
+        <div className="col-span-12 lg:col-span-3 space-y-6">
+          {/* 作者信息卡片 */}
+          <div className="bg-white rounded-xl shadow-md overflow-hidden p-5">
             <h3 className="font-semibold text-lg mb-3">关于作者</h3>
             {resource.author ? (
               <div className="flex">
@@ -351,199 +550,9 @@ export default function ResourceDetail() {
               <div className="text-neutral-500 text-sm">暂无作者信息</div>
             )}
           </div>
+          
+          {/* 可在这里添加其他右侧边栏内容，如相关推荐等 */}
         </div>
-      </div>
-      
-      <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-        <Tabs value={tab} onValueChange={setTab}>
-          <div className="border-b border-neutral-200">
-            <TabsList className="h-auto px-5">
-              <TabsTrigger value="details" className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary">
-                课程详情
-              </TabsTrigger>
-              <TabsTrigger value="contents" className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary">
-                课程目录
-              </TabsTrigger>
-              <TabsTrigger value="reviews" className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary">
-                用户评价
-              </TabsTrigger>
-              <TabsTrigger value="faq" className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary">
-                常见问题
-              </TabsTrigger>
-            </TabsList>
-          </div>
-          
-          <TabsContent value="details" className="p-5 md:p-8 mx-auto">
-            {resource.description ? (
-              <div className="prose prose-blue max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {resource.description}
-                </ReactMarkdown>
-              </div>
-            ) : (
-              <>
-                <p className="mb-4">本课程是一个完整的 React.js 学习指南，从基础概念到高级应用，全面覆盖 React 开发所需的各项技能。无论你是完全的初学者还是想提升 React 技能的开发者，这门课程都能满足你的需求。</p>
-                
-                <p className="mb-4">课程使用最新的 React 18 版本，深入讲解了函数式组件、Hooks、Context API、Redux 状态管理以及现代 React 应用的性能优化技巧。通过实践项目，你将学会如何构建专业、可扩展的 React 应用程序。</p>
-                
-                <div className="mb-6">
-                  <h4 className="font-semibold mb-2">你将学到什么:</h4>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>React 基础概念与工作原理</li>
-                    <li>组件化开发与重用</li>
-                    <li>React Hooks 的全面应用</li>
-                    <li>状态管理策略 (Context API, Redux, Zustand)</li>
-                    <li>React 路由与 SPA 应用开发</li>
-                    <li>处理表单与用户输入</li>
-                    <li>API 集成与数据获取</li>
-                    <li>性能优化与最佳实践</li>
-                    <li>测试 React 应用</li>
-                    <li>3 个完整的实战项目</li>
-                  </ul>
-                </div>
-                
-                <div className="mb-6">
-                  <h4 className="font-semibold mb-2">适合人群:</h4>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>想要学习 React 的前端开发初学者</li>
-                    <li>希望提升 React 技能的开发者</li>
-                    <li>需要更新到 React 18 知识的开发人员</li>
-                    <li>前端开发或全栈开发工程师</li>
-                  </ul>
-                </div>
-                
-                <div>
-                  <h4 className="font-semibold mb-2">先决条件:</h4>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>基本的 HTML, CSS 和 JavaScript 知识</li>
-                    <li>了解 ES6+ 语法会有所帮助</li>
-                    <li>不需要任何 React 经验，课程从基础开始讲解</li>
-                  </ul>
-                </div>
-              </>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="contents" className="p-5 md:p-8 mx-auto">
-            {resource.contents ? (
-              <div className="prose prose-blue max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {resource.contents}
-                </ReactMarkdown>
-              </div>
-            ) : (
-              <>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium mb-2">第1章：React 基础入门</h4>
-                    <ul className="space-y-2 pl-4">
-                      <li className="flex justify-between">
-                        <span>1.1 课程介绍与环境搭建</span>
-                        <span className="text-sm text-neutral-500">15:20</span>
-                      </li>
-                      <li className="flex justify-between">
-                        <span>1.2 React 核心概念</span>
-                        <span className="text-sm text-neutral-500">22:45</span>
-                      </li>
-                      <li className="flex justify-between">
-                        <span>1.3 创建第一个 React 组件</span>
-                        <span className="text-sm text-neutral-500">18:30</span>
-                      </li>
-                    </ul>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-medium mb-2">第2章：React Hooks 详解</h4>
-                    <ul className="space-y-2 pl-4">
-                      <li className="flex justify-between">
-                        <span>2.1 useState 状态管理</span>
-                        <span className="text-sm text-neutral-500">20:15</span>
-                      </li>
-                      <li className="flex justify-between">
-                        <span>2.2 useEffect 与生命周期</span>
-                        <span className="text-sm text-neutral-500">25:40</span>
-                      </li>
-                      <li className="flex justify-between">
-                        <span>2.3 useContext 全局状态</span>
-                        <span className="text-sm text-neutral-500">19:50</span>
-                      </li>
-                    </ul>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-medium mb-2">第3章：React 路由</h4>
-                    <ul className="space-y-2 pl-4">
-                      <li className="flex justify-between">
-                        <span>3.1 React Router 基础</span>
-                        <span className="text-sm text-neutral-500">22:10</span>
-                      </li>
-                      <li className="flex justify-between">
-                        <span>3.2 动态路由与参数</span>
-                        <span className="text-sm text-neutral-500">18:35</span>
-                      </li>
-                      <li className="flex justify-between">
-                        <span>3.3 嵌套路由与布局</span>
-                        <span className="text-sm text-neutral-500">24:20</span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-                
-                <div className="mt-4 text-center">
-                  <Button variant="outline">查看完整目录</Button>
-                </div>
-              </>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="reviews" className="p-5 md:p-8 mx-auto">
-            <ReviewSection resourceId={id || 0} />
-          </TabsContent>
-          
-          <TabsContent value="faq" className="p-5 md:p-8 mx-auto">
-            <h3 className="text-xl font-bold mb-5">常见问题</h3>
-            {resource.faq_content ? (
-              <div className="prose prose-blue max-w-none prose-headings:mt-6 prose-headings:mb-3 prose-p:my-2 prose-li:my-1 prose-hr:my-6">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {resource.faq_content}
-                </ReactMarkdown>
-              </div>
-            ) : (
-              <div className="space-y-5">
-                <div>
-                  <h4 className="font-medium mb-2">1. 这门课程适合完全没有React经验的人吗？</h4>
-                  <p className="text-neutral-700">是的，这门课程是从零基础开始讲解的，即使你之前没有React经验也可以学习。不过，建议你至少具备基本的HTML、CSS和JavaScript知识。</p>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium mb-2">2. 购买后我可以永久访问课程内容吗？</h4>
-                  <p className="text-neutral-700">是的，一旦购买，你将获得课程的终身访问权限，包括未来的内容更新。</p>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium mb-2">3. 课程包含源代码和项目文件吗？</h4>
-                  <p className="text-neutral-700">是的，课程包含所有讲解中使用的源代码和项目文件，你可以直接下载并在本地运行。</p>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium mb-2">4. 如果我对课程有疑问，可以获得支持吗？</h4>
-                  <p className="text-neutral-700">当然可以，你可以在课程评论区提问，老师和助教会定期回复学员的问题。VIP会员还可以获得优先回复和一对一指导。</p>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium mb-2">5. 课程内容会定期更新吗？</h4>
-                  <p className="text-neutral-700">是的，我们会根据React的版本更新和前端技术发展，定期更新课程内容，确保学员学习的是最新的知识和技能。</p>
-                </div>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
-      
-      {/* 版权免责声明 */}
-      <div className="bg-neutral-50 p-5 rounded-lg mb-6 text-sm text-neutral-600">
-        <h4 className="font-semibold text-base mb-2 text-neutral-800">版权免责声明：</h4>
-        <p>本站所有文章，如无特殊说明或标注，均为本站原创发布。任何个人或组织，在未征得本站同意时，禁止复制、盗用、采集、发布本站内容到任何网站、书籍等各类媒体平台。如若本站内容侵犯了原著者的合法权益，可联系我们进行处理。</p>
       </div>
     </div>
   );
