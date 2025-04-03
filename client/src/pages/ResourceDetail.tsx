@@ -178,7 +178,7 @@ export default function ResourceDetail() {
   };
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-16 2xl:px-32 py-6 max-w-screen-2xl">
       <div className="mb-6">
         <Link href="/resources">
           <a className="text-primary hover:text-blue-700 flex items-center text-sm font-medium">
@@ -189,7 +189,7 @@ export default function ResourceDetail() {
       
       <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
         <div className="md:flex">
-          <div className="md:w-2/3 p-6 md:p-8">
+          <div className="md:w-3/4 lg:w-4/5 p-6 md:p-8">
             <div className="flex flex-wrap gap-2 mb-4">
               {resource.category && (
                 <Badge variant="outline" className="bg-blue-100 text-primary border-0">
@@ -204,125 +204,137 @@ export default function ResourceDetail() {
               </Badge>
             </div>
             
-            <h1 className="text-2xl md:text-3xl font-bold mb-2">{resource.title}</h1>
-            <p className="text-neutral-600 mb-4">{resource.subtitle || 'No description available'}</p>
-            
-            <div className="mb-6">
-              <div className="text-4xl font-bold text-neutral-900 mb-1">
-                {isFree ? '免费' : `${Math.round(price)} 积分`}
-              </div>
-              {!isFree && (
-                <div className="text-neutral-500 line-through">原价: {Math.round(originalPrice)} 积分</div>
-              )}
-              {isFree && (
-                <div className="bg-green-100 text-green-800 text-sm px-2 py-0.5 rounded mt-2 inline-block">
-                  限时免费，距结束还有 2 天
+            <div className="md:flex md:flex-wrap md:justify-between">
+              <div className="md:w-2/3 lg:w-2/3">
+                <h1 className="text-2xl md:text-3xl font-bold mb-2">{resource.title}</h1>
+                <p className="text-neutral-600 mb-4">{resource.subtitle || 'No description available'}</p>
+                
+                <div className="mb-6">
+                  <div className="text-4xl font-bold text-neutral-900 mb-1">
+                    {isFree ? '免费' : `${Math.round(price)} 积分`}
+                  </div>
+                  {!isFree && (
+                    <div className="text-neutral-500 line-through">原价: {Math.round(originalPrice)} 积分</div>
+                  )}
+                  {isFree && (
+                    <div className="bg-green-100 text-green-800 text-sm px-2 py-0.5 rounded mt-2 inline-block">
+                      限时免费，距结束还有 2 天
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            
-            {/* 课程内容要点 */}
-            <div className="mb-6 space-y-3">
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                <span>终身访问所有课程内容</span>
-              </div>
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                <span>源代码和项目文件下载</span>
-              </div>
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                <span>完整中英双语字幕</span>
-              </div>
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                <span>移动端和TV端支持</span>
-              </div>
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                <span>课程完成证书</span>
-              </div>
-            </div>
-            
-            {/* 文件信息 */}
-            <div className="mb-6 bg-neutral-50 p-5 rounded-lg">
-              <h3 className="font-semibold text-lg mb-3">文件信息</h3>
-              <div className="grid grid-cols-2 gap-y-3">
-                <span className="text-neutral-600">格式:</span>
-                <span className="font-medium text-right">MP4, PDF</span>
                 
-                <span className="text-neutral-600">大小:</span>
-                <span className="font-medium text-right">{resource.video_size ? `${resource.video_size} GB` : '4.20 GB'}</span>
+                <div className="flex items-center mb-6">
+                  <div className="flex items-center text-amber-500 mr-3">
+                    <Star className="h-4 w-4 fill-current" />
+                    <Star className="h-4 w-4 fill-current" />
+                    <Star className="h-4 w-4 fill-current" />
+                    <Star className="h-4 w-4 fill-current" />
+                    <StarHalf className="h-4 w-4 fill-current" />
+                    <span className="ml-1 text-neutral-800 font-medium">4.5</span>
+                  </div>
+                  <span className="text-neutral-500 text-sm">(526 评价)</span>
+                </div>
+              </div>
+              
+              <div className="md:w-1/3 lg:w-1/3">
+                {/* 文件信息 */}
+                <div className="mb-6 bg-neutral-50 p-5 rounded-lg">
+                  <h3 className="font-semibold text-lg mb-3">文件信息</h3>
+                  <div className="grid grid-cols-2 gap-y-3">
+                    <span className="text-neutral-600">格式:</span>
+                    <span className="font-medium text-right">MP4, PDF</span>
+                    
+                    <span className="text-neutral-600">大小:</span>
+                    <span className="font-medium text-right">{resource.video_size ? `${resource.video_size} GB` : '1.80 GB'}</span>
+                    
+                    <span className="text-neutral-600">更新日期:</span>
+                    <span className="font-medium text-right">{resource.updated_at ? new Date(resource.updated_at).toLocaleDateString() : '2025/4/2'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="md:flex md:gap-8">
+              <div className="md:w-2/3 lg:w-2/3">
+                {/* 课程内容要点 */}
+                <div className="mb-6 space-y-3">
+                  <div className="flex items-center">
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                    <span>终身访问所有课程内容</span>
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                    <span>源代码和项目文件下载</span>
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                    <span>完整中英双语字幕</span>
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                    <span>移动端和TV端支持</span>
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                    <span>课程完成证书</span>
+                  </div>
+                </div>
                 
-                <span className="text-neutral-600">更新日期:</span>
-                <span className="font-medium text-right">{resource.updated_at ? new Date(resource.updated_at).toLocaleDateString() : '2025/3/26'}</span>
+                <div className="mb-4 hidden">
+                  {resource.video_duration && (
+                    <span className="flex items-center">
+                      <Clock className="h-4 w-4 mr-1" /> 总时长: {resource.video_duration} 分钟
+                    </span>
+                  )}
+                  
+                  {resource.video_url && (
+                    <span className="flex items-center">
+                      <FileText className="h-4 w-4 mr-1" /> 课时: {Math.floor(Math.random() * 180 + 20)} 讲
+                    </span>
+                  )}
+                  
+                  {resource.language && (
+                    <span className="flex items-center">
+                      <Globe className="h-4 w-4 mr-1" /> 语言: {resource.language}
+                    </span>
+                  )}
+                  
+                  {resource.subtitle_languages && (
+                    <span className="flex items-center">
+                      <Subtitles className="h-4 w-4 mr-1" /> 字幕: {resource.subtitle_languages}
+                    </span>
+                  )}
+                  
+                  {resource.resolution && (
+                    <span className="flex items-center">
+                      <MonitorSmartphone className="h-4 w-4 mr-1" /> 分辨率: {resource.resolution}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-            
-            <div className="mb-4 hidden">
-              {resource.video_duration && (
-                <span className="flex items-center">
-                  <Clock className="h-4 w-4 mr-1" /> 总时长: {resource.video_duration} 分钟
-                </span>
-              )}
               
-              {resource.video_url && (
-                <span className="flex items-center">
-                  <FileText className="h-4 w-4 mr-1" /> 课时: {Math.floor(Math.random() * 180 + 20)} 讲
-                </span>
-              )}
-              
-              {resource.language && (
-                <span className="flex items-center">
-                  <Globe className="h-4 w-4 mr-1" /> 语言: {resource.language}
-                </span>
-              )}
-              
-              {resource.subtitle_languages && (
-                <span className="flex items-center">
-                  <Subtitles className="h-4 w-4 mr-1" /> 字幕: {resource.subtitle_languages}
-                </span>
-              )}
-              
-              {resource.resolution && (
-                <span className="flex items-center">
-                  <MonitorSmartphone className="h-4 w-4 mr-1" /> 分辨率: {resource.resolution}
-                </span>
-              )}
-            </div>
-            
-            <div className="flex items-center mb-6">
-              <div className="flex items-center text-amber-500 mr-3">
-                <Star className="h-4 w-4 fill-current" />
-                <Star className="h-4 w-4 fill-current" />
-                <Star className="h-4 w-4 fill-current" />
-                <Star className="h-4 w-4 fill-current" />
-                <StarHalf className="h-4 w-4 fill-current" />
-                <span className="ml-1 text-neutral-800 font-medium">4.5</span>
-              </div>
-              <span className="text-neutral-500 text-sm">(526 评价)</span>
-            </div>
-            
-            <div className="flex flex-col gap-4 mb-8">
-              <Button onClick={handleDownload} size="lg" className="w-full text-base py-6">
-                立即获取
-              </Button>
-              <div className="text-center text-sm text-neutral-500">
-                已有 12,569 人下载此资源
-              </div>
-              <div className="flex justify-center gap-4 mt-2 hidden">
-                <Button onClick={handleAddToCart} variant="secondary" className="gap-2">
-                  <ShoppingCart className="h-4 w-4" /> 加入购物车
-                </Button>
-                <Button onClick={handleAddToFavorites} variant="outline" className="gap-2">
-                  <Heart className="h-4 w-4" /> 收藏
-                </Button>
+              <div className="md:w-1/3 lg:w-1/3">
+                <div className="flex flex-col gap-4 mb-8">
+                  <Button onClick={handleDownload} size="lg" className="w-full text-base py-6">
+                    立即获取
+                  </Button>
+                  <div className="text-center text-sm text-neutral-500">
+                    已有 12,569 人下载此资源
+                  </div>
+                  <div className="flex justify-center gap-4 mt-2 hidden">
+                    <Button onClick={handleAddToCart} variant="secondary" className="gap-2">
+                      <ShoppingCart className="h-4 w-4" /> 加入购物车
+                    </Button>
+                    <Button onClick={handleAddToFavorites} variant="outline" className="gap-2">
+                      <Heart className="h-4 w-4" /> 收藏
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
           
-          <div className="md:w-1/3 bg-neutral-50 p-6 md:p-8 border-t md:border-t-0 md:border-l border-neutral-200">
+          <div className="md:w-1/4 lg:w-1/5 bg-neutral-50 p-6 md:p-8 border-t md:border-t-0 md:border-l border-neutral-200">
             <h3 className="font-semibold text-lg mb-3">关于作者</h3>
             {resource.author ? (
               <div className="flex">
@@ -361,7 +373,7 @@ export default function ResourceDetail() {
             </TabsList>
           </div>
           
-          <TabsContent value="details" className="p-6 md:p-8">
+          <TabsContent value="details" className="p-6 md:p-8 max-w-5xl mx-auto">
             {resource.description ? (
               <div className="prose prose-blue max-w-none">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -412,7 +424,7 @@ export default function ResourceDetail() {
             )}
           </TabsContent>
           
-          <TabsContent value="contents" className="p-6 md:p-8">
+          <TabsContent value="contents" className="p-6 md:p-8 max-w-5xl mx-auto">
             {resource.contents ? (
               <div className="prose prose-blue max-w-none">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -484,11 +496,11 @@ export default function ResourceDetail() {
             )}
           </TabsContent>
           
-          <TabsContent value="reviews" className="p-6 md:p-8">
+          <TabsContent value="reviews" className="p-6 md:p-8 max-w-5xl mx-auto">
             <ReviewSection resourceId={id || 0} />
           </TabsContent>
           
-          <TabsContent value="faq" className="p-6 md:p-8">
+          <TabsContent value="faq" className="p-6 md:p-8 max-w-5xl mx-auto">
             <h3 className="text-xl font-bold mb-6">常见问题</h3>
             {resource.faq_content ? (
               <div className="prose prose-blue max-w-none prose-headings:mt-6 prose-headings:mb-3 prose-p:my-2 prose-li:my-1 prose-hr:my-6">
