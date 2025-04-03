@@ -37,7 +37,8 @@ import {
   RefreshCw,
   Search,
   AlertCircle,
-  FileSearch
+  FileSearch,
+  Image as ImageIcon
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -676,10 +677,11 @@ export default function FeifeiManagement() {
                     <TableRow>
                       <TableHead className="w-[60px]">ID</TableHead>
                       <TableHead className="w-[250px]">中文标题</TableHead>
-                      <TableHead className="w-[250px]">英文标题</TableHead>
-                      <TableHead className="w-[120px]">标签</TableHead>
-                      <TableHead className="w-[150px]">创建时间</TableHead>
-                      <TableHead className="w-[120px]">操作</TableHead>
+                      <TableHead className="w-[200px]">英文标题</TableHead>
+                      <TableHead className="w-[100px]">图片</TableHead>
+                      <TableHead className="w-[100px]">标签</TableHead>
+                      <TableHead className="w-[130px]">创建时间</TableHead>
+                      <TableHead className="w-[150px]">操作</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -707,6 +709,20 @@ export default function FeifeiManagement() {
                               className="text-blue-600 hover:underline flex items-center"
                             >
                               <span>{resource.english_title}</span>
+                              <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
+                            </a>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {resource.image_url ? (
+                            <a 
+                              href={resource.image_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-500 hover:text-blue-700 underline flex items-center gap-1"
+                            >
+                              <ImageIcon className="h-4 w-4" />
+                              <span>图片链接</span>
                               <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
                             </a>
                           ) : '-'}
@@ -786,12 +802,16 @@ export default function FeifeiManagement() {
             <div className="space-y-6">
               {selectedResource.image_url && (
                 <div className="w-full flex justify-center">
-                  <div className="relative rounded-md overflow-hidden w-full max-w-md">
-                    <img 
-                      src={selectedResource.image_url} 
-                      alt={selectedResource.chinese_title}
-                      className="w-full h-auto object-cover"
-                    />
+                  <div className="text-center">
+                    <a 
+                      href={selectedResource.image_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-blue-500 hover:text-blue-700 underline flex items-center justify-center gap-2"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      查看资源图片
+                    </a>
                   </div>
                 </div>
               )}
