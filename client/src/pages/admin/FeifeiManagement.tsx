@@ -49,6 +49,7 @@ import { FeifeiCategory, FeifeiResource, FeifeiTag, insertFeifeiCategorySchema }
 // 扩展FeifeiResource类型，添加tags属性
 interface EnrichedFeifeiResource extends FeifeiResource {
   tags?: FeifeiTag[];
+  coin_price?: string; // 金币价格字段
 }
 
 import { Link } from "wouter";
@@ -793,6 +794,7 @@ export default function FeifeiManagement() {
                     <p><strong>热度：</strong> {selectedResource.popularity || '-'}</p>
                     <p><strong>发布时间：</strong> {selectedResource.publish_date || '-'}</p>
                     <p><strong>最近更新：</strong> {selectedResource.last_update || '-'}</p>
+                    <p><strong>金币价格：</strong> {selectedResource.coin_price ? `${selectedResource.coin_price} 金币` : '-'}</p>
                   </div>
                 </div>
                 

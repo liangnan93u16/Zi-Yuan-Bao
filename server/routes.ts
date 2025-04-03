@@ -1575,6 +1575,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log('处理后的热度值:', popularity);
         }
 
+        // 处理金币价格 - 提取"12.5金币"中的数字部分
+        let coinPrice = null;
+        const coinValue = infoItems['普通'] || null;
+        if (coinValue) {
+          // 提取数字部分（支持小数）
+          const coinMatches = coinValue.match(/(\d+(\.\d+)?)/);
+          if (coinMatches && coinMatches[1]) {
+            coinPrice = coinMatches[1]; // 提取数字，例如"12.5"
+            console.log('处理后的金币价格:', coinPrice);
+          }
+        }
+
         // 更新资源信息
         const updateData = {
           resource_category: infoItems['资源分类'] || null,
@@ -1588,6 +1600,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           language: infoItems['语言'] || infoItems['视频语言'] || null,
           subtitle: infoItems['字幕'] || infoItems['视频字幕'] || null,
           details: details,
+          coin_price: coinPrice, // 添加金币价格字段
         };
         
         // 提取页面中的标签
