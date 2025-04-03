@@ -1549,12 +1549,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // 记录提取的信息
         console.log('提取的页面信息:', infoItems);
+        
+        // 添加日志，显示热度处理前后的对比
+        console.log('原始热度值:', infoItems['热度'] || infoItems['浏览热度'] || infoItems['浏览'] || '无');
         console.log('获取的详情内容长度:', details ? details.length : 0);
         
+        // 处理热度数据 - 去掉括号，只保留数字
+        let popularity = null;
+        const hotValue = infoItems['热度'] || infoItems['浏览热度'] || infoItems['浏览'] || null;
+        if (hotValue) {
+          // 如果值形如 "(66)" 或 "浏览次数(66)"，提取括号中的数字
+          const matches = hotValue.match(/\((\d+)\)/);
+          if (matches && matches[1]) {
+            popularity = matches[1]; // 提取括号中的数字
+          } else {
+            // 如果没有括号，尝试直接提取数字
+            const numMatches = hotValue.match(/\d+/);
+            if (numMatches) {
+              popularity = numMatches[0];
+            } else {
+              popularity = hotValue; // 保留原始值
+            }
+          }
+          
+          console.log('处理后的热度值:', popularity);
+        }
+
         // 更新资源信息
         const updateData = {
           resource_category: infoItems['资源分类'] || null,
-          popularity: infoItems['热度'] || infoItems['浏览'] || null,
+          popularity: popularity,
           publish_date: infoItems['发布时间'] || null,
           last_update: infoItems['最近更新'] || null,
           content_info: infoItems['文件内容'] || null,
