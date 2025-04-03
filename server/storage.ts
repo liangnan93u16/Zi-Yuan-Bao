@@ -100,9 +100,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: number, data: Partial<User>): Promise<User | undefined> {
+    // 确保所有的日期值都是有效的 Date 对象
+    const updateData = { ...data };
+    
+    // 如果包含 membership_expire_time 且不是 Date 对象，尝试转换
+    if (updateData.membership_expire_time !== undefined && 
+        !(updateData.membership_expire_time instanceof Date) && 
+        updateData.membership_expire_time !== null) {
+      try {
+        updateData.membership_expire_time = new Date(updateData.membership_expire_time);
+      } catch (error) {
+        console.error('Error converting membership_expire_time to Date', error);
+        // 如果无法转换，设置为null
+        updateData.membership_expire_time = null;
+      }
+    }
+    
+    // 确保 updated_at 始终是 Date 对象
     const [user] = await db
       .update(users)
-      .set({ ...data, updated_at: new Date() })
+      .set({ ...updateData, updated_at: new Date() })
       .where(eq(users.id, id))
       .returning();
     return user || undefined;

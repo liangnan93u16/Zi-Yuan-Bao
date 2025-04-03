@@ -701,7 +701,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // 允许管理员更新的字段
-      const allowedFields = ['membership_type', 'membership_expire_time', 'coins', 'email', 'avatar'];
+      const allowedFields = ['membership_type', 'coins', 'email', 'avatar'];
       const updateData: any = {};
       
       for (const field of allowedFields) {
@@ -710,9 +710,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // 特殊处理会员过期时间字段
+      if (req.body.membership_expire_time !== undefined) {
+        // 如果是空字符串或null，设置为null表示永不过期
+        if (req.body.membership_expire_time === '' || req.body.membership_expire_time === null) {
+          updateData.membership_expire_time = null;
+        } else {
+          // 尝试创建一个有效的Date对象
+          try {
+            const expireDate = new Date(req.body.membership_expire_time);
+            if (!isNaN(expireDate.getTime())) { // 检查日期是否有效
+              updateData.membership_expire_time = expireDate;
+            } else {
+              throw new Error('无效的日期格式');
+            }
+          } catch (err) {
+            console.error('Invalid date format:', req.body.membership_expire_time);
+            return res.status(400).json({ message: '会员过期日期格式无效' });
+          }
+        }
+      }
+      
       // 如果有更新数据，则更新updated_at字段
       if (Object.keys(updateData).length > 0) {
-        updateData.updated_at = new Date().toISOString();
+        updateData.updated_at = new Date();
       }
       
       const updatedUser = await storage.updateUser(userId, updateData);
@@ -849,9 +870,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         user_id: req.user.id,
         resource_id: resourceId,
-        status: 0, // 默认为待审核状态
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        status: 0 // 默认为待审核状态
+        // created_at 和 updated_at 会自动生成
       };
 
       // 验证评价数据
@@ -994,8 +1014,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 更新评价状态
       const updatedReview = await storage.updateReview(reviewId, { 
         status, 
-        admin_notes,
-        updated_at: new Date().toISOString()
+        admin_notes
+        // 不需要设置updated_at，storage.updateReview中会自动设置
       });
       
       if (!updatedReview) {
