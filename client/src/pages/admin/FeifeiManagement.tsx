@@ -642,9 +642,8 @@ export default function FeifeiManagement() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[60px]">ID</TableHead>
-                      <TableHead className="w-[180px]">中文标题</TableHead>
-                      <TableHead className="w-[150px]">英文标题</TableHead>
-                      <TableHead>URL</TableHead>
+                      <TableHead className="w-[250px]">中文标题</TableHead>
+                      <TableHead className="w-[250px]">英文标题</TableHead>
                       <TableHead className="w-[120px]">标签</TableHead>
                       <TableHead className="w-[150px]">创建时间</TableHead>
                     </TableRow>
@@ -653,21 +652,30 @@ export default function FeifeiManagement() {
                     {categoryResources.map((resource) => (
                       <TableRow key={resource.id}>
                         <TableCell>{resource.id}</TableCell>
-                        <TableCell>{resource.chinese_title}</TableCell>
-                        <TableCell>{resource.english_title || '-'}</TableCell>
                         <TableCell>
-                          <div className="flex items-center space-x-2 max-w-[250px] truncate">
-                            <LinkIcon className="h-4 w-4 flex-shrink-0 text-neutral-400" />
+                          <a 
+                            href={resource.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline flex items-center"
+                          >
+                            <LinkIcon className="h-4 w-4 mr-1 flex-shrink-0 text-neutral-400" />
+                            <span>{resource.chinese_title}</span>
+                            <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
+                          </a>
+                        </TableCell>
+                        <TableCell>
+                          {resource.english_title ? (
                             <a 
                               href={resource.url} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline flex items-center truncate"
+                              className="text-blue-600 hover:underline flex items-center"
                             >
-                              <span className="truncate">{resource.url}</span>
+                              <span>{resource.english_title}</span>
                               <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
                             </a>
-                          </div>
+                          ) : '-'}
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
