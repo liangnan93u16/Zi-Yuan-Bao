@@ -800,22 +800,6 @@ export default function FeifeiManagement() {
           
           {selectedResource ? (
             <div className="space-y-6">
-              {selectedResource.image_url && (
-                <div className="w-full flex justify-center">
-                  <div className="text-center">
-                    <a 
-                      href={selectedResource.image_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="text-blue-500 hover:text-blue-700 underline flex items-center justify-center gap-2"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      查看资源图片
-                    </a>
-                  </div>
-                </div>
-              )}
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <h4 className="text-sm font-medium text-gray-500 mb-2">基本信息</h4>
@@ -827,6 +811,20 @@ export default function FeifeiManagement() {
                     <p><strong>发布时间：</strong> {selectedResource.publish_date || '-'}</p>
                     <p><strong>最近更新：</strong> {selectedResource.last_update || '-'}</p>
                     <p><strong>金币价格：</strong> {selectedResource.coin_price ? `${selectedResource.coin_price} 金币` : '-'}</p>
+                    {selectedResource.image_url && (
+                      <p>
+                        <strong>资源图片：</strong> 
+                        <a 
+                          href={selectedResource.image_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-blue-500 hover:text-blue-700 underline inline-flex items-center ml-1 gap-1"
+                        >
+                          <span>查看图片</span>
+                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                        </a>
+                      </p>
+                    )}
                   </div>
                 </div>
                 
