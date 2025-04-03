@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage, ResourceFilters } from "./storage";
 import session from "express-session";
 import { z } from "zod";
+import axios from 'axios';
+import * as cheerio from 'cheerio';
 import { 
   insertCategorySchema, 
   insertResourceSchema, 
@@ -1488,13 +1490,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // 动态导入所需模块
       const { default: axios } = await import('axios');
-      const cheerio = await import('cheerio');
       
       try {
         // 发送请求获取页面内容
         const response = await axios.get(url);
         const html = response.data;
-        const $ = cheerio.default(html);
+        
+        // 动态导入cheerio，使用合适的方式
+        const cheerio = await import('cheerio');
+        
+        // 使用cheerio的load方法
+        const $ = cheerio.load(html);
         
         // 解析页面内容
         const detailsBox = $('.details-box');
