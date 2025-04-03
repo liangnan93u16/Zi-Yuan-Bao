@@ -208,17 +208,45 @@ export default function ResourceDetail() {
         return;
       }
       
-      // 如果是普通用户且资源不免费，弹出确认对话框
+      // 如果是普通用户且资源不免费，直接尝试扣除积分
       // 检查会员是否有效（没有会员类型或会员已过期）
       const isMembershipValid = user.membership_type && 
                                 (!user.membership_expire_time || new Date(user.membership_expire_time) > new Date());
       
       if (!isFree && !isMembershipValid) {
-        // API返回成功但不是"已购买过"的消息，说明需要购买
-        if (!response.ok || !data.success) {
-          // 确认是否购买
-          if (window.confirm(`确定使用 ${price} 积分购买此资源吗？`)) {
-            // 再次发送购买请求
+        // 如果API返回成功，说明资源已获取（可能是会员获取或第一次API调用已成功）
+        if (response.ok && data.success) {
+          // 获取成功
+          if (data.message) {
+            toast({
+              title: "获取成功",
+              description: data.message,
+            });
+          }
+          
+          // 打开资源链接
+          if (data.resource_url) {
+            window.open(data.resource_url, '_blank');
+            toast({
+              title: "资源链接已打开",
+              description: "请在新窗口查看资源下载链接",
+            });
+          }
+          
+          // 更新积分
+          if (data.remaining_coins !== undefined && user) {
+            user.coins = data.remaining_coins;
+          }
+        } 
+        // API返回失败时，再次确认错误类型
+        else {
+          // 如果是积分不足的情况，提示充值
+          if (response.status === 400 && data.message === '积分不足') {
+            // 已经在前面处理过，这里不需要重复处理
+            return;
+          } 
+          // 其他错误情况，直接尝试购买（不再弹出确认对话框）
+          else {
             const purchaseResponse = await fetch(`/api/resources/${id}/purchase`, {
               method: 'POST',
               headers: {
@@ -260,28 +288,6 @@ export default function ResourceDetail() {
                 variant: "destructive",
               });
             }
-          }
-        } else {
-          // 购买成功（第一次调用API就成功了，这种情况通常是会员或免费资源）
-          if (data.message) {
-            toast({
-              title: "获取成功",
-              description: data.message,
-            });
-          }
-          
-          // 打开资源链接
-          if (data.resource_url) {
-            window.open(data.resource_url, '_blank');
-            toast({
-              title: "资源链接已打开",
-              description: "请在新窗口查看资源下载链接",
-            });
-          }
-          
-          // 更新积分
-          if (data.remaining_coins !== undefined && user) {
-            user.coins = data.remaining_coins;
           }
         }
       }
