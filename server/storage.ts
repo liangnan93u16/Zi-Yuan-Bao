@@ -6,7 +6,8 @@ import {
   reviews, type Review, type InsertReview,
   adminLoginLogs, type AdminLoginLog, type InsertAdminLoginLog,
   authors, type Author, type InsertAuthor,
-  userPurchases, type UserPurchase, type InsertUserPurchase
+  userPurchases, type UserPurchase, type InsertUserPurchase,
+  feifeiCategories, type FeifeiCategory, type InsertFeifeiCategory
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, or, desc, sql } from "drizzle-orm";
@@ -69,6 +70,13 @@ export interface IStorage {
   // Admin Login Log operations
   createAdminLoginLog(log: InsertAdminLoginLog): Promise<AdminLoginLog>;
   getAdminLoginLogs(adminEmail?: string, limit?: number): Promise<AdminLoginLog[]>;
+  
+  // Feifei Category operations
+  getFeifeiCategory(id: number): Promise<FeifeiCategory | undefined>;
+  createFeifeiCategory(category: InsertFeifeiCategory): Promise<FeifeiCategory>;
+  updateFeifeiCategory(id: number, data: Partial<FeifeiCategory>): Promise<FeifeiCategory | undefined>;
+  deleteFeifeiCategory(id: number): Promise<boolean>;
+  getAllFeifeiCategories(): Promise<FeifeiCategory[]>;
   
   // Initialize default data
   initializeDefaultData(): Promise<void>;
@@ -574,6 +582,44 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.log("Authors table may not exist yet, skipping author initialization");
     }
+  }
+  
+  // 菲菲网分类操作方法
+  async getFeifeiCategory(id: number): Promise<FeifeiCategory | undefined> {
+    const [category] = await db.select().from(feifeiCategories).where(eq(feifeiCategories.id, id));
+    return category || undefined;
+  }
+  
+  async createFeifeiCategory(insertCategory: InsertFeifeiCategory): Promise<FeifeiCategory> {
+    const [category] = await db
+      .insert(feifeiCategories)
+      .values(insertCategory)
+      .returning();
+    return category;
+  }
+  
+  async updateFeifeiCategory(id: number, data: Partial<FeifeiCategory>): Promise<FeifeiCategory | undefined> {
+    const [category] = await db
+      .update(feifeiCategories)
+      .set({ ...data, updated_at: new Date() })
+      .where(eq(feifeiCategories.id, id))
+      .returning();
+    return category || undefined;
+  }
+  
+  async deleteFeifeiCategory(id: number): Promise<boolean> {
+    const result = await db
+      .delete(feifeiCategories)
+      .where(eq(feifeiCategories.id, id))
+      .returning({ id: feifeiCategories.id });
+    return result.length > 0;
+  }
+  
+  async getAllFeifeiCategories(): Promise<FeifeiCategory[]> {
+    return await db
+      .select()
+      .from(feifeiCategories)
+      .orderBy(feifeiCategories.sort_order);
   }
 }
 

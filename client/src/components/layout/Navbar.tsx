@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Search, Menu, User, ShoppingBag, LogOut, BookOpen, Edit, CheckCircle, ClipboardCheck, Users, History, Shield, Home, Package, Crown, HelpCircle, Info } from "lucide-react";
+import { Search, Menu, User, ShoppingBag, LogOut, BookOpen, Edit, CheckCircle, ClipboardCheck, Users, History, Shield, Home, Package, Crown, HelpCircle, Info, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -156,6 +156,13 @@ export default function Navbar() {
                           会员管理
                         </Link>
                       </DropdownMenuItem>
+                      
+                      <DropdownMenuItem>
+                        <Link href="/admin/feifei" className="flex items-center gap-2">
+                          <LinkIcon className="h-4 w-4" />
+                          菲菲网
+                        </Link>
+                      </DropdownMenuItem>
 
                       {user.email === "1034936667@qq.com" && (
                         <DropdownMenuItem>
@@ -276,6 +283,11 @@ export default function Navbar() {
                             <Link href="/admin/users" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
                                 <Users className="h-4 w-4" />
                                 会员管理
+                            </Link>
+                            
+                            <Link href="/admin/feifei" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                                <LinkIcon className="h-4 w-4" />
+                                菲菲网
                             </Link>
 
                             {user.email === "1034936667@qq.com" && (

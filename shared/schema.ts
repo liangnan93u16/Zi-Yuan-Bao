@@ -198,5 +198,24 @@ export type InsertAdminLoginLog = z.infer<typeof insertAdminLoginLogSchema>;
 export type UserPurchase = typeof userPurchases.$inferSelect;
 export type InsertUserPurchase = z.infer<typeof insertUserPurchaseSchema>;
 
+// 菲菲网分类表
+export const feifeiCategories = pgTable("feifei_categories", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(), // 分类标题
+  url: text("url").notNull(), // 分类URL
+  sort_order: integer("sort_order").default(0), // 排序顺序
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow()
+});
+
+export const insertFeifeiCategorySchema = createInsertSchema(feifeiCategories).omit({
+  id: true,
+  created_at: true,
+  updated_at: true
+});
+
+export type FeifeiCategory = typeof feifeiCategories.$inferSelect;
+export type InsertFeifeiCategory = z.infer<typeof insertFeifeiCategorySchema>;
+
 export type LoginCredentials = z.infer<typeof loginSchema>;
 export type RegisterData = z.infer<typeof registerSchema>;

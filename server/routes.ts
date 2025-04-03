@@ -9,6 +9,7 @@ import {
   insertResourceRequestSchema,
   insertReviewSchema,
   insertAuthorSchema,
+  insertFeifeiCategorySchema,
   loginSchema, 
   registerSchema,
   type Review
@@ -1179,5 +1180,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  // 菲菲网分类API
+  app.get('/api/feifei-categories', async (req, res) => {
+    try {
+      const categories = await storage.getAllFeifeiCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error('Error fetching feifei categories:', error);
+      res.status(500).json({ message: '获取菲菲网分类失败' });
+    }
+  });
+
+  app.get('/api/feifei-categories/:id', async (req, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      if (isNaN(categoryId)) {
+        res.status(400).json({ message: '无效的分类ID' });
+        return;
+      }
+
+      const category = await storage.getFeifeiCategory(categoryId);
+      if (!category) {
+        res.status(404).json({ message: '分类不存在' });
+        return;
+      }
+
+      res.json(category);
+    } catch (error) {
+      console.error('Error fetching feifei category:', error);
+      res.status(500).json({ message: '获取菲菲网分类详情失败' });
+    }
+  });
+
+  app.post('/api/feifei-categories', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const validationResult = insertFeifeiCategorySchema.safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({ message: '分类数据无效', errors: validationResult.error.format() });
+        return;
+      }
+
+      const category = await storage.createFeifeiCategory(validationResult.data);
+      res.status(201).json(category);
+    } catch (error) {
+      console.error('Error creating feifei category:', error);
+      res.status(500).json({ message: '创建菲菲网分类失败' });
+    }
+  });
+
+  app.patch('/api/feifei-categories/:id', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      if (isNaN(categoryId)) {
+        res.status(400).json({ message: '无效的分类ID' });
+        return;
+      }
+
+      const category = await storage.getFeifeiCategory(categoryId);
+      if (!category) {
+        res.status(404).json({ message: '分类不存在' });
+        return;
+      }
+
+      const validationResult = insertFeifeiCategorySchema.partial().safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({ message: '分类数据无效', errors: validationResult.error.format() });
+        return;
+      }
+
+      const updatedCategory = await storage.updateFeifeiCategory(categoryId, validationResult.data);
+      res.json(updatedCategory);
+    } catch (error) {
+      console.error('Error updating feifei category:', error);
+      res.status(500).json({ message: '更新菲菲网分类失败' });
+    }
+  });
+
+  app.delete('/api/feifei-categories/:id', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      if (isNaN(categoryId)) {
+        res.status(400).json({ message: '无效的分类ID' });
+        return;
+      }
+
+      const deleted = await storage.deleteFeifeiCategory(categoryId);
+      if (!deleted) {
+        res.status(404).json({ message: '分类不存在' });
+        return;
+      }
+
+      res.status(204).end();
+    } catch (error) {
+      console.error('Error deleting feifei category:', error);
+      res.status(500).json({ message: '删除菲菲网分类失败' });
+    }
+  });
+
   return httpServer;
 }
