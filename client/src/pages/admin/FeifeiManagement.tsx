@@ -315,8 +315,7 @@ export default function FeifeiManagement() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[80px]">ID</TableHead>
-                    <TableHead className="w-[250px]">标题</TableHead>
-                    <TableHead className="w-[350px]">URL</TableHead>
+                    <TableHead className="w-[350px]">标题</TableHead>
                     <TableHead className="w-[150px]">创建时间</TableHead>
                     <TableHead className="w-[150px]">更新时间</TableHead>
                     <TableHead className="w-[150px]">操作</TableHead>
@@ -325,7 +324,7 @@ export default function FeifeiManagement() {
                 <TableBody>
                   {categories.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-6">
+                      <TableCell colSpan={5} className="text-center py-6">
                         暂无分类数据
                       </TableCell>
                     </TableRow>
@@ -333,20 +332,17 @@ export default function FeifeiManagement() {
                     categories.map((category) => (
                       <TableRow key={category.id}>
                         <TableCell>{category.id}</TableCell>
-                        <TableCell>{category.title}</TableCell>
                         <TableCell>
-                          <div className="flex items-center space-x-2 max-w-[320px] truncate">
-                            <LinkIcon className="h-4 w-4 flex-shrink-0 text-neutral-400" />
-                            <a 
-                              href={category.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline flex items-center truncate"
-                            >
-                              <span className="truncate">{category.url}</span>
-                              <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
-                            </a>
-                          </div>
+                          <a 
+                            href={category.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline flex items-center max-w-[320px] truncate"
+                          >
+                            <LinkIcon className="h-4 w-4 mr-1 flex-shrink-0 text-neutral-400" />
+                            <span className="truncate">{category.title}</span>
+                            <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
+                          </a>
                         </TableCell>
                         <TableCell>{formatDate(category.created_at)}</TableCell>
                         <TableCell>{formatDate(category.updated_at)}</TableCell>
