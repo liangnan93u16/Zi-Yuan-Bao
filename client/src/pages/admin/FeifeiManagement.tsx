@@ -49,7 +49,7 @@ import { FeifeiCategory, FeifeiResource, FeifeiTag, insertFeifeiCategorySchema }
 // 扩展FeifeiResource类型，添加tags属性
 interface EnrichedFeifeiResource extends FeifeiResource {
   tags?: FeifeiTag[];
-  coin_price?: string; // 金币价格字段
+  // coin_price 字段已在 FeifeiResource 中定义，无需重复定义
 }
 
 import { Link } from "wouter";
@@ -848,24 +848,7 @@ export default function FeifeiManagement() {
                   访问原始页面
                 </Button>
                 
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => parseResourcePage(selectedResource)}
-                  disabled={parseResourcePageMutation.isPending}
-                >
-                  {parseResourcePageMutation.isPending && selectedResourceId === selectedResource.id ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      更新中
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      更新详情
-                    </>
-                  )}
-                </Button>
+
               </div>
             </div>
           ) : (
