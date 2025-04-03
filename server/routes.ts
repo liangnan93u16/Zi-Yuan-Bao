@@ -1507,11 +1507,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // 提取资源信息
         const infoItems: Record<string, string> = {};
+        
+        // 尝试使用原始选择器
         detailsBox.find('.infos-box .item').each((i: number, elem: any) => {
           const label = $(elem).find('.label').text().trim();
           const value = $(elem).find('.value').text().trim();
-          infoItems[label] = value;
+          if (label) infoItems[label] = value;
         });
+        
+        // 尝试处理info-box中的li元素
+        $('.info-box li').each((i: number, elem: any) => {
+          const text = $(elem).text().trim();
+          // 解析"文件内容: 视频+中英字幕+配套课件"这样的格式
+          const parts = text.split(':');
+          if (parts.length >= 2) {
+            const label = parts[0].trim();
+            const value = parts.slice(1).join(':').trim(); // 处理值中可能含有冒号的情况
+            infoItems[label] = value;
+          }
+        });
+        
+        // 处理其他格式的行，如"资源分类： -"
+        $('.info-box').contents().each((i: number, elem: any) => {
+          if (elem.type === 'text') {
+            const text = $(elem).text().trim();
+            if (text.includes('：')) {
+              const parts = text.split('：');
+              if (parts.length >= 2) {
+                const label = parts[0].trim();
+                const value = parts.slice(1).join('：').trim();
+                infoItems[label] = value;
+              }
+            }
+          }
+        });
+        
+        console.log('所有选择器处理后的信息:', infoItems);
         
         // 提取详情介绍
         let details = $('.introduction-box .content').html() || '';
@@ -1523,15 +1554,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 更新资源信息
         const updateData = {
           resource_category: infoItems['资源分类'] || null,
-          popularity: infoItems['浏览'] || null,
+          popularity: infoItems['热度'] || infoItems['浏览'] || null,
           publish_date: infoItems['发布时间'] || null,
           last_update: infoItems['最近更新'] || null,
           content_info: infoItems['文件内容'] || null,
           video_size: infoItems['视频尺寸'] || null,
-          file_size: infoItems['视频大小'] || null,
-          duration: infoItems['课时'] || null,
-          language: infoItems['语言'] || null,
-          subtitle: infoItems['字幕'] || null,
+          file_size: infoItems['视频大小'] || infoItems['文件大小'] || null,
+          duration: infoItems['课时'] || infoItems['视频时长'] || null,
+          language: infoItems['语言'] || infoItems['视频语言'] || null,
+          subtitle: infoItems['字幕'] || infoItems['视频字幕'] || null,
           details: details,
         };
         
