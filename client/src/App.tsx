@@ -9,6 +9,7 @@ import Membership from "./pages/Membership";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
+import UserPurchases from "./pages/UserPurchases";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import ResourceManagement from "./pages/admin/ResourceManagement";
@@ -39,6 +40,7 @@ function App() {
               <Route path="/login" component={Login} />
               <Route path="/register" component={Register} />
               <Route path="/profile" component={Profile} />
+              <Route path="/user/purchases" component={UserPurchases} />
               <Route path="/admin/resources" component={ResourceManagement} />
               <Route path="/admin/resources/upload" component={ResourceUpload} />
               <Route path="/admin/resources/:id/edit" component={ResourceEdit} />

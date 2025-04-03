@@ -91,6 +91,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // 获取用户购买记录
+  app.get('/api/user/purchases', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期' });
+        return;
+      }
+      
+      // 获取用户的购买记录
+      const purchases = await storage.getUserPurchases(req.user.id);
+      
+      // 丰富购买记录数据，添加资源信息
+      const enrichedPurchases = await Promise.all(purchases.map(async (purchase) => {
+        const resource = await storage.getResource(purchase.resource_id);
+        return {
+          ...purchase,
+          resource: resource || { title: '未知资源', subtitle: '' }
+        };
+      }));
+      
+      res.json(enrichedPurchases);
+    } catch (error) {
+      console.error('Error fetching user purchases:', error);
+      res.status(500).json({ message: '获取购买记录失败' });
+    }
+  });
+
   // 资源购买接口
   app.post('/api/resources/:id/purchase', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
     try {

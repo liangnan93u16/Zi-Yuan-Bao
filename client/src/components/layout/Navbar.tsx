@@ -124,7 +124,7 @@ export default function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <Link href="/downloads" className="flex items-center gap-2">
+                    <Link href="/user/purchases" className="flex items-center gap-2">
                       <ShoppingBag className="h-4 w-4" />
                       我的购买
                     </Link>
@@ -255,7 +255,7 @@ export default function Navbar() {
                             <User className="h-4 w-4" />
                             个人中心
                         </Link>
-                        <Link href="/downloads" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                        <Link href="/user/purchases" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
                             <ShoppingBag className="h-4 w-4" />
                             我的购买
                         </Link>
