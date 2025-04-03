@@ -10,9 +10,11 @@ import {
   insertReviewSchema,
   insertAuthorSchema,
   insertFeifeiCategorySchema,
+  insertFeifeiResourceSchema,
   loginSchema, 
   registerSchema,
-  type Review
+  type Review,
+  type InsertFeifeiResource
 } from "@shared/schema";
 import { 
   login, 
@@ -1264,6 +1266,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
+      // 首先删除该分类下的所有资源
+      await storage.deleteFeifeiResourcesByCategory(categoryId);
+      
+      // 然后删除分类
       const deleted = await storage.deleteFeifeiCategory(categoryId);
       if (!deleted) {
         res.status(404).json({ message: '分类不存在' });
@@ -1274,6 +1280,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting feifei category:', error);
       res.status(500).json({ message: '删除菲菲网分类失败' });
+    }
+  });
+  
+  // 菲菲网资源相关API
+  app.get('/api/feifei-resources/category/:categoryId', async (req, res) => {
+    try {
+      const categoryId = parseInt(req.params.categoryId);
+      if (isNaN(categoryId)) {
+        res.status(400).json({ message: '无效的分类ID' });
+        return;
+      }
+
+      const resources = await storage.getFeifeiResourcesByCategory(categoryId);
+      res.json(resources);
+    } catch (error) {
+      console.error('Error fetching feifei resources:', error);
+      res.status(500).json({ message: '获取菲菲网资源失败' });
+    }
+  });
+  
+  app.post('/api/feifei-resources', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const validationResult = insertFeifeiResourceSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({ message: '资源数据无效', errors: validationResult.error.format() });
+        return;
+      }
+
+      const resource = await storage.createFeifeiResource(validationResult.data);
+      res.status(201).json(resource);
+    } catch (error) {
+      console.error('Error creating feifei resource:', error);
+      res.status(500).json({ message: '创建菲菲网资源失败' });
+    }
+  });
+  
+  app.post('/api/feifei-categories/:id/parse', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      if (isNaN(categoryId)) {
+        res.status(400).json({ message: '无效的分类ID' });
+        return;
+      }
+      
+      const category = await storage.getFeifeiCategory(categoryId);
+      if (!category) {
+        res.status(404).json({ message: '分类不存在' });
+        return;
+      }
+      
+      // 调用axios获取网页内容
+      const axios = await import('axios');
+      const { data } = await axios.default.get(category.url);
+      
+      // 使用cheerio解析HTML
+      const cheerio = await import('cheerio');
+      const $ = cheerio.load(data);
+      
+      // 获取container中的所有链接
+      const links: InsertFeifeiResource[] = [];
+      $('section.container a').each((index, element) => {
+        const $el = $(element);
+        const href = $el.attr('href');
+        const title = $el.text().trim();
+        
+        // 排除空链接或没有文本的链接
+        if (href && title && href !== '#' && !href.startsWith('javascript:')) {
+          // 处理相对URL
+          const url = href.startsWith('http') ? href : new URL(href, category.url).toString();
+          
+          links.push({
+            category_id: categoryId,
+            title: title,
+            url: url,
+            icon: '', // 暂不提取图标
+            description: '' // 暂不提取描述
+          });
+        }
+      });
+      
+      // 如果没有找到链接，返回空数组
+      if (links.length === 0) {
+        return res.json({ message: '未在页面找到链接', resources: [] });
+      }
+      
+      // 先删除该分类下的所有旧资源
+      await storage.deleteFeifeiResourcesByCategory(categoryId);
+      
+      // 批量创建新资源
+      const newResources = await storage.createManyFeifeiResources(links);
+      
+      res.json({
+        message: `成功解析并保存了 ${newResources.length} 个链接`,
+        resources: newResources
+      });
+    } catch (error) {
+      console.error('Error parsing feifei category URL:', error);
+      res.status(500).json({ message: '解析菲菲网网页失败' });
     }
   });
 
