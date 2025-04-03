@@ -271,30 +271,6 @@ export default function UserManagement() {
               >
                 会员列表
               </TabsTrigger>
-              <TabsTrigger 
-                value="resources" 
-                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
-              >
-                <a href="/admin/resources">资源管理</a>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="upload" 
-                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
-              >
-                <a href="/admin/resources/upload">上传资源</a>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="categories" 
-                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
-              >
-                分类管理
-              </TabsTrigger>
-              <TabsTrigger 
-                value="stats" 
-                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
-              >
-                统计分析
-              </TabsTrigger>
             </TabsList>
           </div>
           
