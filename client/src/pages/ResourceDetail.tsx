@@ -14,9 +14,7 @@ import {
   Download, 
   ShoppingCart, 
   Heart,
-  CheckCircle,
-  ExternalLink,
-  Copy
+  CheckCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,14 +24,6 @@ import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ReviewSection from "@/components/ReviewSection";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 
 export default function ResourceDetail() {
   const { id } = useParams();
@@ -113,26 +103,17 @@ export default function ResourceDetail() {
   const originalPrice = price * 1.5; // Just for display purposes
   // Now we get actual rating from the reviews API
   
-  // 状态用于控制网盘链接对话框
-  const [showLinkDialog, setShowLinkDialog] = useState(false);
-  
   const handleDownload = () => {
-    // 免费资源无需登录即可获取
-    if (isFree) {
-      setShowLinkDialog(true);
-      return;
-    }
-    
     if (!user) {
       toast({
         title: "请先登录",
-        description: "您需要登录后才能下载付费资源。",
+        description: "您需要登录后才能下载资源。",
         variant: "destructive",
       });
       return;
     }
 
-    if (!user.membership_type || (user.membership_expire_time && new Date(user.membership_expire_time) < new Date())) {
+    if (!isFree && (!user.membership_type || (user.membership_expire_time && new Date(user.membership_expire_time) < new Date()))) {
       toast({
         title: "需要购买",
         description: "此资源需要购买或成为会员才能下载。",
@@ -141,8 +122,27 @@ export default function ResourceDetail() {
       return;
     }
 
-    // 显示资源链接对话框
-    setShowLinkDialog(true);
+    if (resource.resource_url) {
+      // 如果有资源下载链接，打开新窗口访问链接
+      window.open(resource.resource_url, '_blank');
+      toast({
+        title: "资源链接已打开",
+        description: "请在新窗口查看资源下载链接",
+      });
+    } else {
+      toast({
+        title: "开始下载",
+        description: "资源下载已开始，请稍候...",
+      });
+      
+      // Simulate download
+      setTimeout(() => {
+        toast({
+          title: "下载完成",
+          description: "资源已成功下载到您的设备。",
+        });
+      }, 2000);
+    }
   };
 
   const handleAddToCart = () => {
@@ -177,65 +177,8 @@ export default function ResourceDetail() {
     });
   };
 
-  // 复制网盘链接到剪贴板
-  const handleCopyLink = () => {
-    if (resource.resource_url) {
-      navigator.clipboard.writeText(resource.resource_url);
-      toast({
-        title: "链接已复制",
-        description: "资源链接已复制到剪贴板。",
-      });
-    }
-  };
-
-  // 获取默认的网盘链接
-  const getDefaultNetDiskLink = () => {
-    if (resource.resource_url) {
-      return resource.resource_url;
-    }
-    // 如果没有实际链接，返回一个示例链接
-    return "https://pan.baidu.com/s/1aBcD123_Resource_" + resource.id;
-  };
-
   return (
     <div className="container mx-auto px-4 sm:px-6 py-6 max-w-[1400px]">
-      {/* 网盘链接对话框 */}
-      <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>资源下载链接</DialogTitle>
-            <DialogDescription>
-              您可以通过以下链接获取资源，也可以复制链接到浏览器中打开。
-            </DialogDescription>
-          </DialogHeader>
-          <div className="p-4 bg-neutral-50 rounded-md my-4 space-y-3">
-            <div className="font-medium text-lg">网盘链接</div>
-            <div className="flex items-center">
-              <input
-                className="flex-1 p-2 border rounded-md bg-white"
-                readOnly
-                value={getDefaultNetDiskLink()}
-              />
-              <Button size="sm" variant="ghost" onClick={handleCopyLink} className="ml-2">
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="text-sm text-neutral-500">
-              提取码: ABCD
-            </div>
-          </div>
-          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-between sm:space-x-2">
-            <Button variant="outline" onClick={() => setShowLinkDialog(false)}>
-              关闭
-            </Button>
-            <Button onClick={() => window.open(getDefaultNetDiskLink(), '_blank')}>
-              <ExternalLink className="mr-2 h-4 w-4" />
-              在新窗口打开
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <div className="mb-4">
         <Link href="/resources">
           <a className="text-primary hover:text-blue-700 flex items-center text-sm font-medium">
@@ -598,7 +541,7 @@ export default function ResourceDetail() {
       </div>
       
       {/* 版权免责声明 */}
-      <div className="bg-neutral-50 p-5 rounded-lg mt-8 mb-6 text-sm text-neutral-600">
+      <div className="bg-neutral-50 p-5 rounded-lg mb-6 text-sm text-neutral-600">
         <h4 className="font-semibold text-base mb-2 text-neutral-800">版权免责声明：</h4>
         <p>本站所有文章，如无特殊说明或标注，均为本站原创发布。任何个人或组织，在未征得本站同意时，禁止复制、盗用、采集、发布本站内容到任何网站、书籍等各类媒体平台。如若本站内容侵犯了原著者的合法权益，可联系我们进行处理。</p>
       </div>
