@@ -178,8 +178,8 @@ export default function ResourceDetail() {
   };
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-16 2xl:px-32 py-6 max-w-screen-2xl">
-      <div className="mb-6">
+    <div className="container mx-auto px-4 sm:px-6 py-6 max-w-[1400px]">
+      <div className="mb-4">
         <Link href="/resources">
           <a className="text-primary hover:text-blue-700 flex items-center text-sm font-medium">
             <ArrowLeft className="mr-1 h-4 w-4" /> 返回资源列表
@@ -187,10 +187,11 @@ export default function ResourceDetail() {
         </Link>
       </div>
       
-      <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-        <div className="md:flex">
-          <div className="md:w-3/4 lg:w-4/5 p-6 md:p-8">
-            <div className="flex flex-wrap gap-2 mb-4">
+      <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12">
+          {/* 主内容区域 */}
+          <div className="p-6 lg:col-span-9">
+            <div className="flex flex-wrap gap-2 mb-3">
               {resource.category && (
                 <Badge variant="outline" className="bg-blue-100 text-primary border-0">
                   {resource.category.name}
@@ -204,12 +205,13 @@ export default function ResourceDetail() {
               </Badge>
             </div>
             
-            <div className="md:flex md:flex-wrap md:justify-between">
-              <div className="md:w-2/3 lg:w-2/3">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+              {/* 左侧内容: 标题、价格、评分 */}
+              <div className="md:col-span-7">
                 <h1 className="text-2xl md:text-3xl font-bold mb-2">{resource.title}</h1>
-                <p className="text-neutral-600 mb-4">{resource.subtitle || 'No description available'}</p>
+                <p className="text-neutral-600 mb-3">{resource.subtitle || 'No description available'}</p>
                 
-                <div className="mb-6">
+                <div className="mb-4">
                   <div className="text-4xl font-bold text-neutral-900 mb-1">
                     {isFree ? '免费' : `${Math.round(price)} 积分`}
                   </div>
@@ -223,7 +225,7 @@ export default function ResourceDetail() {
                   )}
                 </div>
                 
-                <div className="flex items-center mb-6">
+                <div className="flex items-center mb-4">
                   <div className="flex items-center text-amber-500 mr-3">
                     <Star className="h-4 w-4 fill-current" />
                     <Star className="h-4 w-4 fill-current" />
@@ -234,13 +236,40 @@ export default function ResourceDetail() {
                   </div>
                   <span className="text-neutral-500 text-sm">(526 评价)</span>
                 </div>
+                
+                {/* 课程内容要点 */}
+                <div className="space-y-2 md:mt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
+                      <span>终身访问所有课程内容</span>
+                    </div>
+                    <div className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
+                      <span>源代码和项目文件下载</span>
+                    </div>
+                    <div className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
+                      <span>完整中英双语字幕</span>
+                    </div>
+                    <div className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
+                      <span>移动端和TV端支持</span>
+                    </div>
+                    <div className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
+                      <span>课程完成证书</span>
+                    </div>
+                  </div>
+                </div>
               </div>
               
-              <div className="md:w-1/3 lg:w-1/3">
+              {/* 右侧内容: 文件信息和下载按钮 */}
+              <div className="md:col-span-5">
                 {/* 文件信息 */}
-                <div className="mb-6 bg-neutral-50 p-5 rounded-lg">
-                  <h3 className="font-semibold text-lg mb-3">文件信息</h3>
-                  <div className="grid grid-cols-2 gap-y-3">
+                <div className="bg-neutral-50 p-4 rounded-lg mb-4">
+                  <h3 className="font-semibold text-lg mb-2">文件信息</h3>
+                  <div className="grid grid-cols-2 gap-y-2">
                     <span className="text-neutral-600">格式:</span>
                     <span className="font-medium text-right">MP4, PDF</span>
                     
@@ -251,71 +280,9 @@ export default function ResourceDetail() {
                     <span className="font-medium text-right">{resource.updated_at ? new Date(resource.updated_at).toLocaleDateString() : '2025/4/2'}</span>
                   </div>
                 </div>
-              </div>
-            </div>
-            
-            <div className="md:flex md:gap-8">
-              <div className="md:w-2/3 lg:w-2/3">
-                {/* 课程内容要点 */}
-                <div className="mb-6 space-y-3">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                    <span>终身访问所有课程内容</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                    <span>源代码和项目文件下载</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                    <span>完整中英双语字幕</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                    <span>移动端和TV端支持</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                    <span>课程完成证书</span>
-                  </div>
-                </div>
                 
-                <div className="mb-4 hidden">
-                  {resource.video_duration && (
-                    <span className="flex items-center">
-                      <Clock className="h-4 w-4 mr-1" /> 总时长: {resource.video_duration} 分钟
-                    </span>
-                  )}
-                  
-                  {resource.video_url && (
-                    <span className="flex items-center">
-                      <FileText className="h-4 w-4 mr-1" /> 课时: {Math.floor(Math.random() * 180 + 20)} 讲
-                    </span>
-                  )}
-                  
-                  {resource.language && (
-                    <span className="flex items-center">
-                      <Globe className="h-4 w-4 mr-1" /> 语言: {resource.language}
-                    </span>
-                  )}
-                  
-                  {resource.subtitle_languages && (
-                    <span className="flex items-center">
-                      <Subtitles className="h-4 w-4 mr-1" /> 字幕: {resource.subtitle_languages}
-                    </span>
-                  )}
-                  
-                  {resource.resolution && (
-                    <span className="flex items-center">
-                      <MonitorSmartphone className="h-4 w-4 mr-1" /> 分辨率: {resource.resolution}
-                    </span>
-                  )}
-                </div>
-              </div>
-              
-              <div className="md:w-1/3 lg:w-1/3">
-                <div className="flex flex-col gap-4 mb-8">
-                  <Button onClick={handleDownload} size="lg" className="w-full text-base py-6">
+                <div className="flex flex-col gap-3">
+                  <Button onClick={handleDownload} size="lg" className="w-full text-base py-5">
                     立即获取
                   </Button>
                   <div className="text-center text-sm text-neutral-500">
@@ -332,9 +299,42 @@ export default function ResourceDetail() {
                 </div>
               </div>
             </div>
+            
+            <div className="hidden">
+              {resource.video_duration && (
+                <span className="flex items-center">
+                  <Clock className="h-4 w-4 mr-1" /> 总时长: {resource.video_duration} 分钟
+                </span>
+              )}
+              
+              {resource.video_url && (
+                <span className="flex items-center">
+                  <FileText className="h-4 w-4 mr-1" /> 课时: {Math.floor(Math.random() * 180 + 20)} 讲
+                </span>
+              )}
+              
+              {resource.language && (
+                <span className="flex items-center">
+                  <Globe className="h-4 w-4 mr-1" /> 语言: {resource.language}
+                </span>
+              )}
+              
+              {resource.subtitle_languages && (
+                <span className="flex items-center">
+                  <Subtitles className="h-4 w-4 mr-1" /> 字幕: {resource.subtitle_languages}
+                </span>
+              )}
+              
+              {resource.resolution && (
+                <span className="flex items-center">
+                  <MonitorSmartphone className="h-4 w-4 mr-1" /> 分辨率: {resource.resolution}
+                </span>
+              )}
+            </div>
           </div>
           
-          <div className="md:w-1/4 lg:w-1/5 bg-neutral-50 p-6 md:p-8 border-t md:border-t-0 md:border-l border-neutral-200">
+          {/* 右侧边栏 - 作者信息 */}
+          <div className="lg:col-span-3 bg-neutral-50 p-5 border-t lg:border-t-0 lg:border-l border-neutral-200">
             <h3 className="font-semibold text-lg mb-3">关于作者</h3>
             {resource.author ? (
               <div className="flex">
@@ -357,7 +357,7 @@ export default function ResourceDetail() {
       <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
         <Tabs value={tab} onValueChange={setTab}>
           <div className="border-b border-neutral-200">
-            <TabsList className="h-auto">
+            <TabsList className="h-auto px-5">
               <TabsTrigger value="details" className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary">
                 课程详情
               </TabsTrigger>
@@ -373,7 +373,7 @@ export default function ResourceDetail() {
             </TabsList>
           </div>
           
-          <TabsContent value="details" className="p-6 md:p-8 max-w-5xl mx-auto">
+          <TabsContent value="details" className="p-5 md:p-8 mx-auto">
             {resource.description ? (
               <div className="prose prose-blue max-w-none">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -424,7 +424,7 @@ export default function ResourceDetail() {
             )}
           </TabsContent>
           
-          <TabsContent value="contents" className="p-6 md:p-8 max-w-5xl mx-auto">
+          <TabsContent value="contents" className="p-5 md:p-8 mx-auto">
             {resource.contents ? (
               <div className="prose prose-blue max-w-none">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -496,12 +496,12 @@ export default function ResourceDetail() {
             )}
           </TabsContent>
           
-          <TabsContent value="reviews" className="p-6 md:p-8 max-w-5xl mx-auto">
+          <TabsContent value="reviews" className="p-5 md:p-8 mx-auto">
             <ReviewSection resourceId={id || 0} />
           </TabsContent>
           
-          <TabsContent value="faq" className="p-6 md:p-8 max-w-5xl mx-auto">
-            <h3 className="text-xl font-bold mb-6">常见问题</h3>
+          <TabsContent value="faq" className="p-5 md:p-8 mx-auto">
+            <h3 className="text-xl font-bold mb-5">常见问题</h3>
             {resource.faq_content ? (
               <div className="prose prose-blue max-w-none prose-headings:mt-6 prose-headings:mb-3 prose-p:my-2 prose-li:my-1 prose-hr:my-6">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -509,7 +509,7 @@ export default function ResourceDetail() {
                 </ReactMarkdown>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-5">
                 <div>
                   <h4 className="font-medium mb-2">1. 这门课程适合完全没有React经验的人吗？</h4>
                   <p className="text-neutral-700">是的，这门课程是从零基础开始讲解的，即使你之前没有React经验也可以学习。不过，建议你至少具备基本的HTML、CSS和JavaScript知识。</p>
