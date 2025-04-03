@@ -166,75 +166,128 @@ export default function ResourceDetail() {
       return;
     }
     
-    // 如果用户需要付费，弹出确认对话框
-    if (!isFree && (!user.membership_type || (user.membership_expire_time && new Date(user.membership_expire_time) < new Date()))) {
-      // 确认是否购买
-      if (window.confirm(`确定使用 ${price} 积分购买此资源吗？`)) {
-        try {
-          const response = await fetch(`/api/resources/${id}/purchase`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include'
-          });
-          
-          const data = await response.json();
-          
-          if (response.ok && data.success) {
-            // 购买成功
-            toast({
-              title: "购买成功",
-              description: data.message || `已成功扣除${price}积分`,
-            });
-            
-            // 打开资源链接
-            if (data.resource_url) {
-              window.open(data.resource_url, '_blank');
-              toast({
-                title: "资源链接已打开",
-                description: "请在新窗口查看资源下载链接",
-              });
-            }
-            
-            // 刷新用户信息（更新积分）
-            if (data.remaining_coins !== undefined) {
-              // 直接更新用户对象中的积分余额
-              // 注意：理想情况下应通过context更新，这里为简化直接修改
-              if (user) {
-                user.coins = data.remaining_coins;
-              }
-            }
-          } else if (response.status === 400 && data.message === '积分不足') {
-            // 积分不足
-            toast({
-              title: "积分不足",
-              description: `您当前积分为${data.available || 0}，需要${data.required || price}积分。请先充值。`,
-              variant: "destructive",
-            });
-            
-            // 提示充值
-            if (window.confirm("您的积分不足，是否前往充值页面？")) {
-              // 跳转到充值页面
-              window.location.href = "/profile?tab=coins";
-            }
-          } else {
-            // 其他错误
-            toast({
-              title: "购买失败",
-              description: data.message || "请稍后再试",
-              variant: "destructive",
-            });
-          }
-        } catch (error) {
-          console.error("购买资源时出错:", error);
+    // 无论是否需要付费，先尝试获取资源（API 会检查是否已购买）
+    try {
+      const response = await fetch(`/api/resources/${id}/purchase`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+      
+      const data = await response.json();
+      
+      // 如果请求成功且消息包含"已购买过"，说明用户已经购买过此资源
+      if (response.ok && data.success && data.message && data.message.includes('已购买过')) {
+        // 直接打开资源链接，不需要确认
+        if (data.resource_url) {
+          window.open(data.resource_url, '_blank');
           toast({
-            title: "购买失败",
-            description: "服务器错误，请稍后再试",
-            variant: "destructive",
+            title: "资源链接已打开",
+            description: "请在新窗口查看资源下载链接",
           });
         }
+        return;
       }
+      
+      // 如果用户需要付费且未购买过，弹出确认对话框
+      if (!response.ok && response.status === 400 && data.message === '积分不足') {
+        // 积分不足
+        toast({
+          title: "积分不足",
+          description: `您当前积分为${data.available || 0}，需要${data.required || price}积分。请先充值。`,
+          variant: "destructive",
+        });
+        
+        // 提示充值
+        if (window.confirm("您的积分不足，是否前往充值页面？")) {
+          // 跳转到充值页面
+          window.location.href = "/profile?tab=coins";
+        }
+        return;
+      }
+      
+      // 如果是普通用户且资源不免费，弹出确认对话框
+      if (!isFree && (!user.membership_type || (user.membership_expire_time && new Date(user.membership_expire_time) < new Date()))) {
+        // API返回成功但不是"已购买过"的消息，说明需要购买
+        if (!response.ok || !data.success) {
+          // 确认是否购买
+          if (window.confirm(`确定使用 ${price} 积分购买此资源吗？`)) {
+            // 再次发送购买请求
+            const purchaseResponse = await fetch(`/api/resources/${id}/purchase`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              credentials: 'include'
+            });
+            
+            const purchaseData = await purchaseResponse.json();
+            
+            if (purchaseResponse.ok && purchaseData.success) {
+              // 购买成功
+              toast({
+                title: "购买成功",
+                description: purchaseData.message || `已成功扣除${price}积分`,
+              });
+              
+              // 打开资源链接
+              if (purchaseData.resource_url) {
+                window.open(purchaseData.resource_url, '_blank');
+                toast({
+                  title: "资源链接已打开",
+                  description: "请在新窗口查看资源下载链接",
+                });
+              }
+              
+              // 刷新用户信息（更新积分）
+              if (purchaseData.remaining_coins !== undefined) {
+                // 直接更新用户对象中的积分余额
+                if (user) {
+                  user.coins = purchaseData.remaining_coins;
+                }
+              }
+            } else {
+              // 其他错误
+              toast({
+                title: "购买失败",
+                description: purchaseData.message || "请稍后再试",
+                variant: "destructive",
+              });
+            }
+          }
+        } else {
+          // 购买成功（第一次调用API就成功了，这种情况通常是会员或免费资源）
+          if (data.message) {
+            toast({
+              title: "获取成功",
+              description: data.message,
+            });
+          }
+          
+          // 打开资源链接
+          if (data.resource_url) {
+            window.open(data.resource_url, '_blank');
+            toast({
+              title: "资源链接已打开",
+              description: "请在新窗口查看资源下载链接",
+            });
+          }
+          
+          // 更新积分
+          if (data.remaining_coins !== undefined && user) {
+            user.coins = data.remaining_coins;
+          }
+        }
+      }
+    } catch (error) {
+      console.error("获取/购买资源时出错:", error);
+      toast({
+        title: "操作失败",
+        description: "服务器错误，请稍后再试",
+        variant: "destructive",
+      });
     }
   };
 
