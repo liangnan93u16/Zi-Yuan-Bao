@@ -747,8 +747,8 @@ export default function FeifeiManagement() {
                               }}
                               size="sm"
                               variant="outline"
-                              disabled={!resource.resource_category && !resource.details}
-                              title={!resource.resource_category && !resource.details ? "未解析详情" : "查看详情"}
+                              disabled={!resource.details && !resource.resource_category && !resource.publish_date && !resource.popularity}
+                              title={!resource.details && !resource.resource_category && !resource.publish_date && !resource.popularity ? "未解析详情" : "查看详情"}
                             >
                               <FileSearch className="mr-2 h-4 w-4" />
                               查看详情
