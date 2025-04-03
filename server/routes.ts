@@ -1547,8 +1547,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 提取详情介绍
         let details = $('.introduction-box .content').html() || '';
         
+        // 提取页面标题 (h1或.page-title元素)
+        let pageTitle = $('h1').first().text().trim() || $('.page-title').first().text().trim() || '';
+        
+        // 处理标题中的中英文分隔（使用|符号分隔）
+        let chineseTitle = resource.chinese_title;
+        let englishTitle = resource.english_title;
+        
+        // 如果页面有标题且包含"|"分隔符，则进行拆分
+        if (pageTitle && pageTitle.includes('|')) {
+          const titleParts = pageTitle.split('|');
+          chineseTitle = titleParts[0].trim();
+          englishTitle = titleParts[1].trim();
+          
+          // 如果中文部分为空，则保持原值
+          if (chineseTitle === '') chineseTitle = resource.chinese_title;
+          
+          // 如果分割后发现英文部分为空，则设为null
+          if (englishTitle === '') englishTitle = null;
+          
+          console.log('处理后的标题: 中文=', chineseTitle, '英文=', englishTitle);
+        }
+        
         // 记录提取的信息
         console.log('提取的页面信息:', infoItems);
+        console.log('原始页面标题:', pageTitle);
         
         // 添加日志，显示热度处理前后的对比
         console.log('原始热度值:', infoItems['热度'] || infoItems['浏览热度'] || infoItems['浏览'] || '无');
@@ -1577,6 +1600,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // 更新资源信息
         const updateData = {
+          chinese_title: chineseTitle, // 更新中文标题
+          english_title: englishTitle, // 更新英文标题
           resource_category: infoItems['资源分类'] || null,
           popularity: popularity,
           publish_date: infoItems['发布时间'] || null,
