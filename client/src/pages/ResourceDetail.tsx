@@ -132,7 +132,7 @@ export default function ResourceDetail() {
       return;
     }
 
-    if (!isFree && (!user.membership_type || (user.membership_expire_time && new Date(user.membership_expire_time) < new Date()))) {
+    if (!user.membership_type || (user.membership_expire_time && new Date(user.membership_expire_time) < new Date())) {
       toast({
         title: "需要购买",
         description: "此资源需要购买或成为会员才能下载。",
@@ -141,16 +141,8 @@ export default function ResourceDetail() {
       return;
     }
 
-    if (resource.resource_url) {
-      // 如果有资源下载链接，打开新窗口访问链接
-      window.open(resource.resource_url, '_blank');
-      toast({
-        title: "资源链接已打开",
-        description: "请在新窗口查看资源下载链接",
-      });
-    } else {
-      setShowLinkDialog(true);
-    }
+    // 显示资源链接对话框
+    setShowLinkDialog(true);
   };
 
   const handleAddToCart = () => {
@@ -606,7 +598,7 @@ export default function ResourceDetail() {
       </div>
       
       {/* 版权免责声明 */}
-      <div className="bg-neutral-50 p-5 rounded-lg mb-6 text-sm text-neutral-600">
+      <div className="bg-neutral-50 p-5 rounded-lg mt-8 mb-6 text-sm text-neutral-600">
         <h4 className="font-semibold text-base mb-2 text-neutral-800">版权免责声明：</h4>
         <p>本站所有文章，如无特殊说明或标注，均为本站原创发布。任何个人或组织，在未征得本站同意时，禁止复制、盗用、采集、发布本站内容到任何网站、书籍等各类媒体平台。如若本站内容侵犯了原著者的合法权益，可联系我们进行处理。</p>
       </div>
