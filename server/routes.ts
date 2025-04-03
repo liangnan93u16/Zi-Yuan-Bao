@@ -1486,9 +1486,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: '资源URL不存在' });
       }
       
-      // 导入所需模块
-      const axios = require('axios');
-      const cheerio = require('cheerio');
+      // 动态导入所需模块
+      const { default: axios } = await import('axios');
+      const { default: cheerio } = await import('cheerio');
       
       try {
         // 发送请求获取页面内容
