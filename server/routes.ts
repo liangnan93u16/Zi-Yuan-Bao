@@ -619,6 +619,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: '获取用户列表失败' });
     }
   });
+  
+  // Admin user routes
+  app.get('/api/admin/users', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      // 移除敏感信息
+      const sanitizedUsers = users.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      
+      res.json(sanitizedUsers);
+    } catch (error) {
+      console.error('Error fetching admin users:', error);
+      res.status(500).json({ message: '获取用户列表失败' });
+    }
+  });
+  
+  app.post('/api/admin/users', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { email, password, membership_type, coins } = req.body;
+      
+      if (!email || !password) {
+        res.status(400).json({ message: '邮箱和密码不能为空' });
+        return;
+      }
+      
+      // 检查邮箱是否已存在
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        res.status(400).json({ message: '该邮箱已被注册' });
+        return;
+      }
+      
+      // 对密码进行哈希处理
+      const bcrypt = await import('bcrypt');
+      const hashedPassword = await bcrypt.hash(password, 10);
+      
+      // 创建用户
+      const userData = {
+        email,
+        password: hashedPassword,
+        membership_type: membership_type || 'regular',
+        coins: coins || 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      const newUser = await storage.createUser(userData);
+      
+      // 移除密码后返回用户信息
+      const { password: _, ...userWithoutPassword } = newUser;
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      res.status(500).json({ message: '创建用户失败' });
+    }
+  });
 
   app.patch('/api/users/:id', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
     try {

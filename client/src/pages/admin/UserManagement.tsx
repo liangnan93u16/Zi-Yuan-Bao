@@ -262,19 +262,11 @@ export default function UserManagement() {
           <h2 className="text-xl font-bold">会员管理</h2>
         </div>
         
-        <Tabs defaultValue="users">
-          <div className="border-b border-neutral-200">
-            <TabsList className="h-auto">
-              <TabsTrigger 
-                value="users" 
-                className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
-              >
-                会员列表
-              </TabsTrigger>
-            </TabsList>
-          </div>
-          
-          <TabsContent value="users" className="p-6">
+        <div className="border-b border-neutral-200">
+          <h3 className="px-6 py-4 font-medium">会员列表</h3>
+        </div>
+        
+        <div className="p-6">
             <div className="flex flex-wrap gap-4 mb-6">
               <form onSubmit={handleSearch} className="relative flex-grow">
                 <Input
@@ -688,8 +680,7 @@ export default function UserManagement() {
                 </Form>
               </DialogContent>
             </Dialog>
-          </TabsContent>
-        </Tabs>
+        </div>
       </div>
     </div>
   );
