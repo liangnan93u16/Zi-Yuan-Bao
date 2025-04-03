@@ -178,8 +178,25 @@ export const insertAdminLoginLogSchema = createInsertSchema(adminLoginLogs).omit
   login_time: true
 });
 
+// 用户购买记录表，记录用户购买的资源
+export const userPurchases = pgTable("user_purchases", {
+  id: serial("id").primaryKey(),
+  user_id: integer("user_id").notNull().references(() => users.id),
+  resource_id: integer("resource_id").notNull().references(() => resources.id),
+  price: decimal("price", { precision: 10, scale: 2 }).default("0"),
+  purchase_time: timestamp("purchase_time").defaultNow(),
+});
+
+export const insertUserPurchaseSchema = createInsertSchema(userPurchases).omit({
+  id: true,
+  purchase_time: true
+});
+
 export type AdminLoginLog = typeof adminLoginLogs.$inferSelect;
 export type InsertAdminLoginLog = z.infer<typeof insertAdminLoginLogSchema>;
+
+export type UserPurchase = typeof userPurchases.$inferSelect;
+export type InsertUserPurchase = z.infer<typeof insertUserPurchaseSchema>;
 
 export type LoginCredentials = z.infer<typeof loginSchema>;
 export type RegisterData = z.infer<typeof registerSchema>;

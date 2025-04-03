@@ -5,7 +5,8 @@ import {
   resourceRequests, type ResourceRequest, type InsertResourceRequest,
   reviews, type Review, type InsertReview,
   adminLoginLogs, type AdminLoginLog, type InsertAdminLoginLog,
-  authors, type Author, type InsertAuthor
+  authors, type Author, type InsertAuthor,
+  userPurchases, type UserPurchase, type InsertUserPurchase
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, or, desc, sql } from "drizzle-orm";
@@ -59,6 +60,11 @@ export interface IStorage {
   getResourceRequest(id: number): Promise<ResourceRequest | undefined>;
   getAllResourceRequests(): Promise<ResourceRequest[]>;
   updateResourceRequestStatus(id: number, status: number, notes?: string): Promise<ResourceRequest | undefined>;
+  
+  // User Purchase operations
+  createUserPurchase(userId: number, resourceId: number, price: number): Promise<UserPurchase>;
+  getUserPurchase(userId: number, resourceId: number): Promise<UserPurchase | undefined>;
+  getUserPurchases(userId: number): Promise<UserPurchase[]>;
   
   // Admin Login Log operations
   createAdminLoginLog(log: InsertAdminLoginLog): Promise<AdminLoginLog>;
@@ -426,6 +432,53 @@ export class DatabaseStorage implements IStorage {
       .where(eq(reviews.id, id))
       .returning({ id: reviews.id });
     return result.length > 0;
+  }
+  
+  // User Purchase methods
+  async createUserPurchase(userId: number, resourceId: number, price: number): Promise<UserPurchase> {
+    try {
+      const [purchase] = await db
+        .insert(userPurchases)
+        .values({
+          user_id: userId,
+          resource_id: resourceId,
+          price: price.toString()
+        })
+        .returning();
+      return purchase;
+    } catch (error) {
+      console.error('Error creating user purchase:', error);
+      throw error;
+    }
+  }
+  
+  async getUserPurchase(userId: number, resourceId: number): Promise<UserPurchase | undefined> {
+    try {
+      const [purchase] = await db
+        .select()
+        .from(userPurchases)
+        .where(and(
+          eq(userPurchases.user_id, userId),
+          eq(userPurchases.resource_id, resourceId)
+        ));
+      return purchase;
+    } catch (error) {
+      console.error('Error getting user purchase:', error);
+      return undefined;
+    }
+  }
+  
+  async getUserPurchases(userId: number): Promise<UserPurchase[]> {
+    try {
+      return await db
+        .select()
+        .from(userPurchases)
+        .where(eq(userPurchases.user_id, userId))
+        .orderBy(desc(userPurchases.purchase_time));
+    } catch (error) {
+      console.error('Error getting user purchases:', error);
+      return [];
+    }
   }
   
   // Admin Login Log 方法

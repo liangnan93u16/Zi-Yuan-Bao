@@ -112,8 +112,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       
-      // 如果资源是免费的，直接返回成功
+      // 检查用户是否已经购买过该资源
+      const existingPurchase = await storage.getUserPurchase(req.user.id, resourceId);
+      if (existingPurchase) {
+        // 已购买过，不再扣除积分
+        res.json({
+          success: true,
+          message: '您已购买过此资源',
+          resource_url: resource.resource_url,
+          remaining_coins: req.user.coins
+        });
+        return;
+      }
+      
+      // 如果资源是免费的，直接返回成功并记录
       if (resource.is_free) {
+        // 记录购买信息（免费购买）
+        await storage.createUserPurchase(req.user.id, resourceId, 0);
+        
         res.json({ 
           success: true, 
           message: '免费资源获取成功',
@@ -127,6 +143,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.user.membership_type && 
         (!req.user.membership_expire_time || new Date(req.user.membership_expire_time) > new Date())
       ) {
+        // 记录购买信息（会员免费获取）
+        await storage.createUserPurchase(req.user.id, resourceId, 0);
+        
         res.json({ 
           success: true, 
           message: '会员资源获取成功',
@@ -158,6 +177,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(500).json({ message: '购买失败，请稍后再试' });
         return;
       }
+      
+      // 记录购买记录
+      await storage.createUserPurchase(req.user.id, resourceId, price);
       
       // 返回成功信息和资源链接
       res.json({
