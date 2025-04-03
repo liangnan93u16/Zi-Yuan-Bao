@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Search, ShoppingCart, Menu, User, ShoppingBag, LogOut, BookOpen, Edit, CheckCircle, ClipboardCheck, Users, History, Shield, Home, Package, Crown, HelpCircle, Info } from "lucide-react";
+import { Search, Menu, User, ShoppingBag, LogOut, BookOpen, Edit, CheckCircle, ClipboardCheck, Users, History, Shield, Home, Package, Crown, HelpCircle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -102,9 +102,9 @@ export default function Navbar() {
               <Search className="absolute right-3 top-2.5 h-4 w-4 text-neutral-500" />
             </form>
 
-            <Link href="/cart">
+            <Link href="/user/purchases">
               <Button variant="ghost" size="icon" className="text-neutral-600 hover:text-neutral-900">
-                <ShoppingCart className="h-5 w-5" />
+                <ShoppingBag className="h-5 w-5" />
               </Button>
             </Link>
 
