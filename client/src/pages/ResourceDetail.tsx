@@ -103,7 +103,7 @@ export default function ResourceDetail() {
   const originalPrice = price * 1.5; // Just for display purposes
   // Now we get actual rating from the reviews API
   
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!user) {
       toast({
         title: "请先登录",
@@ -113,35 +113,128 @@ export default function ResourceDetail() {
       return;
     }
 
-    if (!isFree && (!user.membership_type || (user.membership_expire_time && new Date(user.membership_expire_time) < new Date()))) {
-      toast({
-        title: "需要购买",
-        description: "此资源需要购买或成为会员才能下载。",
-        variant: "destructive",
-      });
+    // 如果资源是免费的或者用户是有效会员，直接获取资源
+    if (isFree || (user.membership_type && (!user.membership_expire_time || new Date(user.membership_expire_time) > new Date()))) {
+      try {
+        const response = await fetch(`/api/resources/${id}/purchase`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          if (data.resource_url) {
+            // 如果有资源下载链接，打开新窗口访问链接
+            window.open(data.resource_url, '_blank');
+            toast({
+              title: "资源链接已打开",
+              description: "请在新窗口查看资源下载链接",
+            });
+          } else {
+            toast({
+              title: "开始下载",
+              description: "资源下载已开始，请稍候...",
+            });
+            
+            // Simulate download
+            setTimeout(() => {
+              toast({
+                title: "下载完成",
+                description: "资源已成功下载到您的设备。",
+              });
+            }, 2000);
+          }
+        } else {
+          toast({
+            title: "获取资源失败",
+            description: data.message || "请稍后再试",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("获取资源时出错:", error);
+        toast({
+          title: "获取资源失败",
+          description: "服务器错误，请稍后再试",
+          variant: "destructive",
+        });
+      }
       return;
     }
-
-    if (resource.resource_url) {
-      // 如果有资源下载链接，打开新窗口访问链接
-      window.open(resource.resource_url, '_blank');
-      toast({
-        title: "资源链接已打开",
-        description: "请在新窗口查看资源下载链接",
-      });
-    } else {
-      toast({
-        title: "开始下载",
-        description: "资源下载已开始，请稍候...",
-      });
-      
-      // Simulate download
-      setTimeout(() => {
-        toast({
-          title: "下载完成",
-          description: "资源已成功下载到您的设备。",
-        });
-      }, 2000);
+    
+    // 如果用户需要付费，弹出确认对话框
+    if (!isFree && (!user.membership_type || (user.membership_expire_time && new Date(user.membership_expire_time) < new Date()))) {
+      // 确认是否购买
+      if (window.confirm(`确定使用 ${price} 积分购买此资源吗？`)) {
+        try {
+          const response = await fetch(`/api/resources/${id}/purchase`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include'
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok && data.success) {
+            // 购买成功
+            toast({
+              title: "购买成功",
+              description: data.message || `已成功扣除${price}积分`,
+            });
+            
+            // 打开资源链接
+            if (data.resource_url) {
+              window.open(data.resource_url, '_blank');
+              toast({
+                title: "资源链接已打开",
+                description: "请在新窗口查看资源下载链接",
+              });
+            }
+            
+            // 刷新用户信息（更新积分）
+            if (data.remaining_coins !== undefined) {
+              // 直接更新用户对象中的积分余额
+              // 注意：理想情况下应通过context更新，这里为简化直接修改
+              if (user) {
+                user.coins = data.remaining_coins;
+              }
+            }
+          } else if (response.status === 400 && data.message === '积分不足') {
+            // 积分不足
+            toast({
+              title: "积分不足",
+              description: `您当前积分为${data.available || 0}，需要${data.required || price}积分。请先充值。`,
+              variant: "destructive",
+            });
+            
+            // 提示充值
+            if (window.confirm("您的积分不足，是否前往充值页面？")) {
+              // 跳转到充值页面
+              window.location.href = "/profile?tab=coins";
+            }
+          } else {
+            // 其他错误
+            toast({
+              title: "购买失败",
+              description: data.message || "请稍后再试",
+              variant: "destructive",
+            });
+          }
+        } catch (error) {
+          console.error("购买资源时出错:", error);
+          toast({
+            title: "购买失败",
+            description: "服务器错误，请稍后再试",
+            variant: "destructive",
+          });
+        }
+      }
     }
   };
 

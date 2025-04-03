@@ -90,6 +90,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: '升级账号权限时发生错误' });
     }
   });
+  
+  // 资源购买接口
+  app.post('/api/resources/:id/purchase', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期' });
+        return;
+      }
+      
+      const resourceId = parseInt(req.params.id);
+      if (isNaN(resourceId)) {
+        res.status(400).json({ message: '无效的资源ID' });
+        return;
+      }
+      
+      // 获取资源信息
+      const resource = await storage.getResource(resourceId);
+      if (!resource) {
+        res.status(404).json({ message: '资源不存在' });
+        return;
+      }
+      
+      // 如果资源是免费的，直接返回成功
+      if (resource.is_free) {
+        res.json({ 
+          success: true, 
+          message: '免费资源获取成功',
+          resource_url: resource.resource_url
+        });
+        return;
+      }
+      
+      // 如果是会员且会员没有过期，可以免费获取资源
+      if (
+        req.user.membership_type && 
+        (!req.user.membership_expire_time || new Date(req.user.membership_expire_time) > new Date())
+      ) {
+        res.json({ 
+          success: true, 
+          message: '会员资源获取成功',
+          resource_url: resource.resource_url
+        });
+        return;
+      }
+      
+      // 计算资源价格（确保是数字）
+      const price = typeof resource.price === 'string' ? parseFloat(resource.price) : (resource.price || 0);
+      
+      // 检查用户积分是否足够
+      if ((req.user.coins || 0) < price) {
+        res.status(400).json({ 
+          success: false, 
+          message: '积分不足',
+          required: price,
+          available: req.user.coins || 0
+        });
+        return;
+      }
+      
+      // 扣除积分
+      const updatedUser = await storage.updateUser(req.user.id, {
+        coins: (req.user.coins || 0) - price
+      });
+      
+      if (!updatedUser) {
+        res.status(500).json({ message: '购买失败，请稍后再试' });
+        return;
+      }
+      
+      // 返回成功信息和资源链接
+      res.json({
+        success: true,
+        message: '购买成功，已扣除' + price + '积分',
+        resource_url: resource.resource_url,
+        remaining_coins: updatedUser.coins
+      });
+      
+    } catch (error) {
+      console.error('Error purchasing resource:', error);
+      res.status(500).json({ message: '购买资源时发生错误' });
+    }
+  });
 
   // Author routes
   app.get('/api/authors', async (req, res) => {
