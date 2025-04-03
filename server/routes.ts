@@ -12,7 +12,8 @@ import {
   insertFeifeiCategorySchema,
   loginSchema, 
   registerSchema,
-  type Review
+  type Review,
+  type FeifeiResource
 } from "@shared/schema";
 import { 
   login, 
@@ -1303,7 +1304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const $ = load(html);
       
       // 找到所有container内的链接
-      const links: { title: string, url: string }[] = [];
+      const links: { title: string, url: string, tags: string[] }[] = [];
       $('section.container a').each((idx: number, element: any) => {
         const url = $(element).attr('href');
         
@@ -1313,8 +1314,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           title = $(element).text().trim();
         }
         
+        // 提取标题中的标签，例如[udemy]
+        const tags: string[] = [];
+        const tagRegex = /\[(.*?)\]/g;
+        let match;
+        let cleanTitle = title || '';
+        
+        while ((match = tagRegex.exec(cleanTitle)) !== null) {
+          const tag = match[1].toLowerCase().trim();
+          if (tag && !tags.includes(tag)) {
+            tags.push(tag);
+          }
+        }
+        
+        // 移除标题中的标签，获得干净的标题
+        cleanTitle = cleanTitle.replace(/\[.*?\]/g, '').trim();
+        
         if (url && url.startsWith('http')) {
-          links.push({ title: title || url, url });
+          links.push({ 
+            title: cleanTitle || url, 
+            url,
+            tags 
+          });
         }
       });
       
@@ -1324,22 +1345,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 检查资源是否已存在
         const existingResources = await storage.getFeifeiResourcesByUrl(link.url);
         
+        let resource: FeifeiResource;
+        
         if (existingResources.length === 0) {
           // 不存在则创建新资源
-          const newResource = await storage.createFeifeiResource({
+          resource = await storage.createFeifeiResource({
             title: link.title,
             url: link.url,
             category_id: categoryId,
             description: null,
             icon: null
           });
-          savedResources.push(newResource);
         } else {
           // 存在则更新标题并加入结果列表
           const updatedResource = await storage.updateFeifeiResource(existingResources[0].id, {
             title: link.title
           });
-          savedResources.push(updatedResource || existingResources[0]);
+          resource = updatedResource || existingResources[0];
+        }
+        
+        savedResources.push(resource);
+        
+        // 处理标签
+        if (link.tags.length > 0) {
+          // 删除已有的资源-标签关联
+          const existingTags = await storage.getFeifeiResourceTags(resource.id);
+          for (const tag of existingTags) {
+            await storage.deleteFeifeiResourceTag(resource.id, tag.id);
+          }
+          
+          // 添加新标签
+          for (const tagName of link.tags) {
+            // 查找或创建标签
+            let tag = await storage.getFeifeiTagByName(tagName);
+            if (!tag) {
+              tag = await storage.createFeifeiTag({ name: tagName });
+            }
+            
+            // 创建资源-标签关联
+            await storage.createFeifeiResourceTag({
+              resource_id: resource.id,
+              tag_id: tag.id
+            });
+          }
         }
       }
       
@@ -1363,7 +1411,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const resources = await storage.getFeifeiResourcesByCategory(categoryId);
-      res.json(resources);
+      
+      // 为每个资源添加标签信息
+      const enrichedResources = await Promise.all(resources.map(async (resource) => {
+        const tags = await storage.getFeifeiResourceTags(resource.id);
+        return {
+          ...resource,
+          tags
+        };
+      }));
+      
+      res.json(enrichedResources);
     } catch (error) {
       console.error('Error getting feifei resources:', error);
       res.status(500).json({ message: '获取资源失败: ' + (error instanceof Error ? error.message : String(error)) });
@@ -1374,7 +1432,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/feifei-resources', async (req, res) => {
     try {
       const resources = await storage.getAllFeifeiResources();
-      res.json(resources);
+      
+      // 为每个资源添加标签信息
+      const enrichedResources = await Promise.all(resources.map(async (resource) => {
+        const tags = await storage.getFeifeiResourceTags(resource.id);
+        return {
+          ...resource,
+          tags
+        };
+      }));
+      
+      res.json(enrichedResources);
     } catch (error) {
       console.error('Error getting all feifei resources:', error);
       res.status(500).json({ message: '获取所有资源失败: ' + (error instanceof Error ? error.message : String(error)) });

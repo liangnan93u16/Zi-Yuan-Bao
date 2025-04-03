@@ -8,7 +8,9 @@ import {
   authors, type Author, type InsertAuthor,
   userPurchases, type UserPurchase, type InsertUserPurchase,
   feifeiCategories, type FeifeiCategory, type InsertFeifeiCategory,
-  feifeiResources, type FeifeiResource, type InsertFeifeiResource
+  feifeiResources, type FeifeiResource, type InsertFeifeiResource,
+  feifeiTags, type FeifeiTag, type InsertFeifeiTag,
+  feifeiResourceTags, type FeifeiResourceTag, type InsertFeifeiResourceTag
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, or, desc, sql } from "drizzle-orm";
@@ -87,6 +89,20 @@ export interface IStorage {
   updateFeifeiResource(id: number, data: Partial<FeifeiResource>): Promise<FeifeiResource | undefined>;
   deleteFeifeiResource(id: number): Promise<boolean>;
   getAllFeifeiResources(): Promise<FeifeiResource[]>;
+  
+  // Feifei Tag operations
+  getFeifeiTag(id: number): Promise<FeifeiTag | undefined>;
+  getFeifeiTagByName(name: string): Promise<FeifeiTag | undefined>;
+  createFeifeiTag(tag: InsertFeifeiTag): Promise<FeifeiTag>;
+  updateFeifeiTag(id: number, data: Partial<FeifeiTag>): Promise<FeifeiTag | undefined>;
+  deleteFeifeiTag(id: number): Promise<boolean>;
+  getAllFeifeiTags(): Promise<FeifeiTag[]>;
+  
+  // Feifei Resource-Tag operations
+  createFeifeiResourceTag(resourceTag: InsertFeifeiResourceTag): Promise<FeifeiResourceTag>;
+  getFeifeiResourceTags(resourceId: number): Promise<FeifeiTag[]>;
+  getFeifeiTagResources(tagId: number): Promise<FeifeiResource[]>;
+  deleteFeifeiResourceTag(resourceId: number, tagId: number): Promise<boolean>;
   
   // Initialize default data
   initializeDefaultData(): Promise<void>;
@@ -686,6 +702,102 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(feifeiResources)
       .orderBy(desc(feifeiResources.created_at));
+  }
+  
+  // 菲菲资源标签相关方法
+  async getFeifeiTag(id: number): Promise<FeifeiTag | undefined> {
+    const [tag] = await db
+      .select()
+      .from(feifeiTags)
+      .where(eq(feifeiTags.id, id));
+    return tag || undefined;
+  }
+  
+  async getFeifeiTagByName(name: string): Promise<FeifeiTag | undefined> {
+    const [tag] = await db
+      .select()
+      .from(feifeiTags)
+      .where(eq(feifeiTags.name, name));
+    return tag || undefined;
+  }
+  
+  async createFeifeiTag(tag: InsertFeifeiTag): Promise<FeifeiTag> {
+    const [newTag] = await db
+      .insert(feifeiTags)
+      .values(tag)
+      .returning();
+    return newTag;
+  }
+  
+  async updateFeifeiTag(id: number, data: Partial<FeifeiTag>): Promise<FeifeiTag | undefined> {
+    const [tag] = await db
+      .update(feifeiTags)
+      .set({ ...data, updated_at: new Date() })
+      .where(eq(feifeiTags.id, id))
+      .returning();
+    return tag || undefined;
+  }
+  
+  async deleteFeifeiTag(id: number): Promise<boolean> {
+    const result = await db
+      .delete(feifeiTags)
+      .where(eq(feifeiTags.id, id))
+      .returning({ id: feifeiTags.id });
+    return result.length > 0;
+  }
+  
+  async getAllFeifeiTags(): Promise<FeifeiTag[]> {
+    return await db
+      .select()
+      .from(feifeiTags)
+      .orderBy(feifeiTags.name);
+  }
+  
+  // 菲菲资源-标签关联方法
+  async createFeifeiResourceTag(resourceTag: InsertFeifeiResourceTag): Promise<FeifeiResourceTag> {
+    const [newResourceTag] = await db
+      .insert(feifeiResourceTags)
+      .values(resourceTag)
+      .returning();
+    return newResourceTag;
+  }
+  
+  async getFeifeiResourceTags(resourceId: number): Promise<FeifeiTag[]> {
+    const results = await db
+      .select({
+        tag: feifeiTags
+      })
+      .from(feifeiResourceTags)
+      .innerJoin(feifeiTags, eq(feifeiResourceTags.tag_id, feifeiTags.id))
+      .where(eq(feifeiResourceTags.resource_id, resourceId));
+    
+    return results.map(r => r.tag);
+  }
+  
+  async getFeifeiTagResources(tagId: number): Promise<FeifeiResource[]> {
+    const results = await db
+      .select({
+        resource: feifeiResources
+      })
+      .from(feifeiResourceTags)
+      .innerJoin(feifeiResources, eq(feifeiResourceTags.resource_id, feifeiResources.id))
+      .where(eq(feifeiResourceTags.tag_id, tagId));
+    
+    return results.map(r => r.resource);
+  }
+  
+  async deleteFeifeiResourceTag(resourceId: number, tagId: number): Promise<boolean> {
+    const result = await db
+      .delete(feifeiResourceTags)
+      .where(
+        and(
+          eq(feifeiResourceTags.resource_id, resourceId),
+          eq(feifeiResourceTags.tag_id, tagId)
+        )
+      )
+      .returning({ id: feifeiResourceTags.id });
+    
+    return result.length > 0;
   }
 }
 

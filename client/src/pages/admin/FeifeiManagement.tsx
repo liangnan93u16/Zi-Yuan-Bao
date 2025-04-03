@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Table, 
@@ -42,7 +43,13 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { FeifeiCategory, FeifeiResource, insertFeifeiCategorySchema } from "@shared/schema";
+import { FeifeiCategory, FeifeiResource, FeifeiTag, insertFeifeiCategorySchema } from "@shared/schema";
+
+// 扩展FeifeiResource类型，添加tags属性
+interface EnrichedFeifeiResource extends FeifeiResource {
+  tags?: FeifeiTag[];
+}
+
 import { Link } from "wouter";
 
 // 创建表单验证模式
@@ -59,7 +66,7 @@ export default function FeifeiManagement() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isResourcesDialogOpen, setIsResourcesDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<FeifeiCategory | null>(null);
-  const [categoryResources, setCategoryResources] = useState<FeifeiResource[]>([]);
+  const [categoryResources, setCategoryResources] = useState<EnrichedFeifeiResource[]>([]);
   const [isResourcesLoading, setIsResourcesLoading] = useState(false);
   const { toast } = useToast();
 
@@ -217,7 +224,7 @@ export default function FeifeiManagement() {
   const fetchCategoryResources = async (categoryId: number) => {
     try {
       setIsResourcesLoading(true);
-      const response = await apiRequest<FeifeiResource[]>("GET", `/api/feifei-resources/${categoryId}`);
+      const response = await apiRequest<EnrichedFeifeiResource[]>("GET", `/api/feifei-resources/${categoryId}`);
       setCategoryResources(response || []);
       setIsResourcesLoading(false);
       setIsResourcesDialogOpen(true);
@@ -637,6 +644,7 @@ export default function FeifeiManagement() {
                       <TableHead className="w-[60px]">ID</TableHead>
                       <TableHead className="w-[250px]">标题</TableHead>
                       <TableHead>URL</TableHead>
+                      <TableHead className="w-[150px]">标签</TableHead>
                       <TableHead className="w-[150px]">创建时间</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -657,6 +665,15 @@ export default function FeifeiManagement() {
                               <span className="truncate">{resource.url}</span>
                               <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
                             </a>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {resource.tags?.map((tag: FeifeiTag) => (
+                              <Badge key={tag.id} variant="outline" className="bg-gray-100">
+                                {tag.name}
+                              </Badge>
+                            ))}
                           </div>
                         </TableCell>
                         <TableCell>{formatDate(resource.created_at)}</TableCell>

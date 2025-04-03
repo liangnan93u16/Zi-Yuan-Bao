@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, decimal, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -237,6 +237,44 @@ export const insertFeifeiResourceSchema = createInsertSchema(feifeiResources).om
 
 export type FeifeiResource = typeof feifeiResources.$inferSelect;
 export type InsertFeifeiResource = z.infer<typeof insertFeifeiResourceSchema>;
+
+// 菲菲网资源标签表
+export const feifeiTags = pgTable("feifei_tags", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(), // 标签名称，例如"udemy"
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow()
+});
+
+export const insertFeifeiTagSchema = createInsertSchema(feifeiTags).omit({
+  id: true,
+  created_at: true,
+  updated_at: true
+});
+
+export type FeifeiTag = typeof feifeiTags.$inferSelect;
+export type InsertFeifeiTag = z.infer<typeof insertFeifeiTagSchema>;
+
+// 菲菲网资源-标签关联表（多对多关系）
+export const feifeiResourceTags = pgTable("feifei_resource_tags", {
+  id: serial("id").primaryKey(),
+  resource_id: integer("resource_id").notNull().references(() => feifeiResources.id),
+  tag_id: integer("tag_id").notNull().references(() => feifeiTags.id),
+  created_at: timestamp("created_at").defaultNow()
+}, (table) => {
+  return {
+    // 创建联合唯一约束，防止重复关联
+    resource_tag_unique: uniqueIndex("resource_tag_unique").on(table.resource_id, table.tag_id)
+  };
+});
+
+export const insertFeifeiResourceTagSchema = createInsertSchema(feifeiResourceTags).omit({
+  id: true,
+  created_at: true
+});
+
+export type FeifeiResourceTag = typeof feifeiResourceTags.$inferSelect;
+export type InsertFeifeiResourceTag = z.infer<typeof insertFeifeiResourceTagSchema>;
 
 export type LoginCredentials = z.infer<typeof loginSchema>;
 export type RegisterData = z.infer<typeof registerSchema>;
