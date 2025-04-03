@@ -40,8 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const res = await apiRequest("POST", "/api/auth/login", { email, password });
-      const userData = await res.json();
+      const userData = await apiRequest<AuthUser>("POST", "/api/auth/login", { email, password });
       setUser(userData);
       toast({
         title: "登录成功",
@@ -51,21 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 检查是否有响应体，包含详细错误信息
       let errorMessage = "用户名或密码错误，请重试。";
       
-      if (error.response) {
-        try {
-          const errorData = await error.response.json();
-          
-          // 处理不同的错误情况
-          if (errorData.locked) {
-            errorMessage = errorData.message || "账号已被锁定，请稍后再试。";
-          } else if (errorData.remainingAttempts !== undefined) {
-            errorMessage = errorData.message || `密码错误，还有${errorData.remainingAttempts}次尝试机会。`;
-          } else {
-            errorMessage = errorData.message || errorMessage;
-          }
-        } catch (e) {
-          console.error("Failed to parse error response:", e);
-        }
+      if (error && error.message) {
+        errorMessage = error.message;
       }
       
       toast({
@@ -77,9 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 创建一个新错误对象，包含详细信息
       const enhancedError = new Error(errorMessage);
       enhancedError.name = "AuthError";
-      if (error.response && error.response.status) {
-        (enhancedError as any).status = error.response.status;
-      }
       throw enhancedError;
     } finally {
       setLoading(false);
@@ -111,17 +94,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const res = await apiRequest("POST", "/api/auth/register", { email, password });
-      const userData = await res.json();
+      const userData = await apiRequest<AuthUser>("POST", "/api/auth/register", { email, password });
       setUser(userData);
       toast({
         title: "注册成功",
         description: "您的账号已成功创建！",
       });
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error?.message || "注册时出现错误，该邮箱可能已被注册。";
       toast({
         title: "注册失败",
-        description: "注册时出现错误，该邮箱可能已被注册。",
+        description: errorMessage,
         variant: "destructive",
       });
       throw error;
@@ -133,29 +116,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const elevateToAdmin = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/auth/elevate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
+      const userData = await apiRequest<AuthUser>("POST", "/api/auth/elevate", {});
+      setUser(userData);
+      toast({
+        title: "权限升级成功",
+        description: "您的账号已成功升级为管理员！",
       });
-      
-      const userData = await res.json();
-      
-      if (res.ok) {
-        setUser(userData);
-        toast({
-          title: "权限升级成功",
-          description: "您的账号已成功升级为管理员！",
-        });
-      } else {
-        toast({
-          title: "权限升级失败",
-          description: userData.message || "您的账号不符合升级条件。",
-          variant: "destructive",
-        });
-      }
     } catch (error) {
       console.error("升级权限错误:", error);
       toast({
