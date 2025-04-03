@@ -226,6 +226,7 @@ export const feifeiResources = pgTable("feifei_resources", {
   category_id: integer("category_id").notNull().references(() => feifeiCategories.id), // 所属分类
   icon: text("icon"), // 资源图标
   description: text("description"), // 资源描述
+  image_url: text("image_url"), // 资源封面图片URL
   
   // 新增网页解析字段
   resource_category: text("resource_category"), // 资源分类

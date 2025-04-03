@@ -784,6 +784,18 @@ export default function FeifeiManagement() {
           
           {selectedResource ? (
             <div className="space-y-6">
+              {selectedResource.image_url && (
+                <div className="w-full flex justify-center">
+                  <div className="relative rounded-md overflow-hidden w-full max-w-md">
+                    <img 
+                      src={selectedResource.image_url} 
+                      alt={selectedResource.chinese_title}
+                      className="w-full h-auto object-cover"
+                    />
+                  </div>
+                </div>
+              )}
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <h4 className="text-sm font-medium text-gray-500 mb-2">基本信息</h4>

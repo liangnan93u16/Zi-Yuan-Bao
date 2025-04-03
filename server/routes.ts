@@ -1547,6 +1547,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 提取详情介绍
         let details = $('.introduction-box .content').html() || '';
         
+        // 提取图片URL
+        let imageUrl = null;
+        try {
+          // 尝试获取img-box中的图片URL
+          imageUrl = $('.img-box img').attr('src') || null;
+          console.log('获取到的图片URL:', imageUrl);
+        } catch (error) {
+          console.error('获取图片URL时出错:', error);
+        }
+        
         // 记录提取的信息
         console.log('提取的页面信息:', infoItems);
         
@@ -1601,6 +1611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subtitle: infoItems['字幕'] || infoItems['视频字幕'] || null,
           details: details,
           coin_price: coinPrice, // 添加金币价格字段
+          image_url: imageUrl, // 添加图片URL字段
         };
         
         // 提取页面中的标签
