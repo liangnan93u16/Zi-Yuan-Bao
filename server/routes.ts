@@ -677,6 +677,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: '创建用户失败' });
     }
   });
+  
+  // 管理员修改用户信息
+  app.patch('/api/admin/users/:id', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        res.status(400).json({ message: '无效的用户ID' });
+        return;
+      }
+      
+      // 查询用户是否存在
+      const user = await storage.getUser(userId);
+      if (!user) {
+        res.status(404).json({ message: '用户不存在' });
+        return;
+      }
+      
+      // 如果是管理员用户，不允许修改
+      if (user.membership_type === 'admin') {
+        res.status(403).json({ message: '管理员用户不可被修改' });
+        return;
+      }
+      
+      // 允许管理员更新的字段
+      const allowedFields = ['membership_type', 'membership_expire_time', 'coins', 'email', 'avatar'];
+      const updateData: any = {};
+      
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          updateData[field] = req.body[field];
+        }
+      }
+      
+      // 如果有更新数据，则更新updated_at字段
+      if (Object.keys(updateData).length > 0) {
+        updateData.updated_at = new Date().toISOString();
+      }
+      
+      const updatedUser = await storage.updateUser(userId, updateData);
+      if (!updatedUser) {
+        res.status(404).json({ message: '用户不存在' });
+        return;
+      }
+      
+      // 返回成功消息
+      res.status(200).json({ message: '用户更新成功' });
+    } catch (error) {
+      console.error('Error updating user by admin:', error);
+      res.status(500).json({ message: '更新用户失败' });
+    }
+  });
 
   app.patch('/api/users/:id', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
     try {

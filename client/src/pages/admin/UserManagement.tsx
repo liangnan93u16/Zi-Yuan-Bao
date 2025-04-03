@@ -190,6 +190,16 @@ export default function UserManagement() {
   });
 
   const handleEditUser = (user: any) => {
+    // 如果用户是管理员，不允许编辑
+    if (user.membership_type === 'admin') {
+      toast({
+        title: "无法编辑管理员",
+        description: "管理员用户不可被编辑。",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setEditingUser(user);
     form.reset({
       membership_type: user.membership_type || "",
@@ -492,6 +502,8 @@ export default function UserManagement() {
                               variant="ghost" 
                               className="text-primary hover:text-blue-700 h-auto p-0 mr-3"
                               onClick={() => handleEditUser(user)}
+                              disabled={user.membership_type === 'admin'}
+                              title={user.membership_type === 'admin' ? "管理员用户不可编辑" : "编辑用户"}
                             >
                               编辑
                             </Button>
@@ -499,7 +511,8 @@ export default function UserManagement() {
                               variant="ghost"
                               className={isActive ? "text-red-600 hover:text-red-800 h-auto p-0" : "text-green-600 hover:text-green-800 h-auto p-0"}
                               onClick={() => toggleUserStatusMutation.mutate({ userId: user.id, isActive: isActive })}
-                              disabled={toggleUserStatusMutation.isPending}
+                              disabled={toggleUserStatusMutation.isPending || user.membership_type === 'admin'}
+                              title={user.membership_type === 'admin' ? "管理员用户不可禁用" : (isActive ? "禁用用户" : "启用用户")}
                             >
                               {isActive ? '禁用' : '启用'}
                             </Button>
