@@ -31,14 +31,18 @@ import {
   Trash2,
   Loader2,
   Link as LinkIcon,
-  ExternalLink
+  ExternalLink,
+  Download,
+  RefreshCw,
+  Search,
+  AlertCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { FeifeiCategory, insertFeifeiCategorySchema } from "@shared/schema";
+import { FeifeiCategory, FeifeiResource, insertFeifeiCategorySchema } from "@shared/schema";
 import { Link } from "wouter";
 
 // 创建表单验证模式
@@ -53,7 +57,10 @@ export default function FeifeiManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isResourcesDialogOpen, setIsResourcesDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<FeifeiCategory | null>(null);
+  const [categoryResources, setCategoryResources] = useState<FeifeiResource[]>([]);
+  const [isResourcesLoading, setIsResourcesLoading] = useState(false);
   const { toast } = useToast();
 
   // 获取所有菲菲网分类
@@ -182,6 +189,60 @@ export default function FeifeiManagement() {
     }
   };
 
+  // 解析URL
+  const parseCategoryUrlMutation = useMutation({
+    mutationFn: async (categoryId: number) => {
+      return apiRequest<{ message: string, resources: FeifeiResource[] }>("POST", `/api/feifei-categories/${categoryId}/parse`);
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "网站解析成功",
+        description: data.message || "成功解析网站资源链接。",
+      });
+      if (selectedCategory) {
+        fetchCategoryResources(selectedCategory.id);
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "网站解析失败",
+        description: error.message || "解析网站链接时出错，请重试。",
+        variant: "destructive",
+      });
+      setIsResourcesLoading(false);
+    }
+  });
+
+  // 获取分类资源
+  const fetchCategoryResources = async (categoryId: number) => {
+    try {
+      setIsResourcesLoading(true);
+      const response = await apiRequest<FeifeiResource[]>("GET", `/api/feifei-resources/${categoryId}`);
+      setCategoryResources(response || []);
+      setIsResourcesLoading(false);
+      setIsResourcesDialogOpen(true);
+    } catch (error: any) {
+      toast({
+        title: "获取资源失败",
+        description: error.message || "获取分类资源时出错，请重试。",
+        variant: "destructive",
+      });
+      setIsResourcesLoading(false);
+    }
+  };
+
+  // 解析分类URL
+  const parseUrl = (category: FeifeiCategory) => {
+    setSelectedCategory(category);
+    parseCategoryUrlMutation.mutate(category.id);
+  };
+
+  // 查看分类资源
+  const viewResources = (category: FeifeiCategory) => {
+    setSelectedCategory(category);
+    fetchCategoryResources(category.id);
+  };
+
   // 对话框操作函数
   const openCreateDialog = () => {
     createForm.reset({
@@ -288,13 +349,41 @@ export default function FeifeiManagement() {
                               onClick={() => openEditDialog(category)} 
                               size="sm" 
                               variant="outline"
+                              title="编辑"
                             >
                               <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              onClick={() => parseUrl(category)} 
+                              size="sm" 
+                              variant="outline"
+                              title="解析URL"
+                              disabled={parseCategoryUrlMutation.isPending}
+                            >
+                              {parseCategoryUrlMutation.isPending && selectedCategory?.id === category.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Download className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <Button 
+                              onClick={() => viewResources(category)} 
+                              size="sm" 
+                              variant="outline"
+                              title="查看资源"
+                              disabled={isResourcesLoading}
+                            >
+                              {isResourcesLoading && selectedCategory?.id === category.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Search className="h-4 w-4" />
+                              )}
                             </Button>
                             <Button 
                               onClick={() => openDeleteDialog(category)} 
                               size="sm" 
                               variant="destructive"
+                              title="删除"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -467,6 +556,124 @@ export default function FeifeiManagement() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               删除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 查看资源对话框 */}
+      <Dialog open={isResourcesDialogOpen} onOpenChange={setIsResourcesDialogOpen}>
+        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedCategory ? `"${selectedCategory.title}" 解析的资源` : "资源列表"}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {isResourcesLoading ? (
+            <div className="py-8 flex justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : categoryResources.length === 0 ? (
+            <div className="py-8 text-center">
+              <AlertCircle className="w-12 h-12 mx-auto text-yellow-500 mb-3" />
+              <p className="text-lg text-gray-500">暂无解析资源</p>
+              <p className="text-sm text-gray-400 mt-1">
+                尝试点击"解析URL"按钮从网站提取链接
+              </p>
+              {selectedCategory && (
+                <Button
+                  onClick={() => parseUrl(selectedCategory)}
+                  className="mt-4"
+                  variant="outline"
+                  disabled={parseCategoryUrlMutation.isPending}
+                >
+                  {parseCategoryUrlMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      正在解析...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-2 h-4 w-4" />
+                      解析URL
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="mb-4 flex justify-between items-center">
+                <p className="text-sm text-gray-500">
+                  共找到 {categoryResources.length} 个资源链接
+                </p>
+                {selectedCategory && (
+                  <Button
+                    onClick={() => parseUrl(selectedCategory)}
+                    size="sm"
+                    variant="outline"
+                    disabled={parseCategoryUrlMutation.isPending}
+                  >
+                    {parseCategoryUrlMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        重新解析
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        重新解析
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+              
+              <div className="overflow-y-auto max-h-[60vh]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[60px]">ID</TableHead>
+                      <TableHead className="w-[250px]">标题</TableHead>
+                      <TableHead>URL</TableHead>
+                      <TableHead className="w-[150px]">创建时间</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categoryResources.map((resource) => (
+                      <TableRow key={resource.id}>
+                        <TableCell>{resource.id}</TableCell>
+                        <TableCell>{resource.title}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2 max-w-[320px] truncate">
+                            <LinkIcon className="h-4 w-4 flex-shrink-0 text-neutral-400" />
+                            <a 
+                              href={resource.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline flex items-center truncate"
+                            >
+                              <span className="truncate">{resource.url}</span>
+                              <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
+                            </a>
+                          </div>
+                        </TableCell>
+                        <TableCell>{formatDate(resource.created_at)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              type="button" 
+              onClick={() => setIsResourcesDialogOpen(false)}
+            >
+              关闭
             </Button>
           </DialogFooter>
         </DialogContent>

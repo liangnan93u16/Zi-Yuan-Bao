@@ -217,5 +217,26 @@ export const insertFeifeiCategorySchema = createInsertSchema(feifeiCategories).o
 export type FeifeiCategory = typeof feifeiCategories.$inferSelect;
 export type InsertFeifeiCategory = z.infer<typeof insertFeifeiCategorySchema>;
 
+// 菲菲网资源表
+export const feifeiResources = pgTable("feifei_resources", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(), // 资源标题
+  url: text("url").notNull(), // 资源URL
+  category_id: integer("category_id").notNull().references(() => feifeiCategories.id), // 所属分类
+  icon: text("icon"), // 资源图标
+  description: text("description"), // 资源描述
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow()
+});
+
+export const insertFeifeiResourceSchema = createInsertSchema(feifeiResources).omit({
+  id: true,
+  created_at: true,
+  updated_at: true
+});
+
+export type FeifeiResource = typeof feifeiResources.$inferSelect;
+export type InsertFeifeiResource = z.infer<typeof insertFeifeiResourceSchema>;
+
 export type LoginCredentials = z.infer<typeof loginSchema>;
 export type RegisterData = z.infer<typeof registerSchema>;

@@ -1276,6 +1276,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: '删除菲菲网分类失败' });
     }
   });
+  
+  // URL解析API：解析菲菲网分类URL中的资源链接
+  app.post('/api/feifei-categories/:id/parse', async (req, res) => {
+    try {
+      const categoryId = parseInt(req.params.id);
+      if (isNaN(categoryId)) {
+        res.status(400).json({ message: '无效的分类ID' });
+        return;
+      }
+
+      // 获取分类信息
+      const category = await storage.getFeifeiCategory(categoryId);
+      if (!category) {
+        res.status(404).json({ message: '分类不存在' });
+        return;
+      }
+
+      // 导入cheerio库进行HTML解析
+      const axios = (await import('axios')).default;
+      const cheerio = (await import('cheerio')).default || await import('cheerio'); // 兼容ESM和CommonJS
+      
+      // 获取网页内容
+      const response = await axios.get(category.url);
+      const html = response.data;
+      const $ = cheerio.load(html);
+      
+      // 找到所有container内的链接
+      const links: { title: string, url: string }[] = [];
+      $('section.container a').each((idx: number, element: any) => {
+        const url = $(element).attr('href');
+        const title = $(element).text().trim();
+        
+        if (url && url.startsWith('http')) {
+          links.push({ title: title || url, url });
+        }
+      });
+      
+      // 保存找到的链接到数据库
+      const savedResources = [];
+      for (const link of links) {
+        // 检查资源是否已存在
+        const existingResources = await storage.getFeifeiResourcesByUrl(link.url);
+        
+        if (existingResources.length === 0) {
+          // 不存在则创建新资源
+          const newResource = await storage.createFeifeiResource({
+            title: link.title,
+            url: link.url,
+            category_id: categoryId,
+            description: null,
+            icon: null
+          });
+          savedResources.push(newResource);
+        } else {
+          // 存在则加入结果列表
+          savedResources.push(existingResources[0]);
+        }
+      }
+      
+      res.json({
+        message: `成功解析并保存了 ${savedResources.length} 个链接`,
+        resources: savedResources
+      });
+    } catch (error) {
+      console.error('Error parsing feifei category URL:', error);
+      res.status(500).json({ message: '解析URL失败: ' + (error instanceof Error ? error.message : String(error)) });
+    }
+  });
+  
+  // 获取菲菲资源
+  app.get('/api/feifei-resources/:categoryId', async (req, res) => {
+    try {
+      const categoryId = parseInt(req.params.categoryId);
+      if (isNaN(categoryId)) {
+        res.status(400).json({ message: '无效的分类ID' });
+        return;
+      }
+      
+      const resources = await storage.getFeifeiResourcesByCategory(categoryId);
+      res.json(resources);
+    } catch (error) {
+      console.error('Error getting feifei resources:', error);
+      res.status(500).json({ message: '获取资源失败: ' + (error instanceof Error ? error.message : String(error)) });
+    }
+  });
+  
+  // 获取所有菲菲资源
+  app.get('/api/feifei-resources', async (req, res) => {
+    try {
+      const resources = await storage.getAllFeifeiResources();
+      res.json(resources);
+    } catch (error) {
+      console.error('Error getting all feifei resources:', error);
+      res.status(500).json({ message: '获取所有资源失败: ' + (error instanceof Error ? error.message : String(error)) });
+    }
+  });
 
   return httpServer;
 }
