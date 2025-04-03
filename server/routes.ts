@@ -1488,7 +1488,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // 动态导入所需模块
       const { default: axios } = await import('axios');
-      const { default: cheerio } = await import('cheerio');
+      const cheerioModule = await import('cheerio');
+      const cheerio = cheerioModule.default || cheerioModule;
       
       try {
         // 发送请求获取页面内容
