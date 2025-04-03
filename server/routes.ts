@@ -1295,12 +1295,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // 导入cheerio库进行HTML解析
       const axios = (await import('axios')).default;
-      const cheerio = (await import('cheerio')).default || await import('cheerio'); // 兼容ESM和CommonJS
+      const { load } = await import('cheerio');
       
       // 获取网页内容
       const response = await axios.get(category.url);
       const html = response.data;
-      const $ = cheerio.load(html);
+      const $ = load(html);
       
       // 找到所有container内的链接
       const links: { title: string, url: string }[] = [];

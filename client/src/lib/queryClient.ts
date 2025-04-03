@@ -20,7 +20,19 @@ export async function apiRequest<T = any>(
   });
 
   await throwIfResNotOk(res);
-  return await res.json();
+  
+  // 对于一些特殊的端点（登录、登出等），可能不需要返回JSON
+  if (url.includes('/api/auth/login') || url.includes('/api/auth/logout')) {
+    const data = await res.json();
+    return data as T;
+  }
+  
+  try {
+    return await res.json() as T;
+  } catch (e) {
+    // 如果无法解析为JSON（例如空响应），则返回空对象
+    return {} as T;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
