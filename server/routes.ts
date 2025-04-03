@@ -1306,7 +1306,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const links: { title: string, url: string }[] = [];
       $('section.container a').each((idx: number, element: any) => {
         const url = $(element).attr('href');
-        const title = $(element).text().trim();
+        
+        // 首先尝试获取title属性，如果没有则使用<a>标签中的文本内容
+        let title = $(element).attr('title');
+        if (!title || title.trim() === '') {
+          title = $(element).text().trim();
+        }
         
         if (url && url.startsWith('http')) {
           links.push({ title: title || url, url });
@@ -1330,8 +1335,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           savedResources.push(newResource);
         } else {
-          // 存在则加入结果列表
-          savedResources.push(existingResources[0]);
+          // 存在则更新标题并加入结果列表
+          const updatedResource = await storage.updateFeifeiResource(existingResources[0].id, {
+            title: link.title
+          });
+          savedResources.push(updatedResource || existingResources[0]);
         }
       }
       
