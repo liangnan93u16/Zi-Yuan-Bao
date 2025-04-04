@@ -1311,6 +1311,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const url = $(element).attr('href');
         if (!url || !url.startsWith('http')) return;
         
+        // 如果URL以"https://www.feifeiziyuan.com/category"开头，则跳过
+        if (url.startsWith('https://www.feifeiziyuan.com/category')) return;
+        
         // 首先尝试获取title属性，如果没有则使用<a>标签中的文本内容
         let title = $(element).attr('title');
         if (!title || title.trim() === '') {
