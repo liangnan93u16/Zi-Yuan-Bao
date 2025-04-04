@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { 
@@ -24,7 +24,6 @@ import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ReviewSection from "@/components/ReviewSection";
-import { apiRequest } from "@/lib/queryClient";
 
 export default function ResourceDetail() {
   const { id } = useParams();
@@ -333,54 +332,6 @@ export default function ResourceDetail() {
       description: "资源已添加到您的收藏夹。",
     });
   };
-  
-  // 解析课程预览URL
-  const parsePreviewMutation = useMutation({
-    mutationFn: async (previewUrl: string) => {
-      return apiRequest<any>("POST", `/api/resources/${id}/parse-preview`, { url: previewUrl });
-    },
-    onSuccess: (data) => {
-      if (data && data.success) {
-        toast({
-          title: "解析成功",
-          description: "课程预览内容已成功解析，请打开控制台查看结果",
-        });
-        // 打印解析结果到控制台
-        console.log("课程预览解析结果:", data.result);
-      } else {
-        toast({
-          title: "解析结果",
-          description: data?.message || "预览解析已完成",
-        });
-      }
-    },
-    onError: (error: any) => {
-      toast({
-        title: "解析失败",
-        description: error.message || "无法解析课程预览，请稍后再试",
-        variant: "destructive",
-      });
-      console.error("解析预览URL出错:", error);
-    }
-  });
-  
-  const handleParsePreview = (previewUrl: string) => {
-    if (!previewUrl) {
-      toast({
-        title: "无法解析",
-        description: "未找到有效的预览URL",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    toast({
-      title: "开始解析",
-      description: "正在解析课程预览页面，请稍候...",
-    });
-    
-    parsePreviewMutation.mutate(previewUrl);
-  };
 
   return (
     <div className="container mx-auto px-4 sm:px-6 py-6 max-w-[1400px]">
@@ -487,7 +438,7 @@ export default function ResourceDetail() {
                     <span className="font-medium text-right">{resource.updated_at ? new Date(resource.updated_at).toLocaleDateString() : '2025/4/2'}</span>
                   </div>
                   {resource.preview_url && (
-                    <div className="mt-4 pt-3 border-t border-neutral-200 space-y-2">
+                    <div className="mt-4 pt-3 border-t border-neutral-200">
                       <a 
                         href={resource.preview_url} 
                         target="_blank" 
@@ -497,15 +448,6 @@ export default function ResourceDetail() {
                         <Globe className="mr-2 h-4 w-4" />
                         查看预览
                       </a>
-                      {resource.preview_url.includes('udemy.com') && (
-                        <button 
-                          onClick={() => handleParsePreview(resource.preview_url)}
-                          className="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-600 hover:bg-blue-50 rounded-md shadow-sm"
-                        >
-                          <FileText className="mr-2 h-4 w-4" />
-                          解析课程预览
-                        </button>
-                      )}
                     </div>
                   )}
                 </div>
