@@ -521,6 +521,11 @@ export default function ResourceDetail() {
                   <TabsTrigger value="faq" className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary">
                     常见问题
                   </TabsTrigger>
+                  {resource.details && (
+                    <TabsTrigger value="html_details" className="px-6 py-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary">
+                      详情介绍
+                    </TabsTrigger>
+                  )}
                 </TabsList>
               </div>
               
@@ -695,6 +700,15 @@ export default function ResourceDetail() {
                   </div>
                 )}
               </TabsContent>
+              
+              {resource.details && (
+                <TabsContent value="html_details" className="p-5 md:p-8 mx-auto">
+                  <h3 className="text-xl font-bold mb-5">详情介绍</h3>
+                  <div className="prose prose-blue max-w-none">
+                    <div dangerouslySetInnerHTML={{ __html: resource.details }} />
+                  </div>
+                </TabsContent>
+              )}
             </Tabs>
           </div>
         </div>

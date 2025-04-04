@@ -1544,8 +1544,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log('所有选择器处理后的信息:', infoItems);
         
-        // 提取详情介绍
+        // 提取详情介绍（旧方法）
         let details = $('.introduction-box .content').html() || '';
+        
+        // 提取详情介绍（新方法 - 从tab-content获取）
+        if (!details || details.length === 0) {
+          try {
+            // 尝试方法1：获取特定ID的tab内容
+            let tabContent = $('#pills-tabContent').html();
+            if (tabContent && tabContent.length > 0) {
+              details = tabContent;
+              console.log('从#pills-tabContent获取到的详情介绍长度:', tabContent.length);
+            } 
+            // 尝试方法2：获取任何class为tab-content的内容
+            else {
+              tabContent = $('.tab-content').html();
+              if (tabContent && tabContent.length > 0) {
+                details = tabContent;
+                console.log('从.tab-content获取到的详情介绍长度:', tabContent.length);
+              }
+            }
+            
+            // 尝试方法3：查找特定的tab页内容（常见于详情标签页）
+            if (!details || details.length === 0) {
+              // 查找id为pills-details或包含details字样的tab页
+              const detailsTab = $('#pills-details, #tab-details, .tab-pane[id*="detail"]').html();
+              if (detailsTab && detailsTab.length > 0) {
+                details = detailsTab;
+                console.log('从详情标签页获取到的详情介绍长度:', detailsTab.length);
+              }
+            }
+          } catch (error) {
+            console.error('从tab-content获取详情介绍时出错:', error);
+          }
+        }
         
         // 提取图片URL
         let imageUrl = null;

@@ -19,6 +19,12 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from "@/components/ui/tabs";
+import {
   Form,
   FormControl,
   FormField,
@@ -870,15 +876,26 @@ export default function FeifeiManagement() {
                 </div>
               </div>
               
+              {/* Tab标签页：基本内容和详情内容 */}
               {selectedResource.details && (
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-2">详情介绍</h4>
-                  <div className="bg-gray-50 p-3 rounded-md">
-                    <div 
-                      className="prose max-w-none" 
-                      dangerouslySetInnerHTML={{ __html: selectedResource.details }}
-                    />
-                  </div>
+                <div className="mt-4">
+                  <Tabs defaultValue="basic">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="basic">基本信息</TabsTrigger>
+                      <TabsTrigger value="details">详情介绍</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="basic">
+                      {/* 基本信息内容为空，用于占位 */}
+                    </TabsContent>
+                    <TabsContent value="details">
+                      <div className="bg-gray-50 p-3 rounded-md mt-3">
+                        <div 
+                          className="prose max-w-none" 
+                          dangerouslySetInnerHTML={{ __html: selectedResource.details }}
+                        />
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </div>
               )}
               
