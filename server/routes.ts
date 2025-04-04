@@ -1605,6 +1605,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 解析菲菲资源的课程预览页面
+  app.post('/api/feifei-resources/:id/parse-preview', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const resourceId = parseInt(req.params.id);
+      if (isNaN(resourceId)) {
+        return res.status(400).json({ message: '无效的资源ID' });
+      }
+
+      // 获取资源信息 - 只是为了验证资源存在
+      const resource = await storage.getFeifeiResource(resourceId);
+      if (!resource) {
+        return res.status(404).json({ message: '资源不存在' });
+      }
+
+      // 从请求体中获取预览URL
+      const { url } = req.body;
+      if (!url) {
+        return res.status(400).json({ message: '预览URL不存在' });
+      }
+
+      // 验证是否为Udemy网址
+      if (!url.includes('udemy.com')) {
+        return res.status(400).json({ message: '目前仅支持解析Udemy课程页面' });
+      }
+
+      // 动态导入所需模块
+      const { default: axios } = await import('axios');
+      const cheerio = await import('cheerio');
+
+      try {
+        // 发送请求获取页面内容
+        const response = await axios.get(url);
+        const html = response.data;
+        
+        // 使用cheerio的load方法
+        const $ = cheerio.load(html);
+        
+        // 尝试获取Udemy课程内容 - 主要是component-margin中的内容
+        let result: any = {
+          courseTitle: $('h1.ud-heading-xl').text().trim(),
+          courseSummary: $('div.ud-text-sm[data-purpose="lead-headline"]').text().trim(),
+          metadata: {}
+        };
+
+        // 获取元数据信息
+        $('.ud-text-xs').each((i, elem) => {
+          const text = $(elem).text().trim();
+          // 解析时间信息例如"1.5 total hours"
+          if (text.includes('total hours')) {
+            result.metadata.totalHours = text;
+          }
+          
+          // 解析讲师信息
+          if (text.includes('Created by')) {
+            result.metadata.createdBy = text.replace('Created by', '').trim();
+          }
+          
+          // 解析最后更新时间
+          if (text.includes('Last updated')) {
+            result.metadata.lastUpdated = text;
+          }
+        });
+
+        // 提取课程内容部分
+        const courseContent: any[] = [];
+        $('div.component-margin').each((i, section) => {
+          // 只处理包含课程章节信息的部分
+          const sectionTitle = $(section).find('h3.ud-accordion-panel-heading').text().trim();
+          if (sectionTitle) {
+            const lectures: any[] = [];
+            
+            // 获取章节中的所有讲座
+            $(section).find('div.ud-unstyled-list-item').each((j, lecture) => {
+              const lectureTitle = $(lecture).find('div.ud-accordion-panel-title-content').text().trim();
+              const lectureTime = $(lecture).find('span.ud-sr-only').text().trim();
+              
+              if (lectureTitle) {
+                lectures.push({
+                  title: lectureTitle,
+                  time: lectureTime
+                });
+              }
+            });
+            
+            courseContent.push({
+              title: sectionTitle,
+              lectures: lectures
+            });
+          }
+        });
+
+        result.courseContent = courseContent;
+        
+        // 获取价格信息
+        const priceElement = $('div[data-purpose="course-price-text"]');
+        if (priceElement.length > 0) {
+          result.price = priceElement.text().trim();
+        }
+        
+        // 获取评分信息
+        const ratingElement = $('span[data-purpose="rating-number"]');
+        if (ratingElement.length > 0) {
+          result.rating = ratingElement.text().trim();
+        }
+        
+        const ratingCountElement = $('span[data-purpose="rating-count"]');
+        if (ratingCountElement.length > 0) {
+          result.ratingCount = ratingCountElement.text().trim();
+        }
+        
+        // 记录和返回解析结果
+        console.log("Udemy课程预览解析结果:", result);
+        res.json({
+          success: true,
+          message: '成功解析Udemy课程预览页面',
+          result: result
+        });
+      } catch (error) {
+        console.error('Error during parse Udemy preview:', error);
+        res.status(500).json({ 
+          success: false,
+          message: '解析Udemy页面失败: ' + (error instanceof Error ? error.message : String(error)) 
+        });
+      }
+    } catch (error) {
+      console.error('Error processing parse preview request:', error);
+      res.status(500).json({ 
+        success: false,
+        message: '处理解析预览请求失败: ' + (error instanceof Error ? error.message : String(error)) 
+      });
+    }
+  });
+  
   // 解析单个菲菲资源页面内容的API
   app.post('/api/feifei-resources/:id/parse', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
     try {

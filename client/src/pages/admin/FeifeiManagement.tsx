@@ -315,8 +315,8 @@ export default function FeifeiManagement() {
       return;
     }
     
-    // 发送解析请求
-    apiRequest("POST", `/api/resources/${resourceId}/parse-preview`, { url: previewUrl })
+    // 发送解析请求 - 注意这里使用feifei-resources而不是resources端点
+    apiRequest("POST", `/api/feifei-resources/${resourceId}/parse-preview`, { url: previewUrl })
       .then((data: any) => {
         if (data && data.success) {
           toast({
