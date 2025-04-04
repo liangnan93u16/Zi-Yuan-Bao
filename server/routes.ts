@@ -1472,6 +1472,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 辅助函数：处理URL并获取HTML内容
+  async function fetchHtmlWithRedirects(url: string): Promise<{ html: string, finalUrl: string }> {
+    const { default: axios } = await import('axios');
+    console.log('请求Udemy课程预览URL:', url);
+    
+    // 处理匿名代理URL (anonymz.com)
+    let targetUrl = url;
+    if (url.includes('anonymz.com')) {
+      // 尝试从anonymz.com链接中提取真实URL
+      const match = url.match(/\?(.+)/);
+      if (match && match[1]) {
+        targetUrl = match[1];
+        console.log('从匿名代理提取的目标URL:', targetUrl);
+      }
+    }
+    
+    // 发送请求获取页面内容，设置跟随重定向
+    const response = await axios.get(targetUrl, {
+      maxRedirects: 10, // 允许最多10次重定向
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5'
+      }
+    });
+    
+    // 记录最终URL，这在重定向后很有用
+    const finalUrl = response.request?.res?.responseUrl || targetUrl;
+    console.log('最终解析URL:', finalUrl);
+    
+    return { html: response.data, finalUrl };
+  }
+  
   // 解析资源的预览URL（Udemy等课程页面）
   app.post('/api/resources/:id/parse-preview', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
     try {
@@ -1497,14 +1530,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: '目前仅支持解析Udemy课程页面' });
       }
 
-      // 动态导入所需模块
-      const { default: axios } = await import('axios');
+      // 动态导入cheerio
       const cheerio = await import('cheerio');
 
       try {
-        // 发送请求获取页面内容
-        const response = await axios.get(url);
-        const html = response.data;
+        // 使用辅助函数获取HTML内容，支持重定向和匿名链接
+        const { html, finalUrl } = await fetchHtmlWithRedirects(url);
         
         // 使用cheerio的load方法
         const $ = cheerio.load(html);
@@ -1630,14 +1661,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: '目前仅支持解析Udemy课程页面' });
       }
 
-      // 动态导入所需模块
-      const { default: axios } = await import('axios');
+      // 动态导入cheerio
       const cheerio = await import('cheerio');
 
       try {
-        // 发送请求获取页面内容
-        const response = await axios.get(url);
-        const html = response.data;
+        // 使用辅助函数获取HTML内容，支持重定向和匿名链接
+        const { html, finalUrl } = await fetchHtmlWithRedirects(url);
         
         // 使用cheerio的load方法
         const $ = cheerio.load(html);
@@ -1757,16 +1786,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: '资源URL不存在' });
       }
       
-      // 动态导入所需模块
-      const { default: axios } = await import('axios');
+      // 动态导入cheerio
+      const cheerio = await import('cheerio');
       
       try {
-        // 发送请求获取页面内容
-        const response = await axios.get(url);
-        const html = response.data;
+        // 使用辅助函数获取HTML内容，支持重定向和匿名链接
+        const { html, finalUrl } = await fetchHtmlWithRedirects(url);
         
-        // 动态导入cheerio，使用合适的方式
-        const cheerio = await import('cheerio');
+        // 不再需要单独导入cheerio
         
         // 使用cheerio的load方法
         const $ = cheerio.load(html);
