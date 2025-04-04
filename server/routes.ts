@@ -1572,6 +1572,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
             
+            // 移除免责声明内容
+            if (details) {
+              // 定义免责声明的正则表达式，包含多种可能的前缀
+              const disclaimerRegex = /<div[^>]*>[\s\S]*?声明：本站所有文章，如无特殊说明或标注，均为本站原创发布。任何个人或组织，在未征得本站同意时，禁止复制、盗用、采集、发布本站内容到任何网站、书籍等各类媒体平台。如若本站内容侵犯了原著者的合法权益，可联系我们进行处理。[\s\S]*?<\/div>/gi;
+              
+              // 替换掉所有匹配的免责声明
+              details = details.replace(disclaimerRegex, '');
+              
+              // 简单版本的查找替换，以防上面的正则没有匹配到
+              if (details.includes('声明：本站所有文章，如无特殊说明或标注，均为本站原创发布')) {
+                // 查找包含声明文本的段落或div，并移除整个元素
+                const $ = cheerio.load(details);
+                $('p, div').each((i, el) => {
+                  if ($(el).text().includes('声明：本站所有文章，如无特殊说明或标注，均为本站原创发布')) {
+                    $(el).remove();
+                  }
+                });
+                details = $.html();
+              }
+              
+              console.log('移除免责声明后的详情内容长度:', details.length);
+            }
+            
             // 尝试方法3：查找特定的tab页内容（常见于详情标签页）
             if (!details || details.length === 0) {
               // 查找id为pills-details或包含details字样的tab页
