@@ -1700,10 +1700,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // 提取页面中的标签
         const tagNames: string[] = [];
+        
+        // 原有的方式获取标签
         $('.tag-box .tag').each((i: number, elem: any) => {
           const tagName = $(elem).text().trim();
           if (tagName) {
             tagNames.push(tagName);
+          }
+        });
+        
+        // 新增：从entry-tags中获取标签
+        $('.entry-tags a').each((i: number, elem: any) => {
+          const tagName = $(elem).text().trim();
+          if (tagName && !tagNames.includes(tagName)) { // 避免重复添加标签
+            tagNames.push(tagName);
+            console.log('从entry-tags中获取到标签:', tagName);
           }
         });
         
