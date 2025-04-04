@@ -687,7 +687,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(feifeiResources)
       .where(eq(feifeiResources.category_id, categoryId))
-      .orderBy(desc(feifeiResources.created_at));
+      .orderBy(feifeiResources.id); // 按ID升序排列，最小的在最上面
   }
   
   async getFeifeiResourcesByUrl(url: string): Promise<FeifeiResource[]> {

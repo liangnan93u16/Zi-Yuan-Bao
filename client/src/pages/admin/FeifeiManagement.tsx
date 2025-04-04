@@ -688,9 +688,9 @@ export default function FeifeiManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {categoryResources.map((resource) => (
+                    {categoryResources.map((resource, index) => (
                       <TableRow key={resource.id}>
-                        <TableCell>{resource.id}</TableCell>
+                        <TableCell>{index + 1}</TableCell> {/* 显示从1开始的序号，而不是实际的数据库ID */}
                         <TableCell>
                           <a 
                             href={resource.url} 
