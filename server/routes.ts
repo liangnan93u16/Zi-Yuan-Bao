@@ -1557,6 +1557,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('获取图片URL时出错:', error);
         }
         
+        // 提取查看预览链接
+        let previewUrl = null;
+        try {
+          // 尝试查找带有"查看预览"文本的链接
+          $('a').each((i, elem) => {
+            const linkText = $(elem).text().trim();
+            if (linkText.includes('查看预览')) {
+              previewUrl = $(elem).attr('href') || null;
+              console.log('获取到的查看预览链接:', previewUrl);
+              return false; // 找到就跳出循环
+            }
+          });
+          
+          // 如果上面的方法没找到，尝试查找带有特定class的链接
+          if (!previewUrl) {
+            $('a.btn').each((i, elem) => {
+              const linkText = $(elem).text().trim();
+              if (linkText.includes('查看预览') || $(elem).find('i.fas.fa-link').length > 0) {
+                previewUrl = $(elem).attr('href') || null;
+                console.log('通过class获取到的查看预览链接:', previewUrl);
+                return false;
+              }
+            });
+          }
+        } catch (error) {
+          console.error('获取查看预览链接时出错:', error);
+        }
+        
         // 记录提取的信息
         console.log('提取的页面信息:', infoItems);
         
@@ -1612,6 +1640,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           details: details,
           coin_price: coinPrice, // 添加金币价格字段
           image_url: imageUrl, // 添加图片URL字段
+          preview_url: previewUrl, // 添加预览链接字段
         };
         
         // 提取页面中的标签

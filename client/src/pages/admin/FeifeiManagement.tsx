@@ -825,6 +825,20 @@ export default function FeifeiManagement() {
                         </a>
                       </p>
                     )}
+                    {selectedResource.preview_url && (
+                      <p>
+                        <strong>课程预览：</strong> 
+                        <a 
+                          href={selectedResource.preview_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-blue-500 hover:text-blue-700 underline inline-flex items-center ml-1 gap-1"
+                        >
+                          <span>查看预览</span>
+                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                        </a>
+                      </p>
+                    )}
                   </div>
                 </div>
                 

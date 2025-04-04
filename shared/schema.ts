@@ -241,6 +241,7 @@ export const feifeiResources = pgTable("feifei_resources", {
   subtitle: text("subtitle"), // 视频字幕
   details: text("details"), // 详情介绍
   coin_price: text("coin_price"), // 普通用户金币价格
+  preview_url: text("preview_url"), // 查看预览链接
   
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow()
