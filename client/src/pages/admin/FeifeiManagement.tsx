@@ -33,6 +33,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
   Plus,
   Pencil,
   Trash2,
@@ -80,6 +89,9 @@ export default function FeifeiManagement() {
   const [selectedResource, setSelectedResource] = useState<EnrichedFeifeiResource | null>(null);
   const [isResourcesLoading, setIsResourcesLoading] = useState(false);
   const [selectedResourceId, setSelectedResourceId] = useState<number | null>(null);
+  // 分页相关状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const { toast } = useToast();
 
   // 获取所有菲菲网分类
@@ -291,8 +303,25 @@ export default function FeifeiManagement() {
   // 查看分类资源
   const viewResources = (category: FeifeiCategory) => {
     setSelectedCategory(category);
+    // 重置分页
+    setCurrentPage(1);
     fetchCategoryResources(category.id);
   };
+  
+  // 计算当前页的资源
+  const getCurrentPageItems = () => {
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    return categoryResources.slice(indexOfFirstItem, indexOfLastItem);
+  };
+  
+  // 分页处理
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+  
+  // 获取当前页显示的数据
+  const currentResources = getCurrentPageItems();
 
   // 对话框操作函数
   const openCreateDialog = () => {
@@ -677,7 +706,7 @@ export default function FeifeiManagement() {
                 )}
               </div>
               
-              <div className="overflow-y-auto max-h-[60vh]">
+              <div>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -688,9 +717,9 @@ export default function FeifeiManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {categoryResources.map((resource, index) => (
+                    {currentResources.map((resource, index) => (
                       <TableRow key={resource.id}>
-                        <TableCell>{index + 1}</TableCell> {/* 显示从1开始的序号，而不是实际的数据库ID */}
+                        <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell> {/* 显示基于当前页的连续序号 */}
                         <TableCell>
                           <a 
                             href={resource.url} 
@@ -743,6 +772,73 @@ export default function FeifeiManagement() {
                     ))}
                   </TableBody>
                 </Table>
+                
+                {/* 分页控件 */}
+                {categoryResources.length > itemsPerPage && (
+                  <div className="mt-4 flex justify-center">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                        
+                        {Array.from({ length: Math.ceil(categoryResources.length / itemsPerPage) }).map((_, index) => {
+                          const pageNumber = index + 1;
+                          // 计算要显示哪些页码 (显示当前页附近的页码)
+                          const totalPages = Math.ceil(categoryResources.length / itemsPerPage);
+                          
+                          // 显示逻辑：总是显示第一页、最后一页，当前页及其前后页
+                          const shouldShowPageNumber = 
+                            pageNumber === 1 || 
+                            pageNumber === totalPages || 
+                            Math.abs(pageNumber - currentPage) <= 1;
+                          
+                          // 省略号逻辑
+                          if (!shouldShowPageNumber) {
+                            // 在第一页之后且在当前页之前要显示省略号
+                            if (pageNumber === 2 && currentPage > 3) {
+                              return (
+                                <PaginationItem key={`ellipsis-1`}>
+                                  <PaginationEllipsis />
+                                </PaginationItem>
+                              );
+                            }
+                            // 在当前页之后且在最后一页之前要显示省略号
+                            if (pageNumber === totalPages - 1 && currentPage < totalPages - 2) {
+                              return (
+                                <PaginationItem key={`ellipsis-2`}>
+                                  <PaginationEllipsis />
+                                </PaginationItem>
+                              );
+                            }
+                            return null;
+                          }
+                          
+                          return (
+                            <PaginationItem key={pageNumber}>
+                              <PaginationLink
+                                isActive={pageNumber === currentPage}
+                                onClick={() => handlePageChange(pageNumber)}
+                              >
+                                {pageNumber}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        })}
+                        
+                        <PaginationItem>
+                          <PaginationNext 
+                            onClick={() => handlePageChange(Math.min(Math.ceil(categoryResources.length / itemsPerPage), currentPage + 1))}
+                            className={currentPage === Math.ceil(categoryResources.length / itemsPerPage) ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
               </div>
             </>
           )}
