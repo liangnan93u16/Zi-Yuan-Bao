@@ -635,11 +635,35 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteFeifeiCategory(id: number): Promise<boolean> {
-    const result = await db
-      .delete(feifeiCategories)
-      .where(eq(feifeiCategories.id, id))
-      .returning({ id: feifeiCategories.id });
-    return result.length > 0;
+    try {
+      // 先获取该分类下的所有资源
+      const resources = await this.getFeifeiResourcesByCategory(id);
+      
+      // 对每个资源，解除与标签的关联并删除资源
+      for (const resource of resources) {
+        // 1. 获取资源的所有标签
+        const tags = await this.getFeifeiResourceTags(resource.id);
+        
+        // 2. 解除资源与标签的关联
+        for (const tag of tags) {
+          await this.deleteFeifeiResourceTag(resource.id, tag.id);
+        }
+        
+        // 3. 删除资源
+        await this.deleteFeifeiResource(resource.id);
+      }
+      
+      // 最后删除分类
+      const result = await db
+        .delete(feifeiCategories)
+        .where(eq(feifeiCategories.id, id))
+        .returning({ id: feifeiCategories.id });
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error deleting feifei category with related resources:', error);
+      throw error;
+    }
   }
   
   async getAllFeifeiCategories(): Promise<FeifeiCategory[]> {
