@@ -682,10 +682,9 @@ export default function FeifeiManagement() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[60px]">ID</TableHead>
-                      <TableHead className="w-[250px]">中文标题</TableHead>
-                      <TableHead className="w-[200px]">英文标题</TableHead>
-                      <TableHead className="w-[100px]">图片</TableHead>
-                      <TableHead className="w-[100px]">标签</TableHead>
+                      <TableHead className="w-[280px]">中文标题</TableHead>
+                      <TableHead className="w-[220px]">英文标题</TableHead>
+                      <TableHead className="w-[150px]">标签</TableHead>
                       <TableHead className="w-[130px]">创建时间</TableHead>
                       <TableHead className="w-[150px]">操作</TableHead>
                     </TableRow>
@@ -715,20 +714,6 @@ export default function FeifeiManagement() {
                               className="text-blue-600 hover:underline flex items-center"
                             >
                               <span>{resource.english_title}</span>
-                              <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
-                            </a>
-                          ) : '-'}
-                        </TableCell>
-                        <TableCell>
-                          {resource.image_url ? (
-                            <a 
-                              href={resource.image_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-blue-500 hover:text-blue-700 underline flex items-center gap-1"
-                            >
-                              <ImageIcon className="h-4 w-4" />
-                              <span>图片链接</span>
                               <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
                             </a>
                           ) : '-'}
