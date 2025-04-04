@@ -1664,6 +1664,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
+        // 移除详情内容中的免责声明
+        if (details) {
+          // 移除免责声明文字
+          const disclaimerText = "声明：本站所有文章，如无特殊说明或标注，均为本站原创发布。任何个人或组织，在未征得本站同意时，禁止复制、盗用、采集、发布本站内容到任何网站、书籍等各类媒体平台。如若本站内容侵犯了原著者的合法权益，可联系我们进行处理。";
+          details = details.replace(disclaimerText, "");
+          
+          // 移除另一种可能的格式
+          details = details.replace(/版权免责声明.*侵犯了原著者的合法权益.*处理。/gs, "");
+          
+          // 移除可能包含该文字的div
+          details = details.replace(/<div[^>]*>\s*版权免责声明.*?<\/div>/gs, "");
+          details = details.replace(/<div[^>]*>\s*声明：本站所有文章.*?<\/div>/gs, "");
+          
+          console.log('移除免责声明后的详情内容长度:', details.length);
+        }
+        
         // 更新资源信息
         const updateData = {
           resource_category: infoItems['资源分类'] || null,
