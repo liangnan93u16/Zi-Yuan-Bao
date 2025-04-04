@@ -670,7 +670,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(feifeiCategories)
-      .orderBy(feifeiCategories.sort_order);
+      .orderBy(feifeiCategories.id); // 按ID升序排列，最小的ID在最上面
   }
   
   // 菲菲网资源方法
