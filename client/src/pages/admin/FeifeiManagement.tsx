@@ -53,6 +53,7 @@ import {
   Search,
   AlertCircle,
   FileSearch,
+  FileText,
   Image as ImageIcon
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -292,6 +293,53 @@ export default function FeifeiManagement() {
   const parseResourcePage = (resource: EnrichedFeifeiResource) => {
     setSelectedResourceId(resource.id);
     parseResourcePageMutation.mutate(resource.id);
+  };
+  
+  // 解析课程预览URL
+  const handleParsePreview = (resourceId: number, previewUrl: string) => {
+    if (!previewUrl) {
+      toast({
+        title: "无法解析",
+        description: "未找到有效的预览URL",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!previewUrl.includes('udemy.com')) {
+      toast({
+        title: "不支持的URL",
+        description: "目前仅支持解析Udemy课程预览",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // 发送解析请求
+    apiRequest("POST", `/api/resources/${resourceId}/parse-preview`, { url: previewUrl })
+      .then((data: any) => {
+        if (data && data.success) {
+          toast({
+            title: "解析成功",
+            description: "课程预览内容已成功解析，请打开控制台查看结果",
+          });
+          // 打印解析结果到控制台
+          console.log("课程预览解析结果:", data.result);
+        } else {
+          toast({
+            title: "解析结果",
+            description: data?.message || "预览解析已完成",
+          });
+        }
+      })
+      .catch((error: any) => {
+        toast({
+          title: "解析失败",
+          description: error.message || "无法解析课程预览，请稍后再试",
+          variant: "destructive",
+        });
+        console.error("解析预览URL出错:", error);
+      });
   };
 
   // 解析分类URL
@@ -889,18 +937,30 @@ export default function FeifeiManagement() {
                       </p>
                     )}
                     {selectedResource.preview_url && (
-                      <p>
-                        <strong>课程预览：</strong> 
-                        <a 
-                          href={selectedResource.preview_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="text-blue-500 hover:text-blue-700 underline inline-flex items-center ml-1 gap-1"
-                        >
-                          <span>查看预览</span>
-                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                        </a>
-                      </p>
+                      <div>
+                        <p>
+                          <strong>课程预览：</strong> 
+                          <a 
+                            href={selectedResource.preview_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-blue-500 hover:text-blue-700 underline inline-flex items-center ml-1 gap-1"
+                          >
+                            <span>查看预览</span>
+                            <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                          </a>
+                        </p>
+                        
+                        {selectedResource.preview_url.includes('udemy.com') && (
+                          <button
+                            onClick={() => handleParsePreview(selectedResource.id, selectedResource.preview_url)}
+                            className="mt-2 inline-flex items-center justify-center px-3 py-1 text-xs font-medium text-blue-600 bg-white border border-blue-600 hover:bg-blue-50 rounded-md"
+                          >
+                            <FileText className="mr-1 h-3 w-3" />
+                            解析课程预览
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
