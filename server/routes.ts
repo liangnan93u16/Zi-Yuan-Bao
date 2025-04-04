@@ -1547,21 +1547,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 提取详情介绍（旧方法）
         let details = $('.introduction-box .content').html() || '';
         
-        // 提取详情介绍（新方法 - 从tab-content获取）
+        // 提取详情介绍（新方法 - 从特定article标签获取）
         if (!details || details.length === 0) {
           try {
-            // 尝试方法1：获取特定ID的tab内容
-            let tabContent = $('#pills-tabContent').html();
-            if (tabContent && tabContent.length > 0) {
-              details = tabContent;
-              console.log('从#pills-tabContent获取到的详情介绍长度:', tabContent.length);
-            } 
-            // 尝试方法2：获取任何class为tab-content的内容
-            else {
-              tabContent = $('.tab-content').html();
+            // 先查找article标签
+            const articles = $('article.post-content');
+            if (articles.length > 0) {
+              // 找到了符合条件的article标签
+              details = articles.html() || '';
+              console.log('从article.post-content获取到的详情介绍长度:', details.length);
+            } else {
+              // 如果没有找到article标签，尝试从tab-content获取
+              let tabContent = $('#pills-tabContent article').html();
               if (tabContent && tabContent.length > 0) {
                 details = tabContent;
-                console.log('从.tab-content获取到的详情介绍长度:', tabContent.length);
+                console.log('从#pills-tabContent中的article获取到的详情介绍长度:', tabContent.length);
+              } else {
+                // 尝试获取整个tab-content内容
+                tabContent = $('#pills-tabContent').html();
+                if (tabContent && tabContent.length > 0) {
+                  details = tabContent;
+                  console.log('从#pills-tabContent获取到的详情介绍长度:', tabContent.length);
+                }
               }
             }
             
@@ -1575,7 +1582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
           } catch (error) {
-            console.error('从tab-content获取详情介绍时出错:', error);
+            console.error('从article或tab-content获取详情介绍时出错:', error);
           }
         }
         
