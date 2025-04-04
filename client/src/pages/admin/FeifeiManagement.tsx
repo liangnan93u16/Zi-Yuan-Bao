@@ -682,10 +682,8 @@ export default function FeifeiManagement() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[60px]">ID</TableHead>
-                      <TableHead className="w-[280px]">中文标题</TableHead>
-                      <TableHead className="w-[220px]">英文标题</TableHead>
-                      <TableHead className="w-[150px]">标签</TableHead>
-                      <TableHead className="w-[130px]">创建时间</TableHead>
+                      <TableHead className="w-[380px]">中文标题</TableHead>
+                      <TableHead className="w-[160px]">更新时间</TableHead>
                       <TableHead className="w-[150px]">操作</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -705,29 +703,7 @@ export default function FeifeiManagement() {
                             <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
                           </a>
                         </TableCell>
-                        <TableCell>
-                          {resource.english_title ? (
-                            <a 
-                              href={resource.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline flex items-center"
-                            >
-                              <span>{resource.english_title}</span>
-                              <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
-                            </a>
-                          ) : '-'}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {resource.tags?.map((tag: FeifeiTag) => (
-                              <Badge key={tag.id} variant="outline" className="bg-gray-100">
-                                {tag.name}
-                              </Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell>{formatDate(resource.created_at)}</TableCell>
+                        <TableCell>{resource.last_update ? formatDate(new Date(resource.last_update)) : '-'}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
                             <Button

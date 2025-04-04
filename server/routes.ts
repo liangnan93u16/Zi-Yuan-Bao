@@ -1680,12 +1680,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log('移除免责声明后的详情内容长度:', details.length);
         }
         
-        // 更新资源信息
+        // 获取当前时间，格式化为 "YYYY-MM-DD HH:MM" 格式
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const formattedNow = `${year}-${month}-${day} ${hours}:${minutes}`;
+        
+        // 更新资源信息，自动更新最近更新时间
         const updateData = {
           resource_category: infoItems['资源分类'] || null,
           popularity: popularity,
           publish_date: infoItems['发布时间'] || null,
-          last_update: infoItems['最近更新'] || null,
+          last_update: formattedNow, // 设置为当前时间
           content_info: infoItems['文件内容'] || null,
           video_size: infoItems['视频尺寸'] || null,
           file_size: infoItems['视频大小'] || infoItems['文件大小'] || null,
