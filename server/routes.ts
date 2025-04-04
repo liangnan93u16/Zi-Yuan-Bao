@@ -1488,21 +1488,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     
-    // 发送请求获取页面内容，设置跟随重定向
-    const response = await axios.get(targetUrl, {
-      maxRedirects: 10, // 允许最多10次重定向
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5'
+    // 尝试获取Udemy API或替代方案
+    // 注意：对于带有优惠码的URL，我们需要特殊处理
+    const isUdemyUrl = targetUrl.includes('udemy.com');
+    
+    if (isUdemyUrl) {
+      // 尝试提取课程ID和优惠码
+      let courseId = '';
+      let couponCode = '';
+      
+      // 提取课程ID
+      const courseMatch = targetUrl.match(/\/course\/([^\/\?]+)/);
+      if (courseMatch && courseMatch[1]) {
+        courseId = courseMatch[1];
       }
-    });
+      
+      // 提取优惠码
+      const couponMatch = targetUrl.match(/couponCode=([^&]+)/);
+      if (couponMatch && couponMatch[1]) {
+        couponCode = couponMatch[1];
+      }
+      
+      console.log('提取的课程ID:', courseId);
+      console.log('提取的优惠码:', couponCode);
+      
+      // 尝试构建一个更干净的URL，减少被识别为爬虫的可能性
+      if (courseId) {
+        // 构建标准形式的URL，保留优惠码
+        const cleanUrl = `https://www.udemy.com/course/${courseId}/` + 
+                        (couponCode ? `?couponCode=${couponCode}` : '');
+        targetUrl = cleanUrl;
+        console.log('构建的标准URL:', targetUrl);
+      }
+    }
     
-    // 记录最终URL，这在重定向后很有用
-    const finalUrl = response.request?.res?.responseUrl || targetUrl;
-    console.log('最终解析URL:', finalUrl);
-    
-    return { html: response.data, finalUrl };
+    // 添加更多的浏览器指纹模拟
+    try {
+      // 使用更强大的浏览器指纹模拟来避免反爬虫检测
+      const response = await axios.get(targetUrl, {
+        maxRedirects: 10, // 允许最多10次重定向
+        timeout: 30000, // 增加超时时间到30秒
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+          'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Cache-Control': 'max-age=0',
+          'Connection': 'keep-alive',
+          'Sec-Ch-Ua': '"Google Chrome";v="120", "Chromium";v="120", "Not-A.Brand";v="24"',
+          'Sec-Ch-Ua-Mobile': '?0',
+          'Sec-Ch-Ua-Platform': '"Windows"',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'same-origin',
+          'Sec-Fetch-User': '?1',
+          'Upgrade-Insecure-Requests': '1',
+          'Referer': 'https://www.google.com/',
+          'Cookie': 'ud_cache_user=; ud_rule_vars="eJx1jU0PgjAQg_8LL8y2AQPGyytk8kFCMGrwYsDphBAhGcXOe_fXKyZ6vXbttmk3-gJ0gfDPIL_AtqwKtA19oSwx2WjkWQgmDodFbV3OFcqLUQ0Jq1kGThDZCqR3PY8KFkvU5IkEsZ1gAOb3uARjmscAWxRDUg_YAu0Sng98V-i27L76-vqK0WlD3LXMtMQ4yMXZPXgIlBNNQsUNcSUKT9_aFr33_Hpd4pHfwbxG9Hpd69Cqnw-Q3U7_"; __cf_bm=AYV59h05tvWL_UFFgMrFrgPcz3MKqxnbLDXb5JT07Wo-1743732932-1.0.1.1-S71C1R9MFhfGjplYLILzQmF_jPRxYM5WD2XwfZPeNcqL4cF8lKzf9AuhI_EAF6.5EI5FIqgCKBP.6oDu4V6I7A; __cfruid=ddcc2abcfc7c9a2df2e71cd6a7e5c5c69ca12db2-1743732932'
+        }
+      });
+      
+      // 记录最终URL，这在重定向后很有用
+      const finalUrl = response.request?.res?.responseUrl || targetUrl;
+      console.log('最终解析URL:', finalUrl);
+      console.log('响应状态码:', response.status);
+      
+      // 检查响应是否包含Cloudflare挑战
+      const html = response.data;
+      if (html.includes('cf-browser-verification') || html.includes('cf_chl_opt') || 
+          html.includes('challenge-platform') || response.status === 403) {
+        console.log('检测到Cloudflare安全挑战，使用备用方案...');
+        
+        if (isUdemyUrl && targetUrl.includes('/course/')) {
+          // 作为备选方案，尝试获取Udemy课程信息的API数据
+          console.log('尝试使用公共API获取课程信息...');
+          
+          // 由于我们无法直接突破Cloudflare保护，
+          // 我们可以提示用户我们无法获取完整课程内容
+          throw new Error('Udemy网站受到Cloudflare保护，无法直接提取课程内容。需要用户提供课程信息或使用浏览器手动查看。');
+        }
+      }
+      
+      return { html: response.data, finalUrl };
+    } catch (error) {
+      console.error('请求URL失败:', error.message);
+      
+      // 重新抛出错误以便在调用者中处理
+      throw new Error(`获取页面内容失败: ${error.message}`);
+    }
   }
   
   // 解析资源的预览URL（Udemy等课程页面）
