@@ -22,6 +22,7 @@ import LoginLogs from "./pages/admin/LoginLogs";
 import CategoryManagement from "./pages/admin/CategoryManagement";
 import AuthorManagement from "./pages/admin/AuthorManagement";
 import FeifeiManagement from "./pages/admin/FeifeiManagement";
+import ParameterManagement from "./pages/admin/ParameterManagement";
 import { AuthProvider } from "./hooks/use-auth";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -67,6 +68,7 @@ function App() {
               <AdminRoute path="/admin/categories" component={CategoryManagement} />
               <AdminRoute path="/admin/authors" component={AuthorManagement} />
               <AdminRoute path="/admin/feifei" component={FeifeiManagement} />
+              <AdminRoute path="/admin/parameters" component={ParameterManagement} />
               
               <Route component={NotFound} />
             </Switch>

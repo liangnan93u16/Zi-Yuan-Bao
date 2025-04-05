@@ -436,9 +436,17 @@ export default function ResourceDetail() {
                     
                     <span className="text-neutral-600">更新日期:</span>
                     <span className="font-medium text-right">{resource.updated_at ? new Date(resource.updated_at).toLocaleDateString() : '2025/4/2'}</span>
+                    
+                    {resource.source_type && (
+                      <>
+                        <span className="text-neutral-600">资源来源:</span>
+                        <span className="font-medium text-right">{resource.source_type === 'feifei' ? '菲菲资源' : resource.source_type}</span>
+                      </>
+                    )}
                   </div>
-                  {resource.preview_url && (
-                    <div className="mt-4 pt-3 border-t border-neutral-200">
+                  
+                  <div className="mt-4 pt-3 border-t border-neutral-200 space-y-2">
+                    {resource.preview_url && (
                       <a 
                         href={resource.preview_url} 
                         target="_blank" 
@@ -448,8 +456,20 @@ export default function ResourceDetail() {
                         <Globe className="mr-2 h-4 w-4" />
                         查看预览
                       </a>
-                    </div>
-                  )}
+                    )}
+                    
+                    {resource.source_url && (
+                      <a 
+                        href={resource.source_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-green-700 bg-green-100 hover:bg-green-200 rounded-md shadow-sm mt-2"
+                      >
+                        <Globe className="mr-2 h-4 w-4" />
+                        访问原始页面
+                      </a>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="flex flex-col gap-3">

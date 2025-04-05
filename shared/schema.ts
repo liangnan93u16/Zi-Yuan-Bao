@@ -61,6 +61,7 @@ export const resources = pgTable("resources", {
   // 新增资源链接和类型
   resource_url: text("resource_url"),
   resource_type: text("resource_type").default("baidu"), // baidu, aliyun
+  source_url: text("source_url"), // 新增字段：资源来源URL
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow()
 });
@@ -204,6 +205,7 @@ export const feifeiCategories = pgTable("feifei_categories", {
   title: text("title").notNull(), // 分类标题
   url: text("url").notNull(), // 分类URL
   sort_order: integer("sort_order").default(0), // 排序顺序
+  is_invalid: boolean("is_invalid").default(false), // 是否作废标记
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow()
 });
@@ -240,8 +242,11 @@ export const feifeiResources = pgTable("feifei_resources", {
   language: text("language"), // 视频语言
   subtitle: text("subtitle"), // 视频字幕
   details: text("details"), // 详情介绍
+  details_html: text("details_html"), // 详情介绍的HTML原始代码
   coin_price: text("coin_price"), // 普通用户金币价格
+  course_html: text("course_html"), // 课程内容HTML原始代码
   preview_url: text("preview_url"), // 查看预览链接
+  parsed_content: text("parsed_content"), // 存储解析后的JSON内容
   
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow()
@@ -293,6 +298,25 @@ export const insertFeifeiResourceTagSchema = createInsertSchema(feifeiResourceTa
 
 export type FeifeiResourceTag = typeof feifeiResourceTags.$inferSelect;
 export type InsertFeifeiResourceTag = z.infer<typeof insertFeifeiResourceTagSchema>;
+
+// 系统参数表，只有管理员可以管理
+export const parameters = pgTable("parameters", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull().unique(), // 参数键（唯一）
+  value: text("value").notNull(), // 参数值
+  description: text("description"), // 参数描述
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow()
+});
+
+export const insertParameterSchema = createInsertSchema(parameters).omit({
+  id: true,
+  created_at: true,
+  updated_at: true
+});
+
+export type Parameter = typeof parameters.$inferSelect;
+export type InsertParameter = z.infer<typeof insertParameterSchema>;
 
 export type LoginCredentials = z.infer<typeof loginSchema>;
 export type RegisterData = z.infer<typeof registerSchema>;

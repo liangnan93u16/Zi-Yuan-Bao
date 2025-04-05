@@ -10,10 +10,11 @@ import {
   feifeiCategories, type FeifeiCategory, type InsertFeifeiCategory,
   feifeiResources, type FeifeiResource, type InsertFeifeiResource,
   feifeiTags, type FeifeiTag, type InsertFeifeiTag,
-  feifeiResourceTags, type FeifeiResourceTag, type InsertFeifeiResourceTag
+  feifeiResourceTags, type FeifeiResourceTag, type InsertFeifeiResourceTag,
+  parameters, type Parameter, type InsertParameter
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, like, and, or, desc, sql } from "drizzle-orm";
+import { eq, like, and, or, desc, sql, count } from "drizzle-orm";
 
 // Storage interface
 export interface IStorage {
@@ -76,14 +77,21 @@ export interface IStorage {
   
   // Feifei Category operations
   getFeifeiCategory(id: number): Promise<FeifeiCategory | undefined>;
+  getFeifeiCategoryByUrl(url: string): Promise<FeifeiCategory[] | undefined>;
   createFeifeiCategory(category: InsertFeifeiCategory): Promise<FeifeiCategory>;
   updateFeifeiCategory(id: number, data: Partial<FeifeiCategory>): Promise<FeifeiCategory | undefined>;
   deleteFeifeiCategory(id: number): Promise<boolean>;
-  getAllFeifeiCategories(): Promise<FeifeiCategory[]>;
+  getAllFeifeiCategories(options?: { 
+    invalidStatus?: boolean | null, 
+    keyword?: string | null,
+    page?: number, 
+    pageSize?: number 
+  }): Promise<{ categories: FeifeiCategory[], total: number }>;
+  setFeifeiCategoryInvalidStatus(id: number, isInvalid: boolean): Promise<FeifeiCategory | undefined>;
   
   // Feifei Resource operations
   getFeifeiResource(id: number): Promise<FeifeiResource | undefined>;
-  getFeifeiResourcesByCategory(categoryId: number): Promise<FeifeiResource[]>;
+  getFeifeiResourcesByCategory(categoryId: number, page?: number, pageSize?: number): Promise<{ resources: FeifeiResource[], total: number }>;
   getFeifeiResourcesByUrl(url: string): Promise<FeifeiResource[]>;
   createFeifeiResource(resource: InsertFeifeiResource): Promise<FeifeiResource>;
   updateFeifeiResource(id: number, data: Partial<FeifeiResource>): Promise<FeifeiResource | undefined>;
@@ -105,6 +113,14 @@ export interface IStorage {
   deleteFeifeiResourceTag(resourceId: number, tagId: number): Promise<boolean>;
   getFeifeiResourceTagRelation(resourceId: number, tagId: number): Promise<FeifeiResourceTag | undefined>;
   
+  // Parameter operations
+  getParameter(id: number): Promise<Parameter | undefined>;
+  getParameterByKey(key: string): Promise<Parameter | undefined>;
+  createParameter(parameter: InsertParameter): Promise<Parameter>;
+  updateParameter(id: number, data: Partial<Parameter>): Promise<Parameter | undefined>;
+  deleteParameter(id: number): Promise<boolean>;
+  getAllParameters(): Promise<Parameter[]>;
+  
   // Initialize default data
   initializeDefaultData(): Promise<void>;
 }
@@ -115,6 +131,7 @@ export interface ResourceFilters {
   status?: number;
   is_free?: boolean;
   search?: string;
+  source_url?: string; // 增加source_url筛选字段
   page?: number;
   limit?: number;
   offset?: number;
@@ -617,6 +634,11 @@ export class DatabaseStorage implements IStorage {
     return category || undefined;
   }
   
+  async getFeifeiCategoryByUrl(url: string): Promise<FeifeiCategory[] | undefined> {
+    const categories = await db.select().from(feifeiCategories).where(eq(feifeiCategories.url, url));
+    return categories.length > 0 ? categories : undefined;
+  }
+  
   async createFeifeiCategory(insertCategory: InsertFeifeiCategory): Promise<FeifeiCategory> {
     const [category] = await db
       .insert(feifeiCategories)
@@ -666,11 +688,55 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async getAllFeifeiCategories(): Promise<FeifeiCategory[]> {
-    return await db
-      .select()
-      .from(feifeiCategories)
-      .orderBy(feifeiCategories.id); // 按ID升序排列，最小的ID在最上面
+  async getAllFeifeiCategories(options?: { invalidStatus?: boolean | null, keyword?: string | null, page?: number, pageSize?: number }): Promise<{ categories: FeifeiCategory[], total: number }> {
+    // 构建查询条件
+    const conditions = [];
+    
+    // 根据作废状态过滤
+    if (options?.invalidStatus !== undefined && options.invalidStatus !== null) {
+      conditions.push(eq(feifeiCategories.is_invalid, options.invalidStatus));
+    }
+    
+    // 根据关键字搜索标题
+    if (options?.keyword && options.keyword.trim() !== '') {
+      const keyword = options.keyword.trim();
+      conditions.push(like(feifeiCategories.title, `%${keyword}%`));
+    }
+    
+    // 应用过滤条件
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    
+    let query = db.select().from(feifeiCategories).where(whereClause);
+    
+    // 获取总记录数的查询
+    let countQuery = db.select({ count: count() }).from(feifeiCategories).where(whereClause);
+    
+    // 按ID升序排列
+    query = query.orderBy(feifeiCategories.id);
+    
+    // 获取总数
+    const countResult = await countQuery;
+    const total = Number(countResult[0]?.count || 0);
+    
+    // 如果提供了分页参数
+    if (options?.page !== undefined && options?.pageSize !== undefined) {
+      const offset = (options.page - 1) * options.pageSize;
+      query = query.limit(options.pageSize).offset(offset);
+    }
+    
+    const result = await query;
+    return { categories: result, total };
+  }
+  
+  // 设置分类的作废状态
+  async setFeifeiCategoryInvalidStatus(id: number, isInvalid: boolean): Promise<FeifeiCategory | undefined> {
+    const result = await db.update(feifeiCategories)
+      .set({ is_invalid: isInvalid, updated_at: new Date() })
+      .where(eq(feifeiCategories.id, id))
+      .returning();
+    
+    if (result.length === 0) return undefined;
+    return result[0];
   }
   
   // 菲菲网资源方法
@@ -682,12 +748,28 @@ export class DatabaseStorage implements IStorage {
     return resource || undefined;
   }
 
-  async getFeifeiResourcesByCategory(categoryId: number): Promise<FeifeiResource[]> {
-    return await db
+  async getFeifeiResourcesByCategory(categoryId: number, page: number = 1, pageSize: number = 10): Promise<{ resources: FeifeiResource[], total: number }> {
+    // 获取总数
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(feifeiResources)
+      .where(eq(feifeiResources.category_id, categoryId));
+    
+    const total = Number(countResult?.count || 0);
+    
+    // 计算分页偏移量
+    const offset = (page - 1) * pageSize;
+    
+    // 获取当前页的数据
+    const resources = await db
       .select()
       .from(feifeiResources)
       .where(eq(feifeiResources.category_id, categoryId))
-      .orderBy(feifeiResources.id); // 按ID升序排列，最小的在最上面
+      .orderBy(feifeiResources.id) // 按ID升序排列，最小的在最上面
+      .limit(pageSize)
+      .offset(offset);
+    
+    return { resources, total };
   }
   
   async getFeifeiResourcesByUrl(url: string): Promise<FeifeiResource[]> {
@@ -788,6 +870,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getFeifeiResourceTags(resourceId: number): Promise<FeifeiTag[]> {
+    console.time(`db-get-tags-for-resource-${resourceId}`);
     const results = await db
       .select({
         tag: feifeiTags
@@ -796,7 +879,10 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(feifeiTags, eq(feifeiResourceTags.tag_id, feifeiTags.id))
       .where(eq(feifeiResourceTags.resource_id, resourceId));
     
-    return results.map(r => r.tag);
+    const tags = results.map(r => r.tag);
+    console.timeEnd(`db-get-tags-for-resource-${resourceId}`);
+    console.log(`获取到资源 ${resourceId} 的标签数量: ${tags.length}`);
+    return tags;
   }
   
   async getFeifeiTagResources(tagId: number): Promise<FeifeiResource[]> {
@@ -837,6 +923,49 @@ export class DatabaseStorage implements IStorage {
       );
     
     return relation || undefined;
+  }
+  
+  // Parameter 操作方法
+  async getParameter(id: number): Promise<Parameter | undefined> {
+    const [parameter] = await db.select().from(parameters).where(eq(parameters.id, id));
+    return parameter || undefined;
+  }
+
+  async getParameterByKey(key: string): Promise<Parameter | undefined> {
+    const [parameter] = await db.select().from(parameters).where(eq(parameters.key, key));
+    return parameter || undefined;
+  }
+
+  async createParameter(insertParameter: InsertParameter): Promise<Parameter> {
+    const [parameter] = await db
+      .insert(parameters)
+      .values(insertParameter)
+      .returning();
+    return parameter;
+  }
+
+  async updateParameter(id: number, data: Partial<Parameter>): Promise<Parameter | undefined> {
+    const [parameter] = await db
+      .update(parameters)
+      .set({ ...data, updated_at: new Date() })
+      .where(eq(parameters.id, id))
+      .returning();
+    return parameter || undefined;
+  }
+
+  async deleteParameter(id: number): Promise<boolean> {
+    const result = await db
+      .delete(parameters)
+      .where(eq(parameters.id, id))
+      .returning({ id: parameters.id });
+    return result.length > 0;
+  }
+
+  async getAllParameters(): Promise<Parameter[]> {
+    return await db
+      .select()
+      .from(parameters)
+      .orderBy(parameters.key);
   }
 }
 

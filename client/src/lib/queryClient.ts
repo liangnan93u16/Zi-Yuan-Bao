@@ -41,7 +41,30 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+    // 获取基本URL
+    const baseUrl = queryKey[0] as string;
+    
+    // 处理查询参数（如果有）
+    let url = baseUrl;
+    if (queryKey.length > 1 && typeof queryKey[1] === 'object') {
+      const params = new URLSearchParams();
+      const queryParams = queryKey[1] as Record<string, any>;
+      
+      for (const key in queryParams) {
+        if (queryParams[key] !== undefined && queryParams[key] !== null) {
+          params.append(key, String(queryParams[key]));
+        }
+      }
+      
+      const paramsString = params.toString();
+      if (paramsString) {
+        url = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${paramsString}`;
+      }
+    }
+    
+    console.log("请求URL:", url); // 调试用
+    
+    const res = await fetch(url, {
       credentials: "include",
     });
 
