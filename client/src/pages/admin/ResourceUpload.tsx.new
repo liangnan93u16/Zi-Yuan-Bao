@@ -56,13 +56,11 @@ const resourceFormSchema = z.object({
   subtitle_languages: z.string().optional(),
   resolution: z.string().optional(),
   source_type: z.string().optional(),
-  status: z.coerce.number().default(0), // 默认状态为下架
+  status: z.coerce.number().default(1),
   is_free: z.boolean().default(false),
   description: z.string().optional(),
   contents: z.string().optional(), // 课程目录，JSON格式
   faq_content: z.string().optional(), // 常见问题，Markdown格式
-  resource_url: z.string().optional(), // 资源下载链接
-  resource_type: z.string().optional(), // 资源类型
 });
 
 type ResourceFormValues = z.infer<typeof resourceFormSchema>;
@@ -99,13 +97,11 @@ export default function ResourceUpload() {
       subtitle_languages: "中文",
       resolution: "1920x1080", // 默认1080p分辨率
       source_type: "original",
-      status: 0, // 默认下架状态
+      status: 1,
       is_free: false,
       description: "",
       contents: "",
       faq_content: "",
-      resource_url: "", // 新增资源下载链接字段
-      resource_type: "video", // 新增资源类型字段
     },
   });
 
@@ -505,7 +501,7 @@ export default function ResourceUpload() {
                             />
                           </FormControl>
                           <FormDescription>
-                            课程目录使用JSON格式，例如: 章节和小节的结构化数据
+                            课程目录使用JSON格式，例如: [{"title": "第一章", "items": ["1.1 引言", "1.2 基础知识"]}]
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -664,52 +660,8 @@ export default function ResourceUpload() {
                 
                 {/* 链接与下载标签页 */}
                 <TabsContent value="links" className="pt-6">
-                  <div className="space-y-6">
-                    <FormField
-                      control={form.control}
-                      name="resource_url"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>资源下载链接</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="输入资源下载链接" />
-                          </FormControl>
-                          <FormDescription>
-                            用户购买后可见的资源链接，可以是网盘地址或直接下载链接
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="resource_type"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>资源类型</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            value={field.value || "video"}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="选择资源类型" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="video">视频</SelectItem>
-                              <SelectItem value="ebook">电子书</SelectItem>
-                              <SelectItem value="audio">音频</SelectItem>
-                              <SelectItem value="software">软件</SelectItem>
-                              <SelectItem value="document">文档</SelectItem>
-                              <SelectItem value="other">其他</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <div className="space-y-4">
+                    <p className="text-muted-foreground">此部分将在资源创建后可用。</p>
                   </div>
                 </TabsContent>
               </Tabs>

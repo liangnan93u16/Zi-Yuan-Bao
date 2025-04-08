@@ -7,7 +7,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import OpenAI from 'openai';
 import { db } from './db';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { 
   insertCategorySchema, 
   insertResourceSchema, 
@@ -21,7 +21,8 @@ import {
   type Review,
   type FeifeiResource,
   type FeifeiCategory,
-  resources
+  resources,
+  userPurchases
 } from "@shared/schema";
 import { 
   login, 
@@ -34,6 +35,15 @@ import {
 } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // 检查资源是否可以被删除（是否已被购买）
+  async function canDeleteResource(resourceId: number): Promise<boolean> {
+    const purchases = await db
+      .select({ count: sql`count(*)` })
+      .from(userPurchases)
+      .where(eq(userPurchases.resource_id, resourceId));
+    
+    return Number(purchases[0]?.count || 0) === 0;
+  }
   // Session middleware with memorystore
   // Dynamically import memorystore and create store
   const memorystore = await import('memorystore');
@@ -464,13 +474,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 添加分类信息
         if (resource.category_id) {
           const category = await storage.getCategory(resource.category_id);
-          enrichedResource.category = category;
+          (enrichedResource as any).category = category;
         }
         
         // 添加作者信息
         if (resource.author_id) {
           const author = await storage.getAuthor(resource.author_id);
-          enrichedResource.author = author;
+          (enrichedResource as any).author = author;
         }
         
         return enrichedResource;
@@ -552,11 +562,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
+      // 获取更新前的资源，用于比较
+      const originalResource = await storage.getResource(resourceId);
+      console.log('原始资源数据:', JSON.stringify(originalResource));
+      console.log('请求体:', JSON.stringify(req.body));
+
       const validationResult = insertResourceSchema.partial().safeParse(req.body);
       if (!validationResult.success) {
         res.status(400).json({ message: '资源数据无效', errors: validationResult.error.format() });
         return;
       }
+
+      console.log('验证后的数据:', JSON.stringify(validationResult.data));
 
       // Check if category exists if category_id is provided
       if (validationResult.data.category_id) {
@@ -567,12 +584,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const updatedResource = await storage.updateResource(resourceId, validationResult.data);
+      // 进行明确的字段赋值，确保关键字段被更新
+      const dataToUpdate = {
+        ...validationResult.data,
+        title: validationResult.data.title !== undefined ? validationResult.data.title : originalResource?.title,
+        subtitle: validationResult.data.subtitle !== undefined ? validationResult.data.subtitle : originalResource?.subtitle,
+        category_id: validationResult.data.category_id !== undefined ? validationResult.data.category_id : originalResource?.category_id
+      };
+
+      console.log('最终更新数据:', JSON.stringify(dataToUpdate));
+
+      const updatedResource = await storage.updateResource(resourceId, dataToUpdate);
       if (!updatedResource) {
         res.status(404).json({ message: '资源不存在' });
         return;
       }
 
+      console.log('更新后的资源:', JSON.stringify(updatedResource));
       res.json(updatedResource);
     } catch (error) {
       console.error('Error updating resource:', error);
@@ -587,10 +615,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(400).json({ message: '无效的资源ID' });
         return;
       }
+      
+      // 检查资源是否存在
+      const resource = await storage.getResource(resourceId);
+      if (!resource) {
+        res.status(404).json({ message: '资源不存在' });
+        return;
+      }
+      
+      // 检查资源是否已被购买
+      const canDelete = await canDeleteResource(resourceId);
+      if (!canDelete) {
+        return res.status(400).json({ 
+          message: '无法删除已被购买的资源',
+          error: '该资源已被用户购买，删除会影响用户权益，请考虑将其下架而不是删除' 
+        });
+      }
 
       const deleted = await storage.deleteResource(resourceId);
       if (!deleted) {
-        res.status(404).json({ message: '资源不存在' });
+        res.status(500).json({ message: '删除资源失败' });
         return;
       }
 
@@ -637,13 +681,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 添加分类信息
         if (resource.category_id) {
           const category = await storage.getCategory(resource.category_id);
-          enrichedResource.category = category;
+          (enrichedResource as any).category = category;
         }
         
         // 添加作者信息
         if (resource.author_id) {
           const author = await storage.getAuthor(resource.author_id);
-          enrichedResource.author = author;
+          (enrichedResource as any).author = author;
         }
         
         return enrichedResource;
@@ -1733,6 +1777,228 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // 解析分类下所有资源的详细页面
+  // 批量上架分类下所有资源到资源库
+  app.post('/api/feifei-categories/:id/batch-add-to-resources', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期' });
+        return;
+      }
+      
+      const categoryId = parseInt(req.params.id);
+      if (isNaN(categoryId)) {
+        res.status(400).json({ message: '无效的分类ID' });
+        return;
+      }
+      
+      // 先检查分类是否存在
+      const categoryResult = await storage.getFeifeiCategory(categoryId);
+      if (!categoryResult) {
+        res.status(404).json({ message: '分类不存在' });
+        return;
+      }
+      
+      // 立即回应客户端，表示任务已开始
+      res.json({ message: `已启动对分类"${categoryResult.title}"下所有资源的批量上架任务，请查看控制台日志了解进度` });
+      
+      console.log(`=== 开始批量上架分类"${categoryResult.title}"下所有资源 ===`);
+      
+      // 1. 获取分类下所有资源的总数
+      const countResult = await storage.getFeifeiResourcesByCategory(categoryId, 1, 1);
+      const totalResources = countResult.total;
+      console.log(`分类 ${categoryResult.title} 下共有 ${totalResources} 个资源`);
+      
+      // 计算需要的分页数
+      const pageSize = 100; // 每页获取100条记录
+      const totalPages = Math.ceil(totalResources / pageSize);
+      console.log(`将分 ${totalPages} 页处理，每页 ${pageSize} 条记录`);
+      
+      // 批量处理统计数据
+      let successCount = 0;
+      let skipCount = 0;
+      let failureCount = 0;
+      const startTime = new Date();
+      
+      // 2. 循环处理每一页
+      for (let page = 1; page <= totalPages; page++) {
+        console.log(`正在处理第 ${page}/${totalPages} 页...`);
+        
+        // 获取当前页的资源
+        const pageResult = await storage.getFeifeiResourcesByCategory(categoryId, page, pageSize);
+        const resources = pageResult.resources;
+        
+        // 处理当前页的每个资源
+        for (let i = 0; i < resources.length; i++) {
+          const resource = resources[i];
+          const resourceIndex = (page - 1) * pageSize + i + 1;
+          
+          console.log(`[${resourceIndex}/${totalResources}] 处理资源: ${resource.chinese_title}`);
+          
+          try {
+            // 检查资源是否已经上架
+            if (resource.linked_resource_id) {
+              console.log(`  - 跳过: 资源已经上架到资源库，关联资源ID=${resource.linked_resource_id}`);
+              skipCount++;
+              continue;
+            }
+            
+            // 使用公共函数上架资源
+            const result = await addFeifeiResourceToResourceLibrary(resource.id);
+            
+            if (result.success) {
+              console.log(`  - 成功: ${result.message}`);
+              successCount++;
+            } else {
+              console.log(`  - 失败: ${result.message}`);
+              failureCount++;
+            }
+            
+            // 每处理10个资源暂停1秒，避免请求过快
+            if (i > 0 && i % 10 === 0) {
+              console.log(`已处理 ${i} 个资源，暂停1秒...`);
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          } catch (error) {
+            console.error(`  - 错误: 处理资源时发生异常:`, error);
+            failureCount++;
+          }
+        }
+        
+        console.log(`完成第 ${page}/${totalPages} 页处理`);
+      }
+      
+      const endTime = new Date();
+      const totalTime = (endTime.getTime() - startTime.getTime()) / 1000; // 总耗时（秒）
+      const avgTime = totalTime / (successCount + failureCount); // 平均每个资源处理时间（秒）
+      
+      console.log(`=== 批量上架任务完成 ===`);
+      console.log(`总资源数: ${totalResources}`);
+      console.log(`成功上架: ${successCount}`);
+      console.log(`已跳过(已上架): ${skipCount}`);
+      console.log(`失败: ${failureCount}`);
+      console.log(`总耗时: ${totalTime.toFixed(2)}秒`);
+      console.log(`平均每个资源耗时: ${avgTime.toFixed(2)}秒`);
+      
+    } catch (error) {
+      console.error('批量上架资源时出错:', error);
+      // 客户端已经收到了响应，这里只需记录错误
+    }
+  });
+
+  app.post('/api/feifei-categories/:id/parse-all-resources', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期' });
+        return;
+      }
+      
+      const categoryId = parseInt(req.params.id);
+      if (isNaN(categoryId)) {
+        res.status(400).json({ message: '无效的分类ID' });
+        return;
+      }
+      
+      // 先检查分类是否存在
+      const categoryResult = await storage.getFeifeiCategory(categoryId);
+      if (!categoryResult) {
+        res.status(404).json({ message: '分类不存在' });
+        return;
+      }
+      
+      // 立即回应客户端，表示任务已开始
+      res.json({ message: `已启动对分类"${categoryResult.title}"下所有资源的解析任务，请查看控制台日志了解进度` });
+      
+      console.log(`=== 开始解析分类"${categoryResult.title}"下所有资源 ===`);
+      
+      // 1. 获取分类下所有资源的总数
+      const countResult = await storage.getFeifeiResourcesByCategory(categoryId, 1, 1);
+      const totalResources = countResult.total;
+      console.log(`分类 ${categoryResult.title} 下共有 ${totalResources} 个资源`);
+      
+      // 计算需要的分页数
+      const pageSize = 100; // 每页获取100条记录
+      const totalPages = Math.ceil(totalResources / pageSize);
+      console.log(`将分 ${totalPages} 页处理，每页 ${pageSize} 条记录`);
+      
+      // 2. 直接分页处理，避免一次性加载所有资源导致内存问题
+      let parsedCount = 0;
+      let errorCount = 0;
+      
+      // 解析开始时间
+      const batchStartTime = Date.now();
+      let totalProcessedCount = 0;
+      
+      // 按页处理资源
+      for (let currentPage = 1; currentPage <= totalPages; currentPage++) {
+        console.log(`正在获取并处理第 ${currentPage}/${totalPages} 页资源...`);
+        const pageResult = await storage.getFeifeiResourcesByCategory(categoryId, currentPage, pageSize);
+        const pageResources = pageResult.resources;
+        console.log(`本页获取到 ${pageResources.length} 个资源，准备解析`);
+        
+        // 处理当前页的资源
+        for (let i = 0; i < pageResources.length; i++) {
+          const resource = pageResources[i];
+          const resourceTitle = resource.chinese_title || `资源ID: ${resource.id}`;
+          const itemStartTime = Date.now();
+          totalProcessedCount++;
+          
+          console.log(`[${totalProcessedCount}/${totalResources}] 正在解析资源: ${resourceTitle} (URL: ${resource.url})`);
+          
+          try {
+            // 调用共用函数解析资源页面
+            const parseResult = await parseFeifeiResourcePage(resource.id, true);
+            if (parseResult.success) {
+              parsedCount++;
+              const itemDuration = ((Date.now() - itemStartTime) / 1000).toFixed(2);
+              console.log(`  ✓ 解析成功 (耗时: ${itemDuration}秒): ${parseResult.message}`);
+            } else {
+              errorCount++;
+              console.log(`  ✗ 解析失败: ${parseResult.message}`);
+            }
+          } catch (error) {
+            errorCount++;
+            console.error(`  ✗ 解析出错:`, error instanceof Error ? error.message : String(error));
+          }
+          
+          // 每处理10个资源暂停1秒，避免请求过快
+          if ((totalProcessedCount % 10 === 0) && (totalProcessedCount < totalResources)) {
+            const batchDuration = ((Date.now() - batchStartTime) / 1000);
+            const batchDurationStr = batchDuration.toFixed(2);
+            const avgDuration = (batchDuration / totalProcessedCount);
+            const avgDurationStr = avgDuration.toFixed(2);
+            const remaining = totalResources - totalProcessedCount;
+            const estRemainingMinutes = (avgDuration * remaining / 60);
+            const estRemainingStr = estRemainingMinutes.toFixed(1);
+            
+            console.log(`  -- 已处理 ${totalProcessedCount}/${totalResources} 个资源 (${batchDurationStr}秒, 平均${avgDurationStr}秒/项) --`);
+            console.log(`  -- 剩余 ${remaining} 项, 预计还需 ${estRemainingStr} 分钟 --`);
+            console.log(`  -- 暂停1秒... --`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+        
+        // 每处理完一页，打印进度
+        console.log(`完成处理第 ${currentPage}/${totalPages} 页，当前总进度: ${totalProcessedCount}/${totalResources}`);
+      }
+      
+
+      
+      // 总结果
+      const totalDuration = ((Date.now() - batchStartTime) / 1000);
+      const totalDurationStr = totalDuration.toFixed(2);
+      const avgItemDuration = totalProcessedCount > 0 ? (totalDuration / totalProcessedCount) : 0;
+      const avgItemDurationStr = avgItemDuration.toFixed(2);
+      
+      console.log(`=== 分类"${categoryResult.title}"下所有资源解析完成 ===`);
+      console.log(`成功: ${parsedCount}, 失败: ${errorCount}, 总计: ${totalProcessedCount}`);
+      console.log(`总用时: ${totalDurationStr}秒, 平均每项: ${avgItemDurationStr}秒`);
+    } catch (error) {
+      console.error('Error parsing all resources in category:', error);
+      // 由于我们已经向客户端返回了响应，这里的错误只记录，不再发送
+    }
+  });
+  
   // 导入菲菲分类到资源管理分类
   app.post('/api/import-feifei-categories', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
     try {
@@ -2543,6 +2809,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // 智谱AI将HTML转换为Markdown格式的API
+  app.post('/api/feifei-resources/:id/html-to-markdown', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期' });
+        return;
+      }
+      
+      const resourceId = parseInt(req.params.id);
+      if (isNaN(resourceId)) {
+        return res.status(400).json({ message: '无效的资源ID' });
+      }
+      
+      // 获取资源
+      const resource = await storage.getFeifeiResource(resourceId);
+      if (!resource) {
+        return res.status(404).json({ message: '资源不存在' });
+      }
+      
+      // 检查资源是否有HTML详情内容
+      if (!resource.details_html) {
+        return res.status(400).json({ message: '资源没有HTML详情内容可供转换' });
+      }
+      
+      // 从参数表获取智谱AI配置
+      const apiKeyParam = await storage.getParameterByKey('ZHIPU_API');
+      const modelParam = await storage.getParameterByKey('ZHIPU_MODEL');
+      const baseUrlParam = await storage.getParameterByKey('ZHIPU_BASE_URL');
+      
+      if (!apiKeyParam || !apiKeyParam.value) {
+        return res.status(400).json({ message: '缺少智谱AI API密钥配置，请在系统参数中设置ZHIPU_API参数' });
+      }
+      
+      const apiKey = apiKeyParam.value;
+      const model = modelParam?.value || 'glm-4-flash'; // 默认使用glm-4-flash
+      const baseUrl = baseUrlParam?.value || 'https://open.bigmodel.cn/api/paas/v4';
+      
+      console.log('智谱AI配置:', { 
+        apiKey: '(已隐藏)', 
+        baseURL: baseUrl, 
+        model: model 
+      });
+      
+      // 使用完整的智谱AI API URL
+      const openai = new OpenAI({
+        apiKey: apiKey,
+        baseURL: baseUrl
+      });
+      
+      // 准备请求
+      const prompt = `
+      请将以下HTML内容转换为完整的Markdown格式，保留所有内容，包括标题、段落、列表、链接等结构。
+      请对HTML内容进行清理，去除垃圾字符，使其更加清晰可读。
+      
+      HTML内容：
+      ${resource.details_html}
+      
+      请只返回转换后的Markdown内容，不要有任何其他文字说明。
+      `;
+      
+      // 调用智谱AI
+      console.log('调用智谱AI转换HTML内容为Markdown...');
+      const completion = await openai.chat.completions.create({
+        model: model,
+        messages: [
+          { role: 'system', content: '你是一个专业的HTML转Markdown工具，擅长将复杂的HTML内容转换为清晰、结构化的Markdown格式。' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.2
+      });
+      
+      console.log('智谱AI响应:', JSON.stringify({
+        choiceLength: completion.choices.length,
+        hasContent: !!completion.choices[0]?.message?.content
+      }));
+      
+      // 提取返回的内容
+      const markdownContent = completion.choices[0]?.message?.content || '';
+      
+      // 如果内容为空，返回错误
+      if (!markdownContent.trim()) {
+        return res.status(500).json({ message: '转换结果为空，请重试' });
+      }
+      
+      // 更新资源的markdown_content字段
+      const updateResult = await storage.updateFeifeiResource(resourceId, {
+        markdown_content: markdownContent
+      });
+      
+      console.log('数据库更新结果:', JSON.stringify({
+        success: !!updateResult,
+        resourceId,
+        hasMarkdownContent: !!updateResult?.markdown_content,
+        contentLength: updateResult?.markdown_content?.length || 0
+      }));
+      
+      // 获取更新后的资源
+      const updatedResource = await storage.getFeifeiResource(resourceId);
+      
+      // 获取资源关联的标签
+      const tags = await storage.getFeifeiResourceTags(resourceId);
+      
+      // 返回增强的资源对象以及转换结果
+      const enrichedResource = {
+        ...updatedResource,
+        tags: tags
+      };
+      
+      return res.status(200).json({ 
+        message: 'HTML内容已成功转换为Markdown', 
+        resource: enrichedResource 
+      });
+    } catch (error) {
+      console.error('转换HTML内容为Markdown时出错:', error);
+      return res.status(500).json({ message: '服务器错误', error: (error as Error).message });
+    }
+  });
+
   // 将菲菲资源转移到资源表（待上架功能）
   // 用于调试source_url的路由
   app.get('/api/debug/resources-by-source-url', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
@@ -2590,6 +2974,504 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 将菲菲资源转换为资源库资源的公共函数
+  async function addFeifeiResourceToResourceLibrary(resourceId: number) {
+    console.log(`================== 将菲菲资源添加到资源库 ==================`);
+    console.log(`处理菲菲资源ID: ${resourceId}`);
+    
+    try {
+      // 获取菲菲资源
+      const feifeiResource = await storage.getFeifeiResource(resourceId);
+      if (!feifeiResource) {
+        console.log(`未找到指定的菲菲资源, ID=${resourceId}`);
+        return { 
+          success: false, 
+          message: '未找到指定的菲菲资源',
+          resource: null
+        };
+      }
+      
+      // 检查资源是否已经上架
+      if (feifeiResource.linked_resource_id) {
+        console.log(`菲菲资源已经关联到资源库, 菲菲资源ID=${resourceId}, 关联资源ID=${feifeiResource.linked_resource_id}`);
+        // 获取关联的资源
+        const linkedResource = await storage.getResource(feifeiResource.linked_resource_id);
+        if (linkedResource) {
+          // 检查是否需要更新资源库中的空字段
+          const updateData: any = {};
+          let needsUpdate = false;
+          
+          // 检查网盘链接是否为空，如果为空则从菲菲资源更新
+          if (!linkedResource.resource_url && feifeiResource.cloud_disk_url) {
+            console.log(`资源库中网盘链接为空，从菲菲资源更新`);
+            updateData.resource_url = feifeiResource.cloud_disk_url;
+            needsUpdate = true;
+          }
+          
+          // 检查提取码是否为空，如果为空则从菲菲资源更新
+          if (!linkedResource.resource_code && feifeiResource.cloud_disk_code) {
+            console.log(`资源库中提取码为空，从菲菲资源更新`);
+            updateData.resource_code = feifeiResource.cloud_disk_code;
+            needsUpdate = true;
+          }
+          
+          // 如果需要更新，执行更新操作
+          if (needsUpdate) {
+            console.log(`更新资源库中的空字段:`, updateData);
+            const updatedResource = await storage.updateResource(linkedResource.id, updateData);
+            return { 
+              success: true, 
+              message: '已更新资源库中的信息',
+              resource: updatedResource
+            };
+          }
+          
+          // 如果不需要更新，返回原始资源
+          return { 
+            success: true, 
+            message: '该资源已经上架到资源库',
+            resource: linkedResource
+          };
+        }
+      }
+      
+      // 继续处理资源上架流程
+      // 获取该资源所属的菲菲分类
+      let feifeiCategory = null;
+      if (feifeiResource.category_id) {
+        feifeiCategory = await storage.getFeifeiCategory(feifeiResource.category_id);
+      }
+      
+      // 尝试根据菲菲资源的URL查找现有资源
+      console.log(`正在查找source_url为 ${feifeiResource.url} 的资源`);
+      
+      // 直接执行SQL查询查找匹配的资源
+      const matchingResources = await db
+        .select()
+        .from(resources)
+        .where(eq(resources.source_url, feifeiResource.url));
+      
+      console.log(`直接SQL查询结果: 找到 ${matchingResources.length} 个匹配source_url的资源`);
+      
+      // 构建查询结果对象
+      const existingResources = {
+        resources: matchingResources,
+        total: matchingResources.length
+      };
+      
+      // 尝试根据菲菲分类标题查找对应的系统分类
+      let matchedCategoryId = null;
+      if (feifeiCategory) {
+        // 获取所有系统分类
+        const allCategories = await storage.getAllCategories();
+        
+        // 对菲菲分类标题进行标准化处理
+        const normalizedFeifeiTitle = feifeiCategory.title.replace(/\s+/g, '').toLowerCase();
+        
+        // 1. 首先尝试查找完全匹配的分类
+        let exactMatch = false;
+        for (const category of allCategories) {
+          // 对系统分类名称也进行标准化处理
+          const normalizedCategoryName = category.name.replace(/\s+/g, '').toLowerCase();
+          
+          // 检查完全匹配
+          if (normalizedCategoryName === normalizedFeifeiTitle) {
+            matchedCategoryId = category.id;
+            console.log(`找到完全匹配的分类: ${category.name}, ID: ${category.id}`);
+            exactMatch = true;
+            break;
+          }
+        }
+        
+        // 2. 如果没有完全匹配，尝试处理"设计-平面设计与插画"这种格式
+        if (!exactMatch) {
+          // 对菲菲分类标题按'-'分割
+          const titleParts = feifeiCategory.title.split('-').map((part: string) => part.trim());
+          
+          if (titleParts.length > 1) {
+            // 组合成"设计-平面设计与插画"类型的完整分类名
+            const combinedTitle = titleParts.join('-');
+            const combinedTitleNoHyphen = titleParts.join(''); // 无连字符版本
+            
+            for (const category of allCategories) {
+              const normalizedCategoryName = category.name.replace(/\s+/g, '').toLowerCase();
+              
+              // 检查是否匹配组合后的完整名称（无论有无连字符）
+              if (normalizedCategoryName === combinedTitle.toLowerCase().replace(/\s+/g, '') ||
+                  normalizedCategoryName === combinedTitleNoHyphen.toLowerCase() ||
+                  normalizedCategoryName.includes(combinedTitle.toLowerCase().replace(/\s+/g, '')) ||
+                  combinedTitle.toLowerCase().replace(/\s+/g, '').includes(normalizedCategoryName)) {
+                matchedCategoryId = category.id;
+                console.log(`找到组合名称匹配: ${category.name}, ID: ${category.id}`);
+                exactMatch = true;
+                break;
+              }
+            }
+          }
+        }
+        
+        // 3. 尝试分段匹配
+        if (!exactMatch) {
+          const titleParts = feifeiCategory.title.split('-').map((part: string) => part.trim());
+          
+          // 尝试使用第一部分查找匹配的系统分类 (例如：'设计')
+          if (titleParts.length > 0) {
+            const mainCategoryName = titleParts[0];
+            let mainMatch = false;
+            
+            // 查找标题第一部分的匹配
+            for (const category of allCategories) {
+              const normalizedCategoryName = category.name.replace(/\s+/g, '').toLowerCase();
+              const normalizedMainName = mainCategoryName.replace(/\s+/g, '').toLowerCase();
+              
+              if (normalizedCategoryName === normalizedMainName || 
+                  normalizedCategoryName.includes(normalizedMainName)) {
+                matchedCategoryId = category.id;
+                console.log(`找到主分类匹配: ${category.name}, ID: ${category.id}`);
+                mainMatch = true;
+                break;
+              }
+            }
+            
+            // 如果主分类没有匹配，尝试使用子分类
+            if (!mainMatch && titleParts.length > 1) {
+              const subCategoryName = titleParts[1];
+              
+              for (const category of allCategories) {
+                const normalizedCategoryName = category.name.replace(/\s+/g, '').toLowerCase();
+                const normalizedSubName = subCategoryName.replace(/\s+/g, '').toLowerCase();
+                
+                if (normalizedCategoryName.includes(normalizedSubName)) {
+                  matchedCategoryId = category.id;
+                  console.log(`找到子分类匹配: ${category.name}, ID: ${category.id}`);
+                  break;
+                }
+              }
+            }
+          }
+        }
+        
+        // 4. 最后尝试模糊匹配
+        if (!matchedCategoryId) {
+          // 尝试找出最佳匹配
+          let bestMatchScore = 0;
+          let bestMatchCategory = null;
+          
+          for (const category of allCategories) {
+            const normalizedCategoryName = category.name.replace(/\s+/g, '').toLowerCase();
+            
+            // 计算两个字符串的相似度（简化版，仅检查包含关系）
+            let score = 0;
+            if (normalizedCategoryName.includes(normalizedFeifeiTitle)) {
+              score = normalizedFeifeiTitle.length;
+            } else if (normalizedFeifeiTitle.includes(normalizedCategoryName)) {
+              score = normalizedCategoryName.length;
+            }
+            
+            // 保存最高分的匹配
+            if (score > bestMatchScore) {
+              bestMatchScore = score;
+              bestMatchCategory = category;
+            }
+          }
+          
+          if (bestMatchCategory) {
+            matchedCategoryId = bestMatchCategory.id;
+            console.log(`找到最佳模糊匹配: ${bestMatchCategory.name}, ID: ${bestMatchCategory.id}, 分数: ${bestMatchScore}`);
+          }
+        }
+        
+        // 5. 如果所有匹配尝试都失败，使用默认分类（假设ID为1是设计创意分类）
+        if (!matchedCategoryId) {
+          // 寻找设计创意分类
+          const defaultCategory = allCategories.find(cat => 
+            cat.name.includes('设计') || cat.name.includes('创意')
+          );
+          
+          if (defaultCategory) {
+            matchedCategoryId = defaultCategory.id;
+            console.log(`使用默认设计分类: ${defaultCategory.name}, ID: ${defaultCategory.id}`);
+          } else if (allCategories.length > 0) {
+            // 如果找不到设计分类，使用第一个分类作为后备
+            matchedCategoryId = allCategories[0].id;
+            console.log(`使用第一个系统分类作为后备: ${allCategories[0].name}, ID: ${allCategories[0].id}`);
+          }
+        }
+        
+        console.log(`菲菲分类: ${feifeiCategory.title}, 最终匹配的系统分类ID: ${matchedCategoryId || '未找到匹配的分类'}`);
+      }
+      
+      // 如果资源有HTML详情，但还没有Markdown内容，尝试通过AI转换为Markdown
+      let descriptionMarkdown = feifeiResource.description || "";
+      if (feifeiResource.details_html && !feifeiResource.markdown_content) {
+        console.log(`资源有HTML详情但没有Markdown内容，尝试通过AI转换...`);
+        
+        try {
+          // 从参数表获取智谱AI配置
+          const apiKeyParam = await storage.getParameterByKey('ZHIPU_API');
+          const modelParam = await storage.getParameterByKey('ZHIPU_MODEL');
+          const baseUrlParam = await storage.getParameterByKey('ZHIPU_BASE_URL');
+          
+          if (apiKeyParam && apiKeyParam.value) {
+            const apiKey = apiKeyParam.value;
+            const model = modelParam?.value || 'glm-4-flash'; // 默认使用glm-4-flash
+            const baseUrl = baseUrlParam?.value || 'https://open.bigmodel.cn/api/paas/v4';
+            
+            console.log('智谱AI配置:', { 
+              apiKey: '(已隐藏)', 
+              baseURL: baseUrl, 
+              model: model 
+            });
+            
+            // 使用完整的智谱AI API URL
+            const openai = new OpenAI({
+              apiKey: apiKey,
+              baseURL: baseUrl
+            });
+            
+            // 准备请求
+            const prompt = `
+            请将以下HTML内容转换为完整的Markdown格式，保留所有内容，包括标题、段落、列表、链接等结构。
+            请对HTML内容进行清理，去除垃圾字符，使其更加清晰可读。
+            
+            HTML内容：
+            ${feifeiResource.details_html}
+            
+            请只返回转换后的Markdown内容，不要有任何其他文字说明。
+            `;
+            
+            // 调用智谱AI
+            console.log('调用智谱AI转换HTML内容为Markdown...');
+            const completion = await openai.chat.completions.create({
+              model: model,
+              messages: [
+                { role: 'system', content: '你是一个专业的HTML转Markdown工具，擅长将复杂的HTML内容转换为清晰、结构化的Markdown格式。' },
+                { role: 'user', content: prompt }
+              ],
+              temperature: 0.2
+            });
+            
+            // 提取返回的内容
+            const markdownContent = completion.choices[0]?.message?.content || '';
+            
+            if (markdownContent.trim()) {
+              // 使用转换后的Markdown内容
+              descriptionMarkdown = markdownContent;
+              console.log(`成功将HTML转换为Markdown，长度: ${markdownContent.length} 字符`);
+              
+              // 保存转换后的Markdown内容到数据库
+              await storage.updateFeifeiResource(resourceId, {
+                markdown_content: markdownContent
+              });
+              console.log(`已保存Markdown内容到数据库`);
+            } else {
+              console.log(`转换结果为空，将使用原始描述`);
+            }
+          } else {
+            console.log(`未配置智谱API密钥，跳过转换过程`);
+          }
+        } catch (error) {
+          console.error(`转换HTML到Markdown时出错:`, error);
+          console.log(`将使用原始描述字段`);
+        }
+      } else if (feifeiResource.markdown_content) {
+        console.log(`使用已存在的Markdown内容，长度: ${feifeiResource.markdown_content.length} 字符`);
+        descriptionMarkdown = feifeiResource.markdown_content || "";
+      }
+      
+      // 准备资源数据
+      // 将中文语言名称转换为英文的映射（备用）
+      const languageMapping: { [key: string]: string } = {
+        "英语": "english",
+        "中文": "chinese",
+        "英文": "english",
+        "日语": "japanese",
+        "法语": "french",
+        "德语": "german",
+        "西班牙语": "spanish",
+        "意大利语": "italian",
+        "俄语": "russian",
+        "葡萄牙语": "portuguese",
+        "韩语": "korean",
+        "阿拉伯语": "arabic"
+      };
+      
+      // 按用户要求直接使用原始语言值而不做任何转换
+      const languageValue = feifeiResource.language || "";
+      
+      console.log(`===========================================`);
+      console.log(`语言字段: 值="${languageValue}" (直接使用原始值)`);
+      console.log(`===========================================`);
+      
+      // 解析视频时长（从课时字段中提取）
+      let videoDurationMinutes = 0;
+      if (feifeiResource.duration) {
+        console.log(`解析视频时长，原始课时信息: "${feifeiResource.duration}"`);
+        
+        // 使用正则表达式提取小时和分钟
+        // 匹配格式：xx 节课（xx 小时 xx 分钟）等
+        const timeMatch = feifeiResource.duration.match(/\((\d+)\s*小时\s*(\d+)\s*分钟\)/);
+        if (timeMatch) {
+          const hours = parseInt(timeMatch[1], 10);
+          const minutes = parseInt(timeMatch[2], 10);
+          videoDurationMinutes = hours * 60 + minutes;
+          console.log(`提取到括号内时长: ${hours}小时${minutes}分钟，转换为${videoDurationMinutes}分钟`);
+        } else {
+          // 尝试匹配不带括号的格式：xx 小时 xx 分钟
+          const noParenMatch = feifeiResource.duration.match(/(\d+)\s*小时\s*(\d+)\s*分钟/);
+          if (noParenMatch) {
+            const hours = parseInt(noParenMatch[1], 10);
+            const minutes = parseInt(noParenMatch[2], 10);
+            videoDurationMinutes = hours * 60 + minutes;
+            console.log(`提取到时长: ${hours}小时${minutes}分钟，转换为${videoDurationMinutes}分钟`);
+          } else {
+            // 尝试只匹配小时
+            const hoursOnlyMatch = feifeiResource.duration.match(/(\d+)\s*小时/);
+            if (hoursOnlyMatch) {
+              const hours = parseInt(hoursOnlyMatch[1], 10);
+              videoDurationMinutes = hours * 60;
+              console.log(`只提取到小时: ${hours}小时，转换为${videoDurationMinutes}分钟`);
+            } else {
+              // 尝试只匹配分钟
+              const minutesOnlyMatch = feifeiResource.duration.match(/(\d+)\s*分钟/);
+              if (minutesOnlyMatch) {
+                videoDurationMinutes = parseInt(minutesOnlyMatch[1], 10);
+                console.log(`只提取到分钟: ${videoDurationMinutes}分钟`);
+              } else {
+                console.log(`无法从课时信息中提取时长`);
+              }
+            }
+          }
+        }
+      }
+      
+      // 解析文件大小（从file_size字段中提取）
+      let videoSizeGB = 0;
+      if (feifeiResource.file_size) {
+        console.log(`解析文件大小，原始信息: "${feifeiResource.file_size}"`);
+        
+        // 匹配 GB 格式
+        const gbMatch = feifeiResource.file_size.match(/(\d+(?:\.\d+)?)\s*GB/i);
+        if (gbMatch) {
+          videoSizeGB = parseFloat(gbMatch[1]);
+          console.log(`提取到GB大小: ${videoSizeGB} GB`);
+        } else {
+          // 匹配 MB 格式并转换为 GB
+          const mbMatch = feifeiResource.file_size.match(/(\d+(?:\.\d+)?)\s*MB/i);
+          if (mbMatch) {
+            const mbSize = parseFloat(mbMatch[1]);
+            videoSizeGB = mbSize / 1024;
+            console.log(`提取到MB大小: ${mbSize} MB，转换为 ${videoSizeGB.toFixed(2)} GB`);
+          } else {
+            // 匹配 KB 格式并转换为 GB
+            const kbMatch = feifeiResource.file_size.match(/(\d+(?:\.\d+)?)\s*KB/i);
+            if (kbMatch) {
+              const kbSize = parseFloat(kbMatch[1]);
+              videoSizeGB = kbSize / (1024 * 1024);
+              console.log(`提取到KB大小: ${kbSize} KB，转换为 ${videoSizeGB.toFixed(4)} GB`);
+            } else {
+              console.log(`无法从文件大小信息中提取大小`);
+            }
+          }
+        }
+      }
+      
+      // 为作者ID查找一个有效的作者
+      const authors = await storage.getAllAuthors();
+      let defaultAuthorId = 1; // 默认为ID为1的作者，如果没有作者则使用null
+      
+      if (Array.isArray(authors) && authors.length > 0) {
+        defaultAuthorId = authors[0].id; // 使用第一个作者
+        console.log(`使用第一个作者 ID=${defaultAuthorId} 作为默认作者`);
+      } else {
+        console.log(`警告：未找到作者数据，将使用默认作者ID=${defaultAuthorId}`);
+      }
+      
+      const resourceData = {
+        title: feifeiResource.chinese_title,
+        subtitle: feifeiResource.english_title || "",
+        cover_image: feifeiResource.image_url || "",
+        // 使用匹配到的分类ID
+        category_id: matchedCategoryId ? Number(matchedCategoryId) : null,
+        // 使用找到的作者ID
+        author_id: defaultAuthorId ? Number(defaultAuthorId) : null,
+        price: feifeiResource.coin_price || "0",
+        video_url: "",
+        // 使用解析后的视频时长（分钟）
+        video_duration: videoDurationMinutes,
+        // 视频大小（GB）- 转换为字符串
+        video_size: videoSizeGB.toString(),
+        language: languageValue,
+        subtitle_languages: feifeiResource.subtitle || "",
+        resolution: feifeiResource.video_size || "",
+        status: 0, // 默认设置为下架状态
+        is_free: false,
+        description: descriptionMarkdown, // 使用转换后的Markdown内容作为描述
+        contents: feifeiResource.parsed_content || "",
+        faq_content: "",
+        resource_url: feifeiResource.cloud_disk_url || "", // 将网盘链接复制到资源下载链接
+        resource_code: feifeiResource.cloud_disk_code || "", // 将网盘提取码复制到资源提取码
+        resource_type: "video",
+        source_type: "feifei",  // 设置来源类型为菲菲网
+        source_url: feifeiResource.url  // 将feifei资源的原始URL赋值给资源来源字段
+      };
+      
+      console.log("创建/更新资源的数据:", {
+        category_id: resourceData.category_id,
+        author_id: resourceData.author_id
+      });
+      
+      let resource;
+      let message;
+      
+      // 检查是否已存在匹配的资源
+      if (existingResources.total > 0) {
+        // 使用第一个匹配的资源进行更新
+        const existingResource = existingResources.resources[0];
+        console.log(`找到现有资源 ID=${existingResource.id}，将更新此资源`);
+        
+        // 更新资源
+        resource = await storage.updateResource(existingResource.id, resourceData);
+        message = '已更新现有资源';
+        
+        // 更新菲菲资源的关联信息
+        await storage.updateFeifeiResource(resourceId, {
+          linked_resource_id: existingResource.id
+        });
+        
+        console.log(`已更新菲菲资源与资源库的关联 (feifei_id=${resourceId} <-> resource_id=${existingResource.id})`);
+      } else {
+        // 创建新资源
+        console.log(`未找到现有资源，将创建新资源`);
+        resource = await storage.createResource(resourceData);
+        message = '已创建新资源';
+        
+        if (resource) {
+          // 更新菲菲资源的关联信息
+          await storage.updateFeifeiResource(resourceId, {
+            linked_resource_id: resource.id
+          });
+          
+          console.log(`已建立菲菲资源与资源库的关联 (feifei_id=${resourceId} <-> resource_id=${resource.id})`);
+        }
+      }
+      
+      console.log(`资源处理完成: ${message}`);
+      return { 
+        success: true, 
+        message: message,
+        resource: resource
+      };
+    } catch (error) {
+      console.error('将菲菲资源添加到资源库时出错:', error);
+      return { 
+        success: false, 
+        message: '处理资源时出错: ' + (error instanceof Error ? error.message : String(error)),
+        resource: null
+      };
+    }
+  }
+
   app.post('/api/feifei-resources/:id/to-resource', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
     try {
       if (!req.user) {
@@ -2602,6 +3484,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(400).json({ message: '无效的资源ID' });
         return;
       }
+      
+      console.log(`================== TO-RESOURCE API START ==================`);
+      
+      // 使用公共函数上架资源
+      const result = await addFeifeiResourceToResourceLibrary(resourceId);
+      
+      // 根据结果返回响应
+      if (result.success) {
+        res.json({ 
+          message: result.message, 
+          resource: result.resource 
+        });
+      } else {
+        res.status(400).json({ message: result.message });
+      }
+      
+      return;
+      
+      // 以下原有代码保留作为参考，实际执行时不会执行到这里
       
       // 获取菲菲资源
       const feifeiResource = await storage.getFeifeiResource(resourceId);
@@ -2775,35 +3676,225 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`菲菲分类: ${feifeiCategory.title}, 最终匹配的系统分类ID: ${matchedCategoryId || '未找到匹配的分类'}`);
       }
       
+      // 如果资源有HTML详情，但还没有Markdown内容，尝试通过AI转换为Markdown
+      let descriptionMarkdown = feifeiResource.description || "";
+      if (feifeiResource.details_html && !feifeiResource.markdown_content) {
+        console.log(`资源有HTML详情但没有Markdown内容，尝试通过AI转换...`);
+        
+        try {
+          // 从参数表获取智谱AI配置
+          const apiKeyParam = await storage.getParameterByKey('ZHIPU_API');
+          const modelParam = await storage.getParameterByKey('ZHIPU_MODEL');
+          const baseUrlParam = await storage.getParameterByKey('ZHIPU_BASE_URL');
+          
+          if (apiKeyParam && apiKeyParam.value) {
+            const apiKey = apiKeyParam.value;
+            const model = modelParam?.value || 'glm-4-flash'; // 默认使用glm-4-flash
+            const baseUrl = baseUrlParam?.value || 'https://open.bigmodel.cn/api/paas/v4';
+            
+            console.log('智谱AI配置:', { 
+              apiKey: '(已隐藏)', 
+              baseURL: baseUrl, 
+              model: model 
+            });
+            
+            // 使用完整的智谱AI API URL
+            const openai = new OpenAI({
+              apiKey: apiKey,
+              baseURL: baseUrl
+            });
+            
+            // 准备请求
+            const prompt = `
+            请将以下HTML内容转换为完整的Markdown格式，保留所有内容，包括标题、段落、列表、链接等结构。
+            请对HTML内容进行清理，去除垃圾字符，使其更加清晰可读。
+            
+            HTML内容：
+            ${feifeiResource.details_html}
+            
+            请只返回转换后的Markdown内容，不要有任何其他文字说明。
+            `;
+            
+            // 调用智谱AI
+            console.log('调用智谱AI转换HTML内容为Markdown...');
+            const completion = await openai.chat.completions.create({
+              model: model,
+              messages: [
+                { role: 'system', content: '你是一个专业的HTML转Markdown工具，擅长将复杂的HTML内容转换为清晰、结构化的Markdown格式。' },
+                { role: 'user', content: prompt }
+              ],
+              temperature: 0.2
+            });
+            
+            // 提取返回的内容
+            const markdownContent = completion.choices[0]?.message?.content || '';
+            
+            if (markdownContent.trim()) {
+              // 使用转换后的Markdown内容
+              descriptionMarkdown = markdownContent;
+              console.log(`成功将HTML转换为Markdown，长度: ${markdownContent.length} 字符`);
+              
+              // 保存转换后的Markdown内容到数据库
+              await storage.updateFeifeiResource(resourceId, {
+                markdown_content: markdownContent
+              });
+              console.log(`已保存Markdown内容到数据库`);
+            } else {
+              console.log(`转换结果为空，将使用原始描述`);
+            }
+          } else {
+            console.log(`未配置智谱API密钥，跳过转换过程`);
+          }
+        } catch (error) {
+          console.error(`转换HTML到Markdown时出错:`, error);
+          console.log(`将使用原始描述字段`);
+        }
+      } else if (feifeiResource.markdown_content) {
+        console.log(`使用已存在的Markdown内容，长度: ${feifeiResource.markdown_content.length} 字符`);
+        descriptionMarkdown = feifeiResource.markdown_content;
+      }
+      
       // 准备资源数据
+      // 将中文语言名称转换为英文
+      const languageMapping = {
+        "英语": "english",
+        "中文": "chinese",
+        "英文": "english",
+        "日语": "japanese",
+        "法语": "french",
+        "德语": "german",
+        "西班牙语": "spanish",
+        "意大利语": "italian",
+        "俄语": "russian",
+        "葡萄牙语": "portuguese",
+        "韩语": "korean",
+        "阿拉伯语": "arabic"
+      };
+      
+      // 按用户要求直接使用原始语言值而不做任何转换
+      const languageValue = feifeiResource.language || "";
+      
+      console.log(`===========================================`);
+      console.log(`语言字段: 值="${languageValue}" (直接使用原始值)`);
+      console.log(`===========================================`);
+      
+      // 解析视频时长（从课时字段中提取）
+      let videoDurationMinutes = 0;
+      if (feifeiResource.duration) {
+        console.log(`解析视频时长，原始课时信息: "${feifeiResource.duration}"`);
+        
+        // 使用正则表达式提取小时和分钟
+        // 匹配格式：xx 节课（xx 小时 xx 分钟）等
+        const timeMatch = feifeiResource.duration.match(/\((\d+)\s*小时\s*(\d+)\s*分钟\)/);
+        if (timeMatch) {
+          const hours = parseInt(timeMatch[1], 10);
+          const minutes = parseInt(timeMatch[2], 10);
+          videoDurationMinutes = hours * 60 + minutes;
+          console.log(`提取到括号内时长: ${hours}小时${minutes}分钟，转换为${videoDurationMinutes}分钟`);
+        } else {
+          // 尝试匹配不带括号的格式：xx 小时 xx 分钟
+          const noParenMatch = feifeiResource.duration.match(/(\d+)\s*小时\s*(\d+)\s*分钟/);
+          if (noParenMatch) {
+            const hours = parseInt(noParenMatch[1], 10);
+            const minutes = parseInt(noParenMatch[2], 10);
+            videoDurationMinutes = hours * 60 + minutes;
+            console.log(`提取到时长: ${hours}小时${minutes}分钟，转换为${videoDurationMinutes}分钟`);
+          } else {
+            // 尝试只匹配小时
+            const hoursOnlyMatch = feifeiResource.duration.match(/(\d+)\s*小时/);
+            if (hoursOnlyMatch) {
+              const hours = parseInt(hoursOnlyMatch[1], 10);
+              videoDurationMinutes = hours * 60;
+              console.log(`只提取到小时: ${hours}小时，转换为${videoDurationMinutes}分钟`);
+            } else {
+              // 尝试只匹配分钟
+              const minutesOnlyMatch = feifeiResource.duration.match(/(\d+)\s*分钟/);
+              if (minutesOnlyMatch) {
+                videoDurationMinutes = parseInt(minutesOnlyMatch[1], 10);
+                console.log(`只提取到分钟: ${videoDurationMinutes}分钟`);
+              } else {
+                console.log(`无法从课时信息中提取时长`);
+              }
+            }
+          }
+        }
+      }
+      
+      // 解析文件大小（从file_size字段中提取）
+      let videoSizeGB = 0;
+      if (feifeiResource.file_size) {
+        console.log(`解析文件大小，原始信息: "${feifeiResource.file_size}"`);
+        
+        // 匹配 GB 格式
+        const gbMatch = feifeiResource.file_size.match(/(\d+(?:\.\d+)?)\s*GB/i);
+        if (gbMatch) {
+          videoSizeGB = parseFloat(gbMatch[1]);
+          console.log(`提取到GB大小: ${videoSizeGB} GB`);
+        } else {
+          // 匹配 MB 格式并转换为 GB
+          const mbMatch = feifeiResource.file_size.match(/(\d+(?:\.\d+)?)\s*MB/i);
+          if (mbMatch) {
+            const mbSize = parseFloat(mbMatch[1]);
+            videoSizeGB = mbSize / 1024;
+            console.log(`提取到MB大小: ${mbSize} MB，转换为 ${videoSizeGB.toFixed(2)} GB`);
+          } else {
+            // 匹配 KB 格式并转换为 GB
+            const kbMatch = feifeiResource.file_size.match(/(\d+(?:\.\d+)?)\s*KB/i);
+            if (kbMatch) {
+              const kbSize = parseFloat(kbMatch[1]);
+              videoSizeGB = kbSize / (1024 * 1024);
+              console.log(`提取到KB大小: ${kbSize} KB，转换为 ${videoSizeGB.toFixed(4)} GB`);
+            } else {
+              console.log(`无法从文件大小信息中提取大小`);
+            }
+          }
+        }
+      }
+        
+      // 为作者ID查找一个有效的作者
+      const authors = await storage.getAllAuthors();
+      let defaultAuthorId = 1; // 默认为ID为1的作者，如果没有作者则使用null
+      
+      if (Array.isArray(authors) && authors.length > 0) {
+        defaultAuthorId = authors[0].id; // 使用第一个作者
+        console.log(`使用第一个作者 ID=${defaultAuthorId} 作为默认作者`);
+      } else {
+        console.log(`警告：未找到作者数据，将使用默认作者ID=${defaultAuthorId}`);
+      }
+      
       const resourceData = {
         title: feifeiResource.chinese_title,
         subtitle: feifeiResource.english_title || "",
         cover_image: feifeiResource.image_url || "",
         // 使用匹配到的分类ID
-        category_id: matchedCategoryId,
-        // 默认作者ID，后续可以在资源管理页面修改
-        author_id: 1,
+        category_id: matchedCategoryId ? Number(matchedCategoryId) : null,
+        // 使用找到的作者ID
+        author_id: defaultAuthorId ? Number(defaultAuthorId) : null,
         price: feifeiResource.coin_price || "0",
         video_url: "",
-        // 确保视频时长是字符串类型
-        video_duration: 0,
-        // 注意：video_size是字符串类型，但在schema中可能定义为numeric
-        // 如果必要，此处可以尝试提取数字部分，但现在先设为null以解决问题
-        video_size: null,
-        language: feifeiResource.language || "",
+        // 使用解析后的视频时长（分钟）
+        video_duration: videoDurationMinutes,
+        // 视频大小（GB）- 转换为字符串
+        video_size: videoSizeGB.toString(),
+        language: languageValue,
         subtitle_languages: feifeiResource.subtitle || "",
         resolution: feifeiResource.video_size || "",
-        source_type: "feifei",
         status: 0, // 默认设置为下架状态
         is_free: false,
-        description: feifeiResource.description || "",
+        description: descriptionMarkdown, // 使用转换后的Markdown内容作为描述
         contents: feifeiResource.parsed_content || "",
         faq_content: "",
-        resource_url: feifeiResource.url,
-        resource_type: "feifei",
+        resource_url: feifeiResource.cloud_disk_url || "", // 将网盘链接复制到资源下载链接
+        resource_code: feifeiResource.cloud_disk_code || "", // 将网盘提取码复制到资源提取码
+        resource_type: "video",
+        source_type: "feifei",  // 设置来源类型为菲菲网
         source_url: feifeiResource.url  // 将feifei资源的原始URL赋值给资源来源字段
       };
+      
+      console.log("创建/更新资源的数据:", {
+        category_id: resourceData.category_id,
+        author_id: resourceData.author_id
+      });
       
       let resource;
       let message;
@@ -2820,6 +3911,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`未找到匹配source_url的资源，将创建新资源`);
         resource = await storage.createResource(resourceData);
         message = "已创建新资源";
+      }
+      
+      // 更新菲菲资源，保存关联的资源ID
+      if (resource && resource.id) {
+        console.log(`更新菲菲资源 ID=${feifeiResource.id} 的 linked_resource_id 为 ${resource.id}`);
+        await storage.updateFeifeiResource(feifeiResource.id, {
+          linked_resource_id: resource.id
+        });
+        
+        // 重新获取更新后的菲菲资源
+        const updatedFeifeiResource = await storage.getFeifeiResource(feifeiResource.id);
+        console.log(`更新后的菲菲资源:`, updatedFeifeiResource);
+        
+        // 检查最终创建的资源
+        console.log(`================== 导入结果信息 ==================`);
+        console.log(`原始菲菲资源语言: ${feifeiResource.language}`);
+        console.log(`导入后资源语言: ${resource.language}`);
+        console.log(`=================================================`);
       }
       
       return res.json({ 

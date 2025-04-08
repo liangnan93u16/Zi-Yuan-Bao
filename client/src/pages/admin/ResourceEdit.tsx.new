@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, useParams } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,19 +27,20 @@ import { z } from "zod";
 import { insertResourceSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { 
   ImagePlus, 
   FileVideo,
+  Loader2,
   FileText,
-  Info,
   BookOpen,
+  Info,
   CircleDollarSign,
   Link as LinkIcon,
   ArrowLeft
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 // Extended schema with client validations
 const resourceFormSchema = z.object({
@@ -56,21 +57,29 @@ const resourceFormSchema = z.object({
   subtitle_languages: z.string().optional(),
   resolution: z.string().optional(),
   source_type: z.string().optional(),
-  status: z.coerce.number().default(0), // 默认状态为下架
+  status: z.coerce.number().default(1),
   is_free: z.boolean().default(false),
   description: z.string().optional(),
-  contents: z.string().optional(), // 课程目录，JSON格式
+  contents: z.string().optional(), // 课程目录，Markdown格式
   faq_content: z.string().optional(), // 常见问题，Markdown格式
-  resource_url: z.string().optional(), // 资源下载链接
-  resource_type: z.string().optional(), // 资源类型
+  resource_url: z.string().optional(),
+  resource_type: z.string().optional(),
 });
 
 type ResourceFormValues = z.infer<typeof resourceFormSchema>;
 
-export default function ResourceUpload() {
+export default function ResourceEdit() {
   const [activeTab, setActiveTab] = useState("basic");
   const [_, navigate] = useLocation();
+  const params = useParams();
+  const resourceId = params.id;
   const { toast } = useToast();
+
+  // Fetch resource data
+  const { data: resource, isLoading: isResourceLoading } = useQuery({
+    queryKey: [`/api/resources/${resourceId}`],
+    enabled: !!resourceId, // Only fetch if we have an ID
+  }) as { data: any, isLoading: boolean };
 
   // Fetch categories
   const { data: categories, isLoading: isCategoriesLoading } = useQuery({
@@ -89,28 +98,53 @@ export default function ResourceUpload() {
       title: "",
       subtitle: "",
       cover_image: "",
-      category_id: undefined,
-      author_id: undefined,
       price: 0,
       video_url: "",
       video_duration: 0,
       video_size: 0,
       language: "中文",
       subtitle_languages: "中文",
-      resolution: "1920x1080", // 默认1080p分辨率
+      resolution: "1080p",
       source_type: "original",
-      status: 0, // 默认下架状态
+      status: 1,
       is_free: false,
       description: "",
-      contents: "",
-      faq_content: "",
-      resource_url: "", // 新增资源下载链接字段
-      resource_type: "video", // 新增资源类型字段
+      resource_url: "",
     },
   });
 
-  // Create resource mutation
-  const createResourceMutation = useMutation({
+  // Update form values when resource data is loaded
+  useEffect(() => {
+    if (resource) {
+      const numericPrice = typeof resource.price === 'string' ? 
+        parseFloat(resource.price) : (resource.price || 0);
+        
+      form.reset({
+        title: resource.title,
+        subtitle: resource.subtitle || "",
+        cover_image: resource.cover_image || "",
+        category_id: resource.category_id,
+        author_id: resource.author_id,
+        price: numericPrice,
+        video_url: resource.video_url || "",
+        video_duration: resource.video_duration || 0,
+        video_size: resource.video_size || 0,
+        language: resource.language || "中文",
+        subtitle_languages: resource.subtitle_languages || "中文",
+        resolution: resource.resolution || "1080p",
+        source_type: resource.source_type || "original",
+        status: resource.status || 1,
+        is_free: resource.is_free || false,
+        description: resource.description || "",
+        contents: resource.contents || "",
+        faq_content: resource.faq_content || "",
+        resource_url: resource.resource_url || "",
+      });
+    }
+  }, [resource, form]);
+
+  // Update resource mutation
+  const updateResourceMutation = useMutation({
     mutationFn: async (data: ResourceFormValues) => {
       // 将数字转为字符串以匹配后端期望格式
       const formattedData = {
@@ -118,21 +152,22 @@ export default function ResourceUpload() {
         price: data.price?.toString(),
         video_size: data.video_size?.toString()
       };
-      return apiRequest("POST", "/api/resources", formattedData);
+      return apiRequest("PATCH", `/api/resources/${resourceId}`, formattedData);
     },
     onSuccess: () => {
       toast({
-        title: "资源创建成功",
-        description: "新资源已成功添加到系统。",
+        title: "资源更新成功",
+        description: "资源信息已成功更新。",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/resources'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/resources/${resourceId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/resources'] });
       navigate("/admin/resources");
     },
     onError: (error) => {
       toast({
-        title: "创建失败",
-        description: `添加资源时出错: ${error.message}`,
+        title: "更新失败",
+        description: `更新资源时出错: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -140,19 +175,42 @@ export default function ResourceUpload() {
 
   // Handle form submission
   const onSubmit = (data: ResourceFormValues) => {
-    createResourceMutation.mutate(data);
+    updateResourceMutation.mutate(data);
   };
+
+  if (isResourceLoading) {
+    return (
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="bg-white rounded-xl shadow-md p-8 text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>加载资源数据中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!resource) {
+    return (
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="bg-white rounded-xl shadow-md p-8 text-center">
+          <h2 className="text-2xl font-bold mb-4">资源不存在</h2>
+          <p className="mb-6">未找到ID为 {resourceId} 的资源，或者您没有权限编辑该资源。</p>
+          <Button onClick={() => navigate("/admin/resources")}>
+            返回资源列表
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
         <div className="border-b border-neutral-200 px-6 py-4 flex justify-between items-center">
-          <h2 className="text-xl font-bold">上传新资源</h2>
+          <h2 className="text-xl font-bold">编辑资源: {resource.title}</h2>
           <Button 
             variant="outline" 
-            onClick={() => {
-              navigate("/admin/resources");
-            }}
+            onClick={() => navigate("/admin/resources")}
             className="text-sm gap-1"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -225,8 +283,8 @@ export default function ResourceUpload() {
                         <FormItem>
                           <FormLabel>所属分类 *</FormLabel>
                           <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value?.toString()}
+                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            value={field.value?.toString()}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -262,8 +320,8 @@ export default function ResourceUpload() {
                         <FormItem>
                           <FormLabel>资源作者</FormLabel>
                           <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value?.toString()}
+                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            value={field.value?.toString()}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -291,54 +349,7 @@ export default function ResourceUpload() {
                         </FormItem>
                       )}
                     />
-                  </div>
-                </TabsContent>
-                
-                {/* 媒体信息标签页 */}
-                <TabsContent value="media" className="pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="cover_image"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>封面图片 URL</FormLabel>
-                          <FormControl>
-                            <div className="space-y-4">
-                              <Input {...field} placeholder="输入图片URL" />
-                              {field.value && (
-                                <div className="rounded-md overflow-hidden w-40 h-30 relative">
-                                  <img 
-                                    src={field.value} 
-                                    alt="资源封面预览" 
-                                    className="object-cover w-full h-full"
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/320x180?text=封面预览';
-                                    }}
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                     
-                    <FormField
-                      control={form.control}
-                      name="video_url"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>视频链接</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="输入视频URL" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
                     <FormField
                       control={form.control}
                       name="language"
@@ -347,7 +358,7 @@ export default function ResourceUpload() {
                           <FormLabel>资源语言</FormLabel>
                           <Select 
                             onValueChange={field.onChange} 
-                            defaultValue={field.value}
+                            value={field.value || "中文"}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -357,7 +368,7 @@ export default function ResourceUpload() {
                             <SelectContent>
                               <SelectItem value="中文">中文</SelectItem>
                               <SelectItem value="英文">英文</SelectItem>
-                              <SelectItem value="中英字幕">中英字幕</SelectItem>
+                              <SelectItem value="中英双语">中英双语</SelectItem>
                               <SelectItem value="其他">其他</SelectItem>
                             </SelectContent>
                           </Select>
@@ -365,35 +376,39 @@ export default function ResourceUpload() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
-                      name="subtitle_languages"
+                      name="cover_image"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>字幕语言</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                          >
+                        <FormItem className="col-span-1 md:col-span-2">
+                          <FormLabel>封面图片URL</FormLabel>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="选择字幕语言" />
-                              </SelectTrigger>
+                              <Input {...field} placeholder="图片URL" />
                             </FormControl>
-                            <SelectContent>
-                              <SelectItem value="中文">中文</SelectItem>
-                              <SelectItem value="英文">英文</SelectItem>
-                              <SelectItem value="中英字幕">中英字幕</SelectItem>
-                              <SelectItem value="无字幕">无字幕</SelectItem>
-                              <SelectItem value="其他">其他</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            <div className="flex items-center gap-4">
+                              {field.value && (
+                                <div className="border rounded overflow-hidden w-32 h-20">
+                                  <img src={field.value} alt="封面预览" className="w-full h-full object-cover" />
+                                </div>
+                              )}
+                              <div className="border border-dashed rounded p-6 text-center flex-grow">
+                                <ImagePlus className="h-8 w-8 mx-auto text-neutral-400" />
+                                <p className="text-sm text-neutral-500 mt-2">推荐尺寸：1920x1080</p>
+                              </div>
+                            </div>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
+                  </div>
+                </TabsContent>
+                
+                {/* 媒体信息标签页 */}
+                <TabsContent value="media" className="pt-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                       control={form.control}
                       name="video_duration"
@@ -430,22 +445,100 @@ export default function ResourceUpload() {
                           <FormLabel>视频分辨率</FormLabel>
                           <Select 
                             onValueChange={field.onChange} 
-                            value={field.value || ""}
+                            value={field.value || "1080p"}
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="选择视频分辨率" />
+                                <SelectValue placeholder="选择分辨率" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="1280x720">1280x720</SelectItem>
-                              <SelectItem value="1920x1080">1920x1080</SelectItem>
-                              <SelectItem value="4096x2160">4096x2160</SelectItem>
+                              <SelectItem value="720p">720p</SelectItem>
+                              <SelectItem value="1080p">1080p</SelectItem>
+                              <SelectItem value="1440p">1440p</SelectItem>
+                              <SelectItem value="4K">4K</SelectItem>
                             </SelectContent>
                           </Select>
-                          <FormDescription>
-                            选择常用的视频分辨率
-                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="subtitle_languages"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>字幕语言</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value || "中文"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="选择字幕语言" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="中文">中文</SelectItem>
+                              <SelectItem value="英文">英文</SelectItem>
+                              <SelectItem value="中英双语">中英双语</SelectItem>
+                              <SelectItem value="无字幕">无字幕</SelectItem>
+                              <SelectItem value="其他">其他</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="source_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>来源类型</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value || "original"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="选择来源" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="original">原创</SelectItem>
+                              <SelectItem value="udemy">Udemy</SelectItem>
+                              <SelectItem value="coursera">Coursera</SelectItem>
+                              <SelectItem value="lynda">Lynda</SelectItem>
+                              <SelectItem value="pluralsight">Pluralsight</SelectItem>
+                              <SelectItem value="other">其他</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="video_url"
+                      render={({ field }) => (
+                        <FormItem className="col-span-1 md:col-span-2">
+                          <FormLabel>视频预览URL</FormLabel>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                            <FormControl>
+                              <Input {...field} placeholder="视频URL" />
+                            </FormControl>
+                            <div className="flex items-center h-10">
+                              {field.value ? (
+                                <p className="text-sm text-green-600">已设置视频预览链接</p>
+                              ) : (
+                                <p className="text-sm text-neutral-500">未设置视频预览</p>
+                              )}
+                            </div>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -462,30 +555,28 @@ export default function ResourceUpload() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>资源描述</FormLabel>
-                          <FormControl>
-                            <Tabs defaultValue="edit" className="border rounded-md">
-                              <TabsList className="bg-muted">
-                                <TabsTrigger value="edit">编辑</TabsTrigger>
-                                <TabsTrigger value="preview">预览</TabsTrigger>
-                              </TabsList>
-                              <TabsContent value="edit" className="p-4">
-                                <Textarea 
-                                  {...field} 
-                                  placeholder="请输入资源描述(支持Markdown格式)" 
-                                  className="min-h-[200px] font-mono text-sm"
-                                />
-                              </TabsContent>
-                              <TabsContent value="preview" className="p-4 border-t prose max-w-none prose-headings:mt-6 prose-headings:mb-3 prose-p:my-2 prose-li:my-1 prose-hr:my-6">
-                                {field.value ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <FormControl>
+                                <Textarea {...field} placeholder="输入资源描述" className="min-h-[200px]" />
+                              </FormControl>
+                              <FormDescription className="mt-2">
+                                支持 Markdown 格式
+                              </FormDescription>
+                            </div>
+                            <div className="border rounded-md p-4 overflow-auto max-h-[400px]">
+                              <div className="text-sm font-medium mb-2">预览:</div>
+                              {field.value ? (
+                                <div className="prose prose-sm max-w-none">
                                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                     {field.value}
                                   </ReactMarkdown>
-                                ) : (
-                                  <p className="text-muted-foreground">无内容预览</p>
-                                )}
-                              </TabsContent>
-                            </Tabs>
-                          </FormControl>
+                                </div>
+                              ) : (
+                                <div className="text-neutral-500 italic">无内容预览</div>
+                              )}
+                            </div>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -497,16 +588,28 @@ export default function ResourceUpload() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>课程目录</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              {...field} 
-                              placeholder="请输入课程目录 (JSON格式)" 
-                              className="min-h-[180px] font-mono text-sm"
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            课程目录使用JSON格式，例如: 章节和小节的结构化数据
-                          </FormDescription>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <FormControl>
+                                <Textarea {...field} placeholder="输入课程目录" className="min-h-[200px]" />
+                              </FormControl>
+                              <FormDescription className="mt-2">
+                                支持 Markdown 格式，用于展示课程章节结构
+                              </FormDescription>
+                            </div>
+                            <div className="border rounded-md p-4 overflow-auto max-h-[400px]">
+                              <div className="text-sm font-medium mb-2">预览:</div>
+                              {field.value ? (
+                                <div className="prose prose-sm max-w-none">
+                                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {field.value}
+                                  </ReactMarkdown>
+                                </div>
+                              ) : (
+                                <div className="text-neutral-500 italic">无内容预览</div>
+                              )}
+                            </div>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -517,31 +620,29 @@ export default function ResourceUpload() {
                       name="faq_content"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>常见问题 FAQ</FormLabel>
-                          <FormControl>
-                            <Tabs defaultValue="edit" className="border rounded-md">
-                              <TabsList className="bg-muted">
-                                <TabsTrigger value="edit">编辑</TabsTrigger>
-                                <TabsTrigger value="preview">预览</TabsTrigger>
-                              </TabsList>
-                              <TabsContent value="edit" className="p-4">
-                                <Textarea 
-                                  {...field} 
-                                  placeholder="请输入常见问题 (Markdown格式)" 
-                                  className="min-h-[150px] font-mono text-sm"
-                                />
-                              </TabsContent>
-                              <TabsContent value="preview" className="p-4 border-t prose max-w-none prose-headings:mt-6 prose-headings:mb-3 prose-p:my-2 prose-li:my-1 prose-hr:my-6">
-                                {field.value ? (
+                          <FormLabel>常见问题</FormLabel>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <FormControl>
+                                <Textarea {...field} placeholder="输入常见问题与解答" className="min-h-[200px]" />
+                              </FormControl>
+                              <FormDescription className="mt-2">
+                                支持 Markdown 格式，用于展示常见问题与答案
+                              </FormDescription>
+                            </div>
+                            <div className="border rounded-md p-4 overflow-auto max-h-[400px]">
+                              <div className="text-sm font-medium mb-2">预览:</div>
+                              {field.value ? (
+                                <div className="prose prose-sm max-w-none">
                                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                     {field.value}
                                   </ReactMarkdown>
-                                ) : (
-                                  <p className="text-muted-foreground">无内容预览</p>
-                                )}
-                              </TabsContent>
-                            </Tabs>
-                          </FormControl>
+                                </div>
+                              ) : (
+                                <div className="text-neutral-500 italic">无内容预览</div>
+                              )}
+                            </div>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -577,7 +678,7 @@ export default function ResourceUpload() {
                           <FormControl>
                             <RadioGroup
                               onValueChange={(value) => field.onChange(value === "true")}
-                              defaultValue={field.value ? "true" : "false"}
+                              value={field.value ? "true" : "false"}
                               className="flex space-x-4"
                             >
                               <FormItem className="flex items-center space-x-2 space-y-0">
@@ -594,6 +695,9 @@ export default function ResourceUpload() {
                               </FormItem>
                             </RadioGroup>
                           </FormControl>
+                          <FormDescription>
+                            设为免费后，所有用户都可以免费下载此资源
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -604,11 +708,11 @@ export default function ResourceUpload() {
                       name="status"
                       render={({ field }) => (
                         <FormItem className="space-y-3">
-                          <FormLabel>状态</FormLabel>
+                          <FormLabel>资源状态</FormLabel>
                           <FormControl>
                             <RadioGroup
                               onValueChange={(value) => field.onChange(parseInt(value))}
-                              defaultValue={field.value.toString()}
+                              value={field.value?.toString() || "1"}
                               className="flex space-x-4"
                             >
                               <FormItem className="flex items-center space-x-2 space-y-0">
@@ -625,36 +729,9 @@ export default function ResourceUpload() {
                               </FormItem>
                             </RadioGroup>
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="source_type"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>来源类型</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="选择来源" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="original">原创</SelectItem>
-                              <SelectItem value="udemy">Udemy</SelectItem>
-                              <SelectItem value="coursera">Coursera</SelectItem>
-                              <SelectItem value="lynda">Lynda</SelectItem>
-                              <SelectItem value="pluralsight">Pluralsight</SelectItem>
-                              <SelectItem value="feifei">菲菲网</SelectItem>
-                              <SelectItem value="other">其他</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormDescription>
+                            下架后，资源将不会在前台显示
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -714,7 +791,8 @@ export default function ResourceUpload() {
                 </TabsContent>
               </Tabs>
               
-              <div className="flex justify-end space-x-4 pt-6 border-t">
+              {/* 提交按钮 */}
+              <div className="flex justify-end pt-4 space-x-4">
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -724,9 +802,14 @@ export default function ResourceUpload() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={createResourceMutation.isPending}
+                  disabled={updateResourceMutation.isPending}
                 >
-                  {createResourceMutation.isPending ? "保存中..." : "保存资源"}
+                  {updateResourceMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      保存中...
+                    </>
+                  ) : "保存资源"}
                 </Button>
               </div>
             </form>

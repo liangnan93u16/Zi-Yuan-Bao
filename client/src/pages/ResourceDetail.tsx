@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ReviewSection from "@/components/ReviewSection";
+import CourseSyllabus from "@/components/CourseSyllabus";
 
 export default function ResourceDetail() {
   const { id } = useParams();
@@ -408,7 +409,7 @@ export default function ResourceDetail() {
                     </div>
                     <div className="flex items-center">
                       <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
-                      <span>完整中英双语字幕</span>
+                      <span>完整中英字幕</span>
                     </div>
                     <div className="flex items-center">
                       <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
@@ -602,10 +603,8 @@ export default function ResourceDetail() {
               
               <TabsContent value="contents" className="p-5 md:p-8 mx-auto">
                 {resource.contents ? (
-                  <div className="prose prose-blue max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {resource.contents}
-                    </ReactMarkdown>
+                  <>
+                    <CourseSyllabus contentsJson={resource.contents} />
                     
                     <div className="mt-12 pt-6 border-t border-neutral-200">
                       <div className="text-sm text-neutral-600 bg-neutral-50 p-4 rounded-lg">
@@ -613,7 +612,7 @@ export default function ResourceDetail() {
                         <p>本站所有文章，如无特殊说明或标注，均为本站原创发布。任何个人或组织，在未征得本站同意时，禁止复制、盗用、采集、发布本站内容到任何网站、书籍等各类媒体平台。如若本站内容侵犯了原著者的合法权益，可联系我们进行处理。</p>
                       </div>
                     </div>
-                  </div>
+                  </>
                 ) : (
                   <>
                     <div className="space-y-4">

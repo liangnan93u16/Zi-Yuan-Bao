@@ -50,19 +50,18 @@ export default function ReviewSection({ resourceId }: ReviewSectionProps) {
 
   // 获取评价列表
   const { 
-    data: reviews = [], 
+    data: reviewsData = { reviews: [], meta: { average_rating: 0, review_count: 0 } }, 
     isLoading: isLoadingReviews 
-  } = useQuery<Review[]>({
+  } = useQuery<{ reviews: Review[], meta: { average_rating: number, review_count: number } }>({
     queryKey: [`/api/resources/${resourceId}/reviews`],
   });
 
-  // 获取评分摘要
-  const { 
-    data: ratingStats = { average: 0, count: 0 },
-    isLoading: isLoadingRating
-  } = useQuery<{ average: number; count: number }>({
-    queryKey: [`/api/resources/${resourceId}/rating`],
-  });
+  // 从响应中提取评价列表和统计信息
+  const reviews = reviewsData.reviews || [];
+  const ratingStats = {
+    average: reviewsData.meta?.average_rating || 0,
+    count: reviewsData.meta?.review_count || 0
+  };
 
   // 检查当前用户是否已经评价过
   useEffect(() => {
@@ -100,9 +99,8 @@ export default function ReviewSection({ resourceId }: ReviewSectionProps) {
         description: userReview ? "您的评价已成功更新" : "感谢您的评价！",
       });
       setIsEditing(false);
-      // 刷新评价列表和评分统计
+      // 刷新评价列表（包含评分统计）
       queryClient.invalidateQueries({ queryKey: [`/api/resources/${resourceId}/reviews`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/resources/${resourceId}/rating`] });
     },
     onError: (error) => {
       console.error("Error submitting review:", error);
@@ -135,9 +133,8 @@ export default function ReviewSection({ resourceId }: ReviewSectionProps) {
       });
       setUserReview(null);
       setNewReview({ rating: 5, content: "" });
-      // 刷新评价列表和评分统计
+      // 刷新评价列表（包含评分统计）
       queryClient.invalidateQueries({ queryKey: [`/api/resources/${resourceId}/reviews`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/resources/${resourceId}/rating`] });
     },
     onError: (error) => {
       console.error("Error deleting review:", error);
@@ -230,7 +227,7 @@ export default function ReviewSection({ resourceId }: ReviewSectionProps) {
     );
   };
 
-  if (isLoadingReviews || isLoadingRating) {
+  if (isLoadingReviews) {
     return (
       <div className="animate-pulse space-y-6">
         <div className="flex items-center justify-between mb-6">

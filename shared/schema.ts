@@ -56,11 +56,12 @@ export const resources = pgTable("resources", {
   status: integer("status").default(1),
   is_free: boolean("is_free").default(false),
   description: text("description"),
-  contents: text("contents"), // 课程目录，使用Markdown格式
+  contents: text("contents"), // 课程目录，使用JSON格式
   faq_content: text("faq_content"), // 常见问题，使用Markdown格式
   // 新增资源链接和类型
   resource_url: text("resource_url"),
   resource_type: text("resource_type").default("baidu"), // baidu, aliyun
+  resource_code: text("resource_code"), // 新增字段：资源提取码
   source_url: text("source_url"), // 新增字段：资源来源URL
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow()
@@ -247,6 +248,12 @@ export const feifeiResources = pgTable("feifei_resources", {
   course_html: text("course_html"), // 课程内容HTML原始代码
   preview_url: text("preview_url"), // 查看预览链接
   parsed_content: text("parsed_content"), // 存储解析后的JSON内容
+  linked_resource_id: integer("linked_resource_id"), // 关联的资源系统中的资源ID，默认为null
+  markdown_content: text("markdown_content"), // 存储从HTML转换来的Markdown格式内容
+  
+  // 新增网盘链接和提取码字段
+  cloud_disk_url: text("cloud_disk_url"), // 网盘链接
+  cloud_disk_code: text("cloud_disk_code"), // 提取码
   
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow()

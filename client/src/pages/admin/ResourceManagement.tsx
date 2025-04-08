@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -27,12 +27,23 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Trash2, Edit, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function ResourceManagement() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,42 +52,161 @@ export default function ResourceManagement() {
   const [priceFilter, setPriceFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [tab, setTab] = useState("resources");
+  const [resourceToDelete, setResourceToDelete] = useState<number | null>(null);
+  const [updatingResourceIds, setUpdatingResourceIds] = useState<number[]>([]);
   const { toast } = useToast();
 
   // Fetch resources with filters
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery<{
+    resources: any[];
+    total: number;
+  }>({
     queryKey: ['/api/admin/resources', categoryFilter, statusFilter, priceFilter, page],
+    // 确保不使用缓存，始终获取最新数据
+    staleTime: 0,
+    // 确保每次数据变化时都重新渲染
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
+  
+  // 当组件挂载或导航到此页面时，强制刷新数据
+  useEffect(() => {
+    const needsForceRefresh = localStorage.getItem('force_refresh_resources') === 'true';
+    
+    // 强制立即刷新资源列表
+    queryClient.invalidateQueries({ queryKey: ['/api/admin/resources'] });
+    
+    // 如果需要强制刷新，则完全重置查询缓存
+    if (needsForceRefresh) {
+      console.log("检测到需要强制刷新资源列表数据");
+      queryClient.resetQueries({ queryKey: ['/api/admin/resources'] });
+      localStorage.removeItem('force_refresh_resources'); // 清除标记
+    }
+    
+    // 立即重新获取数据
+    refetch();
+    
+    // 每秒检查一次是否需要刷新，直到成功
+    const checkInterval = setInterval(() => {
+      if (data?.resources && data.resources.length > 0) {
+        clearInterval(checkInterval);
+      } else {
+        console.log("等待数据加载，重新获取资源列表...");
+        refetch();
+      }
+    }, 1000);
+    
+    // 组件卸载时清除定时器
+    return () => clearInterval(checkInterval);
+  }, [refetch, data]);
 
   // Fetch categories for filter dropdown
-  const { data: categories } = useQuery({
+  const { data: categories } = useQuery<any[]>({
     queryKey: ['/api/categories'],
   });
 
-  // Change resource status mutation
-  const changeStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: number }) => {
-      return apiRequest("PATCH", `/api/admin/resources/${id}`, { status });
+  // 注意：我们不再使用 useMutation 钩子，改为直接在 handleStatusChange 中使用 apiRequest
+  
+  // Delete resource mutation
+  const deleteResourceMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/resources/${id}`);
     },
     onSuccess: () => {
+      // 强制立即刷新资源列表
       queryClient.invalidateQueries({ queryKey: ['/api/admin/resources'] });
+      
+      // 延迟100ms以确保后端数据更新完成
+      setTimeout(() => {
+        // 直接重新获取资源列表数据
+        queryClient.refetchQueries({ 
+          queryKey: ['/api/admin/resources'],
+          type: 'all',
+          exact: false
+        });
+        
+        // 特定刷新当前页面的数据
+        queryClient.refetchQueries({ 
+          queryKey: ['/api/admin/resources', categoryFilter, statusFilter, priceFilter, page],
+          exact: true 
+        });
+      }, 100);
+      
       toast({
-        title: "状态已更新",
-        description: "资源状态已成功更新。",
+        title: "删除成功",
+        description: "资源已成功删除。",
       });
+      setResourceToDelete(null);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("删除资源错误:", error);
+      let errorMessage = "删除资源时出错，请重试。";
+      
+      // 获取详细错误信息
+      if (error?.error) {
+        errorMessage = error.error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
-        title: "更新失败",
-        description: "更新资源状态时出错，请重试。",
+        title: "删除失败",
+        description: errorMessage,
         variant: "destructive",
       });
+      setResourceToDelete(null);
     },
   });
 
-  const handleStatusChange = (id: number, currentStatus: number) => {
-    const newStatus = currentStatus === 1 ? 0 : 1;
-    changeStatusMutation.mutate({ id, status: newStatus });
+  // 状态变更处理函数
+  const handleStatusChange = async (id: number, currentStatus: number) => {
+    try {
+      // 1. 标记资源为正在更新状态
+      setUpdatingResourceIds(prev => [...prev, id]);
+      
+      // 2. 确定新状态（上架=1，下架=0）
+      const newStatus = currentStatus === 1 ? 0 : 1;
+      
+      // 3. 调用API更新资源状态
+      const result = await apiRequest("PATCH", `/api/admin/resources/${id}`, { status: newStatus });
+      console.log("资源状态更新成功:", result);
+      
+      // 4. 强制刷新资源列表数据，完全替代本地缓存
+      await queryClient.invalidateQueries({
+        queryKey: ['/api/admin/resources', categoryFilter, statusFilter, priceFilter, page],
+        exact: true,
+        refetchType: 'all'
+      });
+      
+      // 5. 强制重新获取数据
+      await refetch();
+      
+      // 6. 通知用户更新成功
+      toast({
+        title: newStatus === 1 ? "资源已上架" : "资源已下架",
+        description: `资源 "${result.title}" 状态已成功更新`,
+      });
+      
+      // 7. 为确保状态已更新，在一小段延迟后再次强制刷新
+      setTimeout(async () => {
+        await refetch();
+      }, 500);
+      
+    } catch (error: any) {
+      console.error("更新资源状态失败:", error);
+      
+      // 显示错误提示
+      toast({
+        title: "状态更新失败",
+        description: error.message || "操作失败，请重试",
+        variant: "destructive",
+      });
+    } finally {
+      // 延迟移除更新状态，确保有足够时间展示加载状态
+      setTimeout(() => {
+        setUpdatingResourceIds(prev => prev.filter(itemId => itemId !== id));
+      }, 800);
+    }
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -87,6 +217,27 @@ export default function ResourceManagement() {
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* 删除确认对话框 */}
+      <AlertDialog open={resourceToDelete !== null} onOpenChange={(open) => !open && setResourceToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除资源</AlertDialogTitle>
+            <AlertDialogDescription>
+              您确定要永久删除这个资源吗？此操作无法撤销，删除后资源将不再可用。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-red-600 hover:bg-red-700 text-white" 
+              onClick={() => resourceToDelete && deleteResourceMutation.mutate(resourceToDelete)}
+            >
+              {deleteResourceMutation.isPending ? "删除中..." : "确认删除"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
         <div className="border-b border-neutral-200 px-6 py-4">
           <h2 className="text-xl font-bold">资源管理后台</h2>
@@ -178,13 +329,13 @@ export default function ResourceManagement() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>资源名称</TableHead>
-                    <TableHead>分类</TableHead>
-                    <TableHead>价格</TableHead>
-                    <TableHead>状态</TableHead>
-                    <TableHead>下载量</TableHead>
-                    <TableHead>创建时间</TableHead>
-                    <TableHead className="text-right">操作</TableHead>
+                    <TableHead className="w-[220px] whitespace-nowrap">资源名称</TableHead>
+                    <TableHead className="whitespace-nowrap">分类</TableHead>
+                    <TableHead className="whitespace-nowrap">价格</TableHead>
+                    <TableHead className="whitespace-nowrap">状态</TableHead>
+                    <TableHead className="whitespace-nowrap">下载量</TableHead>
+                    <TableHead className="whitespace-nowrap">创建时间</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -219,20 +370,20 @@ export default function ResourceManagement() {
                               <AvatarImage src={resource.cover_image} alt={resource.title} />
                               <AvatarFallback>{resource.title.charAt(0)}</AvatarFallback>
                             </Avatar>
-                            <div>
-                              <div className="text-sm font-medium text-neutral-900">{resource.title}</div>
-                              <div className="text-sm text-neutral-500">{resource.subtitle}</div>
+                            <div className="max-w-[150px]">
+                              <div className="text-sm font-medium text-neutral-900 truncate" title={resource.title}>{resource.title}</div>
+                              <div className="text-sm text-neutral-500 truncate" title={resource.subtitle}>{resource.subtitle}</div>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           {resource.category && (
-                            <Badge variant="outline" className="bg-blue-100 text-blue-800 border-0">
+                            <Badge variant="outline" className="bg-blue-100 text-blue-800 border-0 whitespace-nowrap">
                               {resource.category.name}
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <div className="text-sm text-neutral-900">
                             {resource.is_free ? '免费' : `¥${typeof resource.price === 'string' ? 
                               parseFloat(resource.price).toFixed(2) : 
@@ -242,30 +393,67 @@ export default function ResourceManagement() {
                             <div className="text-sm text-neutral-500">限时活动</div>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <Badge variant="outline" className={`
                             ${resource.status === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} 
-                            border-0
+                            border-0 whitespace-nowrap
                           `}>
                             {resource.status === 1 ? '已上架' : '已下架'}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm text-neutral-500">
+                        <TableCell className="text-sm text-neutral-500 whitespace-nowrap">
                           {resource.download_count || Math.floor(Math.random() * 10000)}
                         </TableCell>
-                        <TableCell className="text-sm text-neutral-500">
+                        <TableCell className="text-sm text-neutral-500 whitespace-nowrap">
                           {new Date(resource.created_at).toLocaleDateString()}
                         </TableCell>
-                        <TableCell className="text-right text-sm font-medium">
-                          <Link href={`/admin/resources/${resource.id}/edit`} className="text-primary hover:text-blue-700 mr-3">
-                            编辑
-                          </Link>
-                          <button
-                            className={resource.status === 1 ? "text-red-600 hover:text-red-800" : "text-green-600 hover:text-green-800"}
-                            onClick={() => handleStatusChange(resource.id, resource.status)}
-                          >
-                            {resource.status === 1 ? '下架' : '上架'}
-                          </button>
+                        <TableCell className="text-right text-sm font-medium whitespace-nowrap" style={{ minWidth: '200px' }}>
+                          <div className="flex justify-end space-x-3">
+                            <Link href={`/admin/resources/${resource.id}/edit`} className="text-primary hover:text-blue-700 inline-flex items-center">
+                              <Edit className="h-4 w-4 mr-1" /> 编辑
+                            </Link>
+                            <button
+                              className={
+                                updatingResourceIds.includes(resource.id)
+                                  ? "text-gray-500 inline-flex items-center cursor-wait"
+                                  : resource.status === 1
+                                  ? "text-red-600 hover:text-red-800 inline-flex items-center"
+                                  : "text-green-600 hover:text-green-800 inline-flex items-center"
+                              }
+                              onClick={() => {
+                                if (!updatingResourceIds.includes(resource.id)) {
+                                  handleStatusChange(resource.id, resource.status);
+                                }
+                              }}
+                              disabled={updatingResourceIds.includes(resource.id)}
+                            >
+                              {updatingResourceIds.includes(resource.id) ? (
+                                resource.status === 1 ? (
+                                  <>
+                                    <ArrowDownCircle className="h-4 w-4 mr-1 animate-pulse" /> 下架中...
+                                  </>
+                                ) : (
+                                  <>
+                                    <ArrowUpCircle className="h-4 w-4 mr-1 animate-pulse" /> 上架中...
+                                  </>
+                                )
+                              ) : resource.status === 1 ? (
+                                <>
+                                  <ArrowDownCircle className="h-4 w-4 mr-1" /> 下架
+                                </>
+                              ) : (
+                                <>
+                                  <ArrowUpCircle className="h-4 w-4 mr-1" /> 上架
+                                </>
+                              )}
+                            </button>
+                            <button
+                              className="text-red-600 hover:text-red-800 inline-flex items-center"
+                              onClick={() => setResourceToDelete(resource.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" /> 删除
+                            </button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
