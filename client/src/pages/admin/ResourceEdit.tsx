@@ -78,9 +78,9 @@ export default function ResourceEdit() {
   const resourceId = params.id;
   const { toast } = useToast();
 
-  // Fetch resource data
+  // Fetch resource data - 使用管理员专用API，不受资源状态限制
   const { data: resource, isLoading: isResourceLoading, refetch } = useQuery({
-    queryKey: [`/api/resources/${resourceId}`],
+    queryKey: [`/api/admin/resources/${resourceId}`],
     enabled: !!resourceId, // Only fetch if we have an ID
   }) as { data: any, isLoading: boolean, refetch: () => Promise<any> };
 
@@ -199,13 +199,18 @@ export default function ResourceEdit() {
   // Update resource mutation
   const updateResourceMutation = useMutation({
     mutationFn: async (data: ResourceFormValues) => {
+      // 确保status字段有值（如果data中没有，则使用原始资源的status值）
+      if (data.status === undefined && resource && resource.status !== undefined) {
+        data.status = resource.status;
+      }
+      
       // 数据安全处理 - 确保所有数据都有合适的类型和格式
       const formattedData = {
         ...data,
         // 确保数字类型转换正确
         category_id: data.category_id ? Number(data.category_id) : undefined,
         author_id: data.author_id ? Number(data.author_id) : undefined,
-        status: Number(data.status),
+        status: data.status !== undefined ? Number(data.status) : (resource?.status !== undefined ? Number(resource.status) : 1),
         price: data.price ? data.price.toString() : "0",
         video_duration: data.video_duration ? Number(data.video_duration) : undefined,
         video_size: data.video_size ? data.video_size.toString() : undefined,
@@ -237,6 +242,7 @@ export default function ResourceEdit() {
       // 更新缓存
       queryClient.invalidateQueries({ queryKey: ['/api/resources'] });
       queryClient.invalidateQueries({ queryKey: [`/api/resources/${resourceId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/resources/${resourceId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/resources'] });
       
       // 立即重新获取当前资源数据，而不导航离开
@@ -270,6 +276,11 @@ export default function ResourceEdit() {
       // 获取当前表单数据
       const formData = form.getValues();
       
+      // 确保保留资源状态值 (resource.status)
+      if (!formData.status && resource && resource.status !== undefined) {
+        formData.status = resource.status;
+      }
+      
       // 格式化数据 - 确保price是字符串类型
       const formattedData = {
         ...formData,
@@ -290,6 +301,54 @@ export default function ResourceEdit() {
       });
     }
   };
+  
+  // 同步图片路径的Mutation
+  const syncImagePathMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/resources/${resourceId}/sync-feifei-image-path`, {});
+    },
+    onSuccess: (data) => {
+      console.log("同步图片路径成功:", data);
+      toast({
+        title: "同步成功",
+        description: "本地图片路径已成功从菲菲资源同步",
+      });
+      
+      // 更新缓存
+      queryClient.invalidateQueries({ queryKey: ['/api/resources'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/resources/${resourceId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/resources/${resourceId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/resources'] });
+      
+      // 立即重新获取当前资源数据
+      setTimeout(() => {
+        refetch();
+      }, 100);
+    },
+    onError: (error: any) => {
+      console.error("同步图片路径失败:", error);
+      let errorMessage = "未知错误";
+      
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error?.toString) {
+        errorMessage = error.toString();
+      }
+      
+      toast({
+        title: "同步失败",
+        description: `同步图片路径时出错: ${errorMessage}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // 同步图片路径的方法
+  const syncImagePath = () => {
+    syncImagePathMutation.mutate();
+  };
 
   // Handle form submission
   const onSubmit = (data: ResourceFormValues) => {
@@ -307,6 +366,11 @@ export default function ResourceEdit() {
     }
     
     try {
+      // 确保保留资源状态值 (resource.status)
+      if (!data.status && resource && resource.status !== undefined) {
+        data.status = resource.status;
+      }
+      
       // 格式化数据 - 确保price和video_size是字符串类型
       const formattedData = {
         ...data,
@@ -895,39 +959,7 @@ export default function ResourceEdit() {
                       )}
                     />
                     
-                    <FormField
-                      control={form.control}
-                      name="status"
-                      render={({ field }) => (
-                        <FormItem className="space-y-3">
-                          <FormLabel>资源状态</FormLabel>
-                          <FormControl>
-                            <RadioGroup
-                              onValueChange={(value) => field.onChange(parseInt(value))}
-                              value={field.value?.toString() || "1"}
-                              className="flex space-x-4"
-                            >
-                              <FormItem className="flex items-center space-x-2 space-y-0">
-                                <FormControl>
-                                  <RadioGroupItem value="1" />
-                                </FormControl>
-                                <FormLabel className="cursor-pointer font-normal">上架</FormLabel>
-                              </FormItem>
-                              <FormItem className="flex items-center space-x-2 space-y-0">
-                                <FormControl>
-                                  <RadioGroupItem value="0" />
-                                </FormControl>
-                                <FormLabel className="cursor-pointer font-normal">下架</FormLabel>
-                              </FormItem>
-                            </RadioGroup>
-                          </FormControl>
-                          <FormDescription>
-                            下架后，资源将不会在前台显示
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {/* 资源状态字段已被移除，资源上下架通过资源上下架按钮控制 */}
                   </div>
                 </TabsContent>
                 

@@ -7,10 +7,12 @@ import CategoryCard from "@/components/resources/CategoryCard";
 import ResourceCard from "@/components/resources/ResourceCard";
 import { FilterType, ResourceWithCategory } from "@/lib/types";
 import { Category } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Home() {
   const [filter, setFilter] = useState<FilterType>("all");
   const [page, setPage] = useState(1);
+  const { user } = useAuth(); // 获取当前用户登录状态
   
   // Fetch categories
   const { data: categories = [], isLoading: isLoadingCategories } = useQuery<Category[]>({
@@ -20,6 +22,21 @@ export default function Home() {
   // Fetch resources with filter
   const { data: resourcesData, isLoading: isLoadingResources } = useQuery<{resources: ResourceWithCategory[], total: number}>({
     queryKey: ['/api/resources', filter, page],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filter === "free") params.append("is_free", "true");
+      if (filter === "paid") params.append("is_free", "false");
+      params.append("page", String(page));
+      params.append("limit", "4"); // 每页显示4个资源
+      params.append("status", "1"); // 只显示已上架的资源
+      
+      const url = `/api/resources?${params.toString()}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Failed to fetch resources");
+      }
+      return response.json();
+    },
   });
 
   // Extract resources from the response and provide a default empty array
@@ -149,7 +166,11 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {resources?.map((resource: ResourceWithCategory) => (
-              <ResourceCard key={resource.id} resource={resource} />
+              <ResourceCard 
+                key={resource.id} 
+                resource={resource} 
+                isLoggedIn={!!user} 
+              />
             ))}
           </div>
         )}

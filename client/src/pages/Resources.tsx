@@ -25,9 +25,11 @@ import { Search, SlidersHorizontal, X } from "lucide-react";
 import ResourceCard from "@/components/resources/ResourceCard";
 import { FilterType, ResourceWithCategory, SortOrder } from "@/lib/types";
 import { Category } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Resources() {
   const [location] = useLocation();
+  const { user } = useAuth(); // 获取当前用户登录状态
   
   // Parse search query from URL if available
   const getInitialSearchQuery = () => {
@@ -114,6 +116,7 @@ export default function Resources() {
   if (searchQuery) params.append("search", searchQuery);
   params.append("page", String(page));
   params.append("limit", String(limit));
+  params.append("status", "1"); // 只显示已上架的资源
   
   // Convert sort order to API parameters
   switch (sortOrder) {
@@ -461,7 +464,11 @@ export default function Resources() {
       ) : resources.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {resources.map((resource) => (
-            <ResourceCard key={resource.id} resource={resource} />
+            <ResourceCard 
+              key={resource.id} 
+              resource={resource} 
+              isLoggedIn={!!user}
+            />
           ))}
         </div>
       ) : (

@@ -7,6 +7,7 @@ import {
   adminLoginLogs, type AdminLoginLog, type InsertAdminLoginLog,
   authors, type Author, type InsertAuthor,
   userPurchases, type UserPurchase, type InsertUserPurchase,
+  userFavorites, type UserFavorite, type InsertUserFavorite,
   feifeiCategories, type FeifeiCategory, type InsertFeifeiCategory,
   feifeiResources, type FeifeiResource, type InsertFeifeiResource,
   feifeiTags, type FeifeiTag, type InsertFeifeiTag,
@@ -70,6 +71,13 @@ export interface IStorage {
   createUserPurchase(userId: number, resourceId: number, price: number): Promise<UserPurchase>;
   getUserPurchase(userId: number, resourceId: number): Promise<UserPurchase | undefined>;
   getUserPurchases(userId: number): Promise<UserPurchase[]>;
+  
+  // User Favorite operations
+  createUserFavorite(userId: number, resourceId: number): Promise<UserFavorite>;
+  getUserFavorite(userId: number, resourceId: number): Promise<UserFavorite | undefined>;
+  getUserFavorites(userId: number): Promise<{ resources: Resource[], total: number }>;
+  deleteUserFavorite(userId: number, resourceId: number): Promise<boolean>;
+  checkIfUserFavorited(userId: number, resourceId: number): Promise<boolean>;
   
   // Admin Login Log operations
   createAdminLoginLog(log: InsertAdminLoginLog): Promise<AdminLoginLog>;
@@ -530,6 +538,103 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error getting user purchases:', error);
       return [];
+    }
+  }
+  
+  // User Favorite methods
+  async createUserFavorite(userId: number, resourceId: number): Promise<UserFavorite> {
+    try {
+      const [favorite] = await db
+        .insert(userFavorites)
+        .values({
+          user_id: userId,
+          resource_id: resourceId
+        })
+        .returning();
+      return favorite;
+    } catch (error) {
+      console.error('Error creating user favorite:', error);
+      throw error;
+    }
+  }
+  
+  async getUserFavorite(userId: number, resourceId: number): Promise<UserFavorite | undefined> {
+    try {
+      const [favorite] = await db
+        .select()
+        .from(userFavorites)
+        .where(and(
+          eq(userFavorites.user_id, userId),
+          eq(userFavorites.resource_id, resourceId)
+        ));
+      return favorite;
+    } catch (error) {
+      console.error('Error getting user favorite:', error);
+      return undefined;
+    }
+  }
+  
+  async getUserFavorites(userId: number): Promise<{ resources: Resource[], total: number }> {
+    try {
+      // 首先获取用户收藏的资源ID列表
+      const favorites = await db
+        .select()
+        .from(userFavorites)
+        .where(eq(userFavorites.user_id, userId))
+        .orderBy(desc(userFavorites.created_at));
+      
+      // 如果没有收藏记录，直接返回空数组
+      if (favorites.length === 0) {
+        return { resources: [], total: 0 };
+      }
+      
+      // 获取资源ID列表
+      const resourceIds = favorites.map(fav => fav.resource_id);
+      
+      // 查询对应的资源列表
+      const resourcesList = await db
+        .select()
+        .from(resources)
+        .where(sql`${resources.id} IN (${resourceIds.join(', ')})`);
+      
+      return { resources: resourcesList, total: resourcesList.length };
+    } catch (error) {
+      console.error('Error getting user favorites:', error);
+      return { resources: [], total: 0 };
+    }
+  }
+  
+  async deleteUserFavorite(userId: number, resourceId: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(userFavorites)
+        .where(and(
+          eq(userFavorites.user_id, userId),
+          eq(userFavorites.resource_id, resourceId)
+        ))
+        .returning({ id: userFavorites.id });
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error deleting user favorite:', error);
+      return false;
+    }
+  }
+  
+  async checkIfUserFavorited(userId: number, resourceId: number): Promise<boolean> {
+    try {
+      const [favorite] = await db
+        .select()
+        .from(userFavorites)
+        .where(and(
+          eq(userFavorites.user_id, userId),
+          eq(userFavorites.resource_id, resourceId)
+        ));
+      
+      return !!favorite;
+    } catch (error) {
+      console.error('Error checking if user favorited:', error);
+      return false;
     }
   }
   

@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, ResourceFilters } from "./storage";
 import session from "express-session";
@@ -7,7 +7,9 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import OpenAI from 'openai';
 import { db } from './db';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, and, isNull, isNotNull, ne } from 'drizzle-orm';
+import * as fs from 'fs';
+import * as path from 'path';
 import { 
   insertCategorySchema, 
   insertResourceSchema, 
@@ -16,6 +18,7 @@ import {
   insertAuthorSchema,
   insertFeifeiCategorySchema,
   insertFeifeiResourceSchema,
+  feifeiResources,
   loginSchema, 
   registerSchema,
   type Review,
@@ -35,6 +38,22 @@ import {
 } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // 创建图片保存目录
+  const imagesDir = path.join('public', 'images');
+  try {
+    if (!fs.existsSync(imagesDir)) {
+      console.log(`创建图片保存目录: ${imagesDir}`);
+      fs.mkdirSync(imagesDir, { recursive: true });
+    } else {
+      console.log(`图片保存目录已存在: ${imagesDir}`);
+    }
+  } catch (err) {
+    console.error(`创建图片保存目录失败: ${err}`);
+  }
+  
+  // 设置静态文件服务，提供图片访问
+  app.use('/images', express.static(path.join('public', 'images')));
+  
   // 检查资源是否可以被删除（是否已被购买）
   async function canDeleteResource(resourceId: number): Promise<boolean> {
     const purchases = await db
@@ -135,6 +154,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching user purchases:', error);
       res.status(500).json({ message: '获取购买记录失败' });
+    }
+  });
+  
+  // 获取用户收藏的资源列表
+  app.get('/api/user/favorites', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期' });
+        return;
+      }
+      
+      // 获取用户的收藏资源
+      const { resources, total } = await storage.getUserFavorites(req.user.id);
+      
+      // 对资源进行分类增强
+      const enrichedResources = await Promise.all(resources.map(async (resource) => {
+        let category = null;
+        if (resource.category_id) {
+          category = await storage.getCategory(resource.category_id);
+        }
+        
+        let author = null;
+        if (resource.author_id) {
+          author = await storage.getAuthor(resource.author_id);
+        }
+        
+        return {
+          ...resource,
+          category,
+          author
+        };
+      }));
+      
+      res.json({
+        resources: enrichedResources,
+        total
+      });
+    } catch (error) {
+      console.error('Error fetching user favorites:', error);
+      res.status(500).json({ message: '获取收藏记录失败' });
+    }
+  });
+  
+  // 添加收藏
+  app.post('/api/resources/:id/favorite', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期' });
+        return;
+      }
+      
+      const resourceId = parseInt(req.params.id);
+      if (isNaN(resourceId)) {
+        res.status(400).json({ message: '无效的资源ID' });
+        return;
+      }
+      
+      // 检查资源是否存在
+      const resource = await storage.getResource(resourceId);
+      if (!resource) {
+        res.status(404).json({ message: '资源不存在' });
+        return;
+      }
+      
+      // 检查用户是否已经收藏过该资源
+      const existingFavorite = await storage.getUserFavorite(req.user.id, resourceId);
+      if (existingFavorite) {
+        res.status(200).json({ 
+          success: true, 
+          message: '已经收藏过该资源', 
+          favorited: true 
+        });
+        return;
+      }
+      
+      // 添加收藏
+      await storage.createUserFavorite(req.user.id, resourceId);
+      
+      res.status(201).json({ 
+        success: true, 
+        message: '收藏成功',
+        favorited: true
+      });
+    } catch (error) {
+      console.error('Error adding favorite:', error);
+      res.status(500).json({ message: '收藏失败' });
+    }
+  });
+  
+  // 取消收藏
+  app.delete('/api/resources/:id/favorite', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期' });
+        return;
+      }
+      
+      const resourceId = parseInt(req.params.id);
+      if (isNaN(resourceId)) {
+        res.status(400).json({ message: '无效的资源ID' });
+        return;
+      }
+      
+      // 删除收藏
+      const result = await storage.deleteUserFavorite(req.user.id, resourceId);
+      
+      if (result) {
+        res.json({ 
+          success: true, 
+          message: '取消收藏成功',
+          favorited: false
+        });
+      } else {
+        res.status(404).json({ message: '收藏记录不存在' });
+      }
+    } catch (error) {
+      console.error('Error removing favorite:', error);
+      res.status(500).json({ message: '取消收藏失败' });
+    }
+  });
+  
+  // 检查资源是否已收藏
+  app.get('/api/resources/:id/favorite/check', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期', favorited: false });
+        return;
+      }
+      
+      const resourceId = parseInt(req.params.id);
+      if (isNaN(resourceId)) {
+        res.status(400).json({ message: '无效的资源ID', favorited: false });
+        return;
+      }
+      
+      // 检查是否收藏过
+      const favorited = await storage.checkIfUserFavorited(req.user.id, resourceId);
+      
+      res.json({ 
+        success: true, 
+        favorited 
+      });
+    } catch (error) {
+      console.error('Error checking favorite status:', error);
+      res.status(500).json({ message: '检查收藏状态失败', favorited: false });
     }
   });
 
@@ -506,6 +670,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(404).json({ message: '资源不存在' });
         return;
       }
+      
+      // 检查资源状态，非管理员只能查看已上架资源
+      if (resource.status !== 1 && (!req.user || req.user.role !== 'admin')) {
+        res.status(403).json({ message: '该资源未上架或已下架' });
+        return;
+      }
 
       // 准备结果对象
       let result: any = { ...resource };
@@ -697,6 +867,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching admin resources:', error);
       res.status(500).json({ message: '获取资源列表失败' });
+    }
+  });
+  
+  // 管理员获取单个资源详情
+  app.get('/api/admin/resources/:id', authenticateUser as any, authorizeAdmin as any, async (req, res) => {
+    try {
+      const resourceId = parseInt(req.params.id);
+      if (isNaN(resourceId)) {
+        res.status(400).json({ message: '无效的资源ID' });
+        return;
+      }
+
+      const resource = await storage.getResource(resourceId);
+      if (!resource) {
+        res.status(404).json({ message: '资源不存在' });
+        return;
+      }
+      
+      // 准备结果对象
+      let result: any = { ...resource };
+      
+      // 包含分类数据
+      if (resource.category_id) {
+        const category = await storage.getCategory(resource.category_id);
+        result.category = category;
+      }
+      
+      // 包含作者数据
+      if (resource.author_id) {
+        const author = await storage.getAuthor(resource.author_id);
+        result.author = author;
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching admin resource:', error);
+      res.status(500).json({ message: '获取资源详情失败' });
     }
   });
 
@@ -2344,21 +2551,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // 准备请求
-      const prompt = `
+      // 第一步：先提取结构
+      const extractPrompt = `
       我需要你从以下HTML代码中提取课程大纲信息。
       HTML代码描述了一个在线课程的章节和讲座结构。
       请提取所有章节和每个章节下的讲座信息，包括标题和时长。
 
-      请以以下JSON格式返回：
+      请以以下JSON格式返回，所有字段名必须使用中文：
       {
-        "chapters": [
+        "章节": [
           {
-            "title": "章节标题",
-            "duration": "章节总时长",
-            "lectures": [
+            "标题": "章节标题",
+            "时长": "章节总时长",
+            "讲座": [
               {
-                "title": "讲座标题",
-                "duration": "讲座时长"
+                "标题": "讲座标题",
+                "时长": "讲座时长"
               }
             ]
           }
@@ -2369,39 +2577,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ${resource.course_html}
       
       请只返回提取后的JSON数据，不要有任何其他文字说明。
+      确保所有字段名都使用中文，而不是英文。
+      确保返回的是有效的JSON结构。
       `;
 
-      // 调用智谱AI
-      console.log('调用智谱AI解析HTML内容...');
-      const completion = await openai.chat.completions.create({
+      // 调用智谱AI - 第一步提取结构
+      console.log('步骤1：调用智谱AI解析HTML内容...');
+      const extractCompletion = await openai.chat.completions.create({
         model: model,
         messages: [
-          { role: 'system', content: '你是一个帮助解析HTML结构的专业助手，擅长从HTML中提取结构化信息并返回JSON格式数据。' },
-          { role: 'user', content: prompt }
+          { role: 'system', content: '你是一个帮助解析HTML结构的专业助手。你擅长提取HTML中的课程结构信息并按照要求的JSON格式返回。' },
+          { role: 'user', content: extractPrompt }
         ],
-        temperature: 0.2
+        temperature: 0.1
       });
 
-      console.log('智谱AI响应:', JSON.stringify(completion, null, 2));
+      // 提取返回的内容
+      const extractedContent = extractCompletion.choices[0]?.message?.content || '';
+      
+      // 尝试解析JSON
+      let extractedData;
+      try {
+        // 清理内容，移除可能的markdown代码块标记
+        const cleanedExtractedContent = extractedContent.replace(/```json|```/g, '').trim();
+        console.log('步骤1 - 清理后的内容:', cleanedExtractedContent);
+        
+        extractedData = JSON.parse(cleanedExtractedContent);
+        console.log('步骤1 - 成功解析JSON结构');
+      } catch (parseError) {
+        console.error('步骤1 - 解析智谱AI返回的JSON失败:', parseError);
+        console.error('步骤1 - 接收到的原始内容:', extractedContent);
+        return res.status(400).json({ message: '解析课程结构失败', error: (parseError as Error).message });
+      }
+
+      // 第二步：翻译内容
+      const translatePrompt = `
+      我需要你将以下JSON数据中的所有英文内容翻译成中文。这是一个翻译任务！
+
+      JSON数据是一个课程大纲，包含章节和讲座信息。
+      你需要翻译所有的"标题"字段内容，但保持"时长"字段不变。
+
+      原始JSON数据：
+      ${JSON.stringify(extractedData, null, 2)}
+
+      请翻译后返回完整的JSON数据，所有字段名保持不变，只翻译"标题"字段的内容。
+      
+      翻译规则：
+      1. 所有英文标题必须翻译成中文，不允许保留任何英文内容
+      2. 请只返回翻译后的JSON数据，不要有任何其他文字说明
+      3. 保持时长的格式不变，只翻译文本内容
+      4. 确保返回的是有效的JSON结构
+      
+      示例：
+      - 英文标题"Introduction to Course"应翻译为"课程介绍"
+      - 英文标题"Module 1: Getting Started"应翻译为"模块1：入门"
+      - 英文标题"Prompt Engineering"应翻译为"提示词工程"
+      - 英文标题"Logo Creation with AI"应翻译为"AI辅助标志创建"
+      `;
+
+      // 调用智谱AI - 第二步翻译
+      console.log('步骤2：调用智谱AI翻译提取的内容...');
+      const translateCompletion = await openai.chat.completions.create({
+        model: model,
+        messages: [
+          { role: 'system', content: '你是一个专业的英汉翻译助手。你的任务是将所有英文内容准确地翻译成中文，同时保持JSON结构的完整性。你必须翻译所有文本内容，绝不保留任何英文。' },
+          { role: 'user', content: translatePrompt }
+        ],
+        temperature: 0.1
+      });
+
+      // 记录智谱AI响应
+      console.log('步骤2 - 智谱AI翻译响应:', JSON.stringify(translateCompletion, null, 2));
 
       // 提取返回的内容
-      const content = completion.choices[0]?.message?.content || '';
+      const translatedContent = translateCompletion.choices[0]?.message?.content || '';
       
       // 尝试解析JSON
       let parsedContent;
       let parsedContentStr;
       try {
         // 清理内容，移除可能的markdown代码块标记
-        const cleanedContent = content.replace(/```json|```/g, '').trim();
-        console.log('清理后的内容:', cleanedContent);
+        const cleanedContent = translatedContent.replace(/```json|```/g, '').trim();
+        console.log('步骤2 - 清理后的内容:', cleanedContent);
         
         parsedContent = JSON.parse(cleanedContent);
         parsedContentStr = JSON.stringify(parsedContent, null, 2);
-        console.log('成功解析JSON结果:', parsedContentStr);
+        console.log('步骤2 - 成功解析带翻译的JSON结果:', parsedContentStr);
       } catch (parseError) {
-        console.error('解析智谱AI返回的JSON失败:', parseError);
-        console.error('接收到的原始内容:', content);
-        parsedContent = { error: '无法解析返回的JSON', content };
+        console.error('步骤2 - 解析智谱AI返回的JSON失败:', parseError);
+        console.error('步骤2 - 接收到的原始内容:', translatedContent);
+        parsedContent = { error: '无法解析返回的JSON', content: translatedContent };
         parsedContentStr = JSON.stringify(parsedContent);
       }
 
@@ -2471,6 +2736,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // 导入axios和cheerio库
     const axios = (await import('axios')).default;
     const { load } = await import('cheerio');
+    
+    // 导入文件系统模块
+    const path = (await import('path')).default;  
+    const fs = (await import('fs')).promises;
     
     try {
       // 获取网页内容
@@ -2616,6 +2885,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     $('.wp-post-image').attr('src') ||
                     $('img.attachment-large').attr('src');
       
+      // 保存图片到本地
+      let localImagePath = null;
+      if (imgUrl) {
+        try {
+          // 创建唯一的文件名，使用资源ID和时间戳
+          const fileExtension = path.extname(new URL(imgUrl).pathname) || '.jpg';
+          const fileName = `feifei_${resourceId}_${Date.now()}${fileExtension}`;
+          const imagePath = path.join('public', 'images', fileName);
+          
+          if (isLogVerbose) console.log(`下载图片: ${imgUrl} 到本地: ${imagePath}`);
+          
+          // 下载图片
+          const imageResponse = await axios.get(imgUrl, { responseType: 'arraybuffer' });
+          
+          // 保存图片到本地
+          await fs.writeFile(imagePath, Buffer.from(imageResponse.data));
+          
+          // 设置相对路径用于数据库存储
+          localImagePath = `/images/${fileName}`;
+          
+          if (isLogVerbose) console.log(`图片已保存到本地: ${localImagePath}`);
+        } catch (imgError) {
+          console.error('下载或保存图片时出错:', imgError);
+          if (isLogVerbose) console.log(`无法保存图片: ${imgUrl}`);
+        }
+      } else {
+        if (isLogVerbose) console.log('未找到图片URL，跳过图片下载');
+      }
+      
       // 提取详情描述
       const details = $('.entry-content').text().trim();
       
@@ -2679,6 +2977,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 更新details_html字段
         ...(articleContentHtml && { details_html: articleContentHtml }),
         ...(imgUrl && { image_url: imgUrl }),
+        ...(localImagePath && { local_image_path: localImagePath }),
         ...(resourceCategory && { resource_category: resourceCategory }),
         ...(popularity && { popularity }),
         ...(publishDate && { publish_date: publishDate }),
@@ -3015,9 +3314,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             needsUpdate = true;
           }
           
+          // 检查本地图片路径：如果菲菲资源有本地图片路径，且资源库中没有或与菲菲资源不同，则更新
+          if (feifeiResource.local_image_path && 
+              (!linkedResource.local_image_path || linkedResource.local_image_path !== feifeiResource.local_image_path)) {
+            console.log(`更新资源库中的本地图片路径: 从 ${linkedResource.local_image_path || '无'} 更新为 ${feifeiResource.local_image_path}`);
+            updateData.local_image_path = feifeiResource.local_image_path;
+            needsUpdate = true;
+          }
+          
           // 如果需要更新，执行更新操作
           if (needsUpdate) {
-            console.log(`更新资源库中的空字段:`, updateData);
+            console.log(`更新资源库中的字段:`, updateData);
             const updatedResource = await storage.updateResource(linkedResource.id, updateData);
             return { 
               success: true, 
@@ -3390,6 +3697,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const resourceData = {
         title: feifeiResource.chinese_title,
         subtitle: feifeiResource.english_title || "",
+        local_image_path: feifeiResource.local_image_path || null, // 添加本地图片路径
         cover_image: feifeiResource.image_url || "",
         // 使用匹配到的分类ID
         category_id: matchedCategoryId ? Number(matchedCategoryId) : null,
@@ -3865,6 +4173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const resourceData = {
         title: feifeiResource.chinese_title,
         subtitle: feifeiResource.english_title || "",
+        local_image_path: feifeiResource.local_image_path || null, // 添加本地图片路径
         cover_image: feifeiResource.image_url || "",
         // 使用匹配到的分类ID
         category_id: matchedCategoryId ? Number(matchedCategoryId) : null,
@@ -3904,11 +4213,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const existingResource = existingResources.resources[0];
         console.log(`找到已存在的资源: ID=${existingResource.id}, 标题=${existingResource.title}`);
         console.log(`将更新此资源而不是创建新资源`);
+        
+        // 确保本地图片路径被正确更新
+        if (feifeiResource.local_image_path && (!existingResource.local_image_path || existingResource.local_image_path !== feifeiResource.local_image_path)) {
+          console.log(`更新资源本地图片路径: 从 ${existingResource.local_image_path || '无'} 更新为 ${feifeiResource.local_image_path}`);
+        }
+        
         resource = await storage.updateResource(existingResource.id, resourceData);
         message = "已更新资源";
       } else {
         // 创建新资源
         console.log(`未找到匹配source_url的资源，将创建新资源`);
+        if (feifeiResource.local_image_path) {
+          console.log(`新资源将使用本地图片路径: ${feifeiResource.local_image_path}`);
+        }
         resource = await storage.createResource(resourceData);
         message = "已创建新资源";
       }
@@ -4013,6 +4331,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('解析菲菲资源时出错:', error);
       // 由于已经向客户端发送了响应，这里只记录错误
+    }
+  });
+
+  // 同步菲菲资源的本地图片路径到关联的资源
+  app.post('/api/sync-feifei-image-paths', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期' });
+        return;
+      }
+
+      // 获取所有已关联资源的菲菲资源
+      const feifeiResourcesData = await db
+        .select()
+        .from(feifeiResources)
+        .where(and(
+          isNotNull(feifeiResources.linked_resource_id),
+          isNotNull(feifeiResources.local_image_path)
+        ));
+
+      console.log(`找到 ${feifeiResourcesData.length} 个带有本地图片的已关联菲菲资源`);
+      
+      // 记录更新的资源数量
+      let updatedCount = 0;
+      let errorCount = 0;
+      
+      // 遍历菲菲资源，更新对应的资源本地图片路径
+      for (const feifeiResource of feifeiResourcesData) {
+        if (feifeiResource.linked_resource_id && feifeiResource.local_image_path) {
+          try {
+            // 更新资源的本地图片路径
+            await storage.updateResource(feifeiResource.linked_resource_id, {
+              local_image_path: feifeiResource.local_image_path
+            });
+            
+            console.log(`已更新资源 ID=${feifeiResource.linked_resource_id} 的本地图片路径: ${feifeiResource.local_image_path}`);
+            updatedCount++;
+          } catch (error) {
+            console.error(`更新资源 ID=${feifeiResource.linked_resource_id} 的本地图片路径时出错:`, error);
+            errorCount++;
+          }
+        }
+      }
+      
+      // 返回结果
+      res.json({
+        success: true,
+        message: `成功同步 ${updatedCount} 个资源的本地图片路径，失败 ${errorCount} 个`,
+        updated: updatedCount,
+        errors: errorCount,
+        total: feifeiResourcesData.length
+      });
+    } catch (error) {
+      console.error('同步本地图片路径时出错:', error);
+      res.status(500).json({
+        success: false,
+        message: '同步本地图片路径失败',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // 为单个资源同步菲菲资源的本地图片路径
+  app.post('/api/resources/:id/sync-feifei-image-path', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期' });
+        return;
+      }
+
+      const resourceId = parseInt(req.params.id);
+      if (isNaN(resourceId)) {
+        res.status(400).json({ success: false, message: '无效的资源ID' });
+        return;
+      }
+
+      // 查找与该资源关联的菲菲资源
+      const feifeiResource = await db
+        .select()
+        .from(feifeiResources)
+        .where(eq(feifeiResources.linked_resource_id, resourceId))
+        .limit(1);
+
+      if (feifeiResource.length === 0) {
+        res.status(404).json({ success: false, message: '未找到与该资源关联的菲菲资源' });
+        return;
+      }
+
+      // 检查菲菲资源是否有本地图片路径
+      if (!feifeiResource[0].local_image_path) {
+        res.status(404).json({ success: false, message: '菲菲资源没有本地图片路径' });
+        return;
+      }
+
+      // 更新资源的本地图片路径
+      const updatedResource = await storage.updateResource(resourceId, {
+        local_image_path: feifeiResource[0].local_image_path
+      });
+
+      console.log(`已更新资源 ID=${resourceId} 的本地图片路径: ${feifeiResource[0].local_image_path}`);
+
+      // 返回结果
+      res.json({
+        success: true,
+        message: `成功更新资源 ID=${resourceId} 的本地图片路径`,
+        resource: updatedResource
+      });
+    } catch (error) {
+      console.error(`更新资源 ID=${req.params.id} 的本地图片路径时出错:`, error);
+      res.status(500).json({
+        success: false,
+        message: '更新本地图片路径失败',
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 

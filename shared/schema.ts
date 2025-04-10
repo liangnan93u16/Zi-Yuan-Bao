@@ -43,6 +43,7 @@ export const resources = pgTable("resources", {
   title: text("title").notNull(),
   subtitle: text("subtitle"),
   cover_image: text("cover_image"),
+  local_image_path: text("local_image_path"), // 本地保存的图片路径，与feifei_resources表同步
   category_id: integer("category_id").references(() => categories.id),
   author_id: integer("author_id").references(() => authors.id), // 关联到作者表
   price: decimal("price", { precision: 10, scale: 2 }).default("0"),
@@ -230,6 +231,7 @@ export const feifeiResources = pgTable("feifei_resources", {
   icon: text("icon"), // 资源图标
   description: text("description"), // 资源描述
   image_url: text("image_url"), // 资源封面图片URL
+  local_image_path: text("local_image_path"), // 本地保存的图片路径
   
   // 新增网页解析字段
   resource_category: text("resource_category"), // 资源分类
@@ -324,6 +326,27 @@ export const insertParameterSchema = createInsertSchema(parameters).omit({
 
 export type Parameter = typeof parameters.$inferSelect;
 export type InsertParameter = z.infer<typeof insertParameterSchema>;
+
+// 用户收藏表，记录用户收藏的资源
+export const userFavorites = pgTable("user_favorites", {
+  id: serial("id").primaryKey(),
+  user_id: integer("user_id").notNull().references(() => users.id),
+  resource_id: integer("resource_id").notNull().references(() => resources.id),
+  created_at: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    // 创建联合唯一约束，防止用户重复收藏同一资源
+    user_resource_unique: uniqueIndex("user_favorite_unique").on(table.user_id, table.resource_id)
+  };
+});
+
+export const insertUserFavoriteSchema = createInsertSchema(userFavorites).omit({
+  id: true,
+  created_at: true
+});
+
+export type UserFavorite = typeof userFavorites.$inferSelect;
+export type InsertUserFavorite = z.infer<typeof insertUserFavoriteSchema>;
 
 export type LoginCredentials = z.infer<typeof loginSchema>;
 export type RegisterData = z.infer<typeof registerSchema>;

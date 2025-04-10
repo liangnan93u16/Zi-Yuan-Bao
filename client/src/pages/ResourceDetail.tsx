@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ import {
   Star, 
   StarHalf, 
   Download, 
-  ShoppingCart, 
   Heart,
   CheckCircle
 } from "lucide-react";
@@ -21,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ReviewSection from "@/components/ReviewSection";
@@ -31,11 +31,32 @@ export default function ResourceDetail() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [tab, setTab] = useState("details");
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
 
   // Fetch resource detail
   const { data: resource = {}, isLoading } = useQuery<any>({
     queryKey: [`/api/resources/${id}`],
   });
+  
+  // 检查是否已收藏
+  useEffect(() => {
+    if (!user || !id) return;
+    
+    const checkFavorite = async () => {
+      try {
+        const response = await apiRequest('GET', `/api/resources/${id}/favorite/check`);
+        
+        if (response.success) {
+          setIsFavorited(response.favorited);
+        }
+      } catch (error) {
+        console.error('Error checking favorite status:', error);
+      }
+    };
+    
+    checkFavorite();
+  }, [id, user]);
 
   if (isLoading) {
     return (
@@ -108,8 +129,17 @@ export default function ResourceDetail() {
     if (!user) {
       toast({
         title: "请先登录",
-        description: "您需要登录后才能下载资源。",
+        description: `您需要登录后才能${resource.resource_url ? '下载资源' : '接收上架通知'}。`,
         variant: "destructive",
+      });
+      return;
+    }
+    
+    // 如果资源没有下载链接，则处理预售通知逻辑
+    if (!resource.resource_url) {
+      toast({
+        title: "预售通知已设置",
+        description: "当资源正式上架后，我们将通过系统消息通知您。",
       });
       return;
     }
@@ -302,23 +332,9 @@ export default function ResourceDetail() {
     }
   };
 
-  const handleAddToCart = () => {
-    if (!user) {
-      toast({
-        title: "请先登录",
-        description: "您需要登录后才能将资源添加到购物车。",
-        variant: "destructive",
-      });
-      return;
-    }
 
-    toast({
-      title: "已添加到购物车",
-      description: "您可以在购物车中查看并结算资源。",
-    });
-  };
 
-  const handleAddToFavorites = () => {
+  const handleAddToFavorites = async () => {
     if (!user) {
       toast({
         title: "请先登录",
@@ -327,11 +343,45 @@ export default function ResourceDetail() {
       });
       return;
     }
-
-    toast({
-      title: "已收藏",
-      description: "资源已添加到您的收藏夹。",
-    });
+    
+    if (isFavoriteLoading) return;
+    
+    setIsFavoriteLoading(true);
+    
+    try {
+      if (isFavorited) {
+        // 取消收藏
+        const response = await apiRequest('DELETE', `/api/resources/${id}/favorite`);
+        
+        if (response.success) {
+          setIsFavorited(false);
+          toast({
+            title: "已取消收藏",
+            description: "资源已从您的收藏夹中移除",
+          });
+        }
+      } else {
+        // 添加收藏
+        const response = await apiRequest('POST', `/api/resources/${id}/favorite`);
+        
+        if (response.success) {
+          setIsFavorited(true);
+          toast({
+            title: "收藏成功",
+            description: "资源已添加到您的收藏夹",
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast({
+        title: "操作失败",
+        description: "请稍后再试",
+        variant: "destructive",
+      });
+    } finally {
+      setIsFavoriteLoading(false);
+    }
   };
 
   return (
@@ -342,6 +392,28 @@ export default function ResourceDetail() {
             <ArrowLeft className="mr-1 h-4 w-4" /> 返回资源列表
           </a>
         </Link>
+      </div>
+      
+      {/* 资源封面图片 */}
+      <div className="mb-6 overflow-hidden rounded-xl shadow-md">
+        <img 
+          className="w-full h-64 object-cover"
+          src={
+            // 优先使用本地图片路径，如果存在
+            resource.local_image_path 
+              ? `/uploads${resource.local_image_path}` 
+              : (resource.cover_image || 'https://via.placeholder.com/1200x400/e2e8f0/1a202c?text=No+Image')
+          } 
+          alt={resource.title} 
+          onError={(e) => {
+            // 如果本地图片加载失败，回退到远程图片
+            const target = e.target as HTMLImageElement;
+            if (resource.local_image_path && target.src.includes('/uploads')) {
+              console.log('本地图片加载失败，切换到远程图片');
+              target.src = resource.cover_image || 'https://via.placeholder.com/1200x400/e2e8f0/1a202c?text=No+Image';
+            }
+          }}
+        />
       </div>
       
       {/* 使用grid grid-cols-12系统进行9:3比例布局 */}
@@ -459,34 +531,27 @@ export default function ResourceDetail() {
                       </a>
                     )}
                     
-                    {resource.source_url && (
-                      <a 
-                        href={resource.source_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-green-700 bg-green-100 hover:bg-green-200 rounded-md shadow-sm mt-2"
-                      >
-                        <Globe className="mr-2 h-4 w-4" />
-                        访问原始页面
-                      </a>
-                    )}
+                    {/* 移除访问原始页面按钮 */}
                   </div>
                 </div>
                 
                 <div className="flex flex-col gap-3">
-                  <Button onClick={handleDownload} size="lg" className="w-full text-base py-5">
-                    立即获取
-                  </Button>
-                  <div className="text-center text-sm text-neutral-500">
-                    已有 12,569 人下载此资源
+                  <div className="flex gap-2">
+                    <Button onClick={handleDownload} size="lg" className="flex-1 text-base py-5">
+                      {resource.resource_url ? '立即获取' : '上架通知'}
+                    </Button>
+                    <Button 
+                      onClick={handleAddToFavorites} 
+                      variant={isFavorited ? "secondary" : "outline"} 
+                      className={`px-2 ${isFavorited ? 'bg-red-50 text-red-500 hover:bg-red-100 border-red-200' : ''}`}
+                      disabled={isFavoriteLoading}
+                      size="icon"
+                    >
+                      <Heart className={`h-5 w-5 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
+                    </Button>
                   </div>
-                  <div className="flex justify-center gap-4 mt-2 hidden">
-                    <Button onClick={handleAddToCart} variant="secondary" className="gap-2">
-                      <ShoppingCart className="h-4 w-4" /> 加入购物车
-                    </Button>
-                    <Button onClick={handleAddToFavorites} variant="outline" className="gap-2">
-                      <Heart className="h-4 w-4" /> 收藏
-                    </Button>
+                  <div className="text-center text-sm text-neutral-500">
+                    已有 {resource.download_count || 12569} 人{resource.resource_url ? '下载' : '关注'}此资源
                   </div>
                 </div>
               </div>

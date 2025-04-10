@@ -86,6 +86,7 @@ interface EnrichedFeifeiResource extends Omit<FeifeiResource, 'parsed_content'> 
   tags?: FeifeiTag[];
   parsed_content?: string | null; // 添加解析内容字段，与服务器返回的类型一致
   details_html: string | null; // 添加详情HTML内容字段，不可为undefined
+  local_image_path: string | null; // 本地保存的图片路径
   // markdown_content 字段已在 FeifeiResource 中定义为 string | null，无需在这里重新定义
   // coin_price 字段已在 FeifeiResource 中定义，无需重复定义
   linked_resource_id: number | null; // 添加关联的资源管理系统中的资源ID
@@ -1672,19 +1673,43 @@ export default function FeifeiManagement() {
                             <p><strong>发布时间：</strong> {selectedResource.publish_date || '-'}</p>
                             <p><strong>最近更新：</strong> {selectedResource.last_update || '-'}</p>
                             <p><strong>金币价格：</strong> {selectedResource.coin_price ? `${selectedResource.coin_price} 金币` : '-'}</p>
-                            {selectedResource.image_url && (
-                              <p>
-                                <strong>资源图片：</strong> 
-                                <a 
-                                  href={selectedResource.image_url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  className="text-blue-500 hover:text-blue-700 underline inline-flex items-center ml-1 gap-1"
-                                >
-                                  <span>查看图片</span>
-                                  <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                                </a>
-                              </p>
+                            {(selectedResource.local_image_path || selectedResource.image_url) && (
+                              <div>
+                                <p><strong>资源图片：</strong></p>
+                                {selectedResource.local_image_path ? (
+                                  <div className="mt-2 max-w-xs">
+                                    <img 
+                                      src={selectedResource.local_image_path} 
+                                      alt={selectedResource.chinese_title || "资源图片"} 
+                                      className="rounded-md border border-gray-200 max-h-48 object-contain"
+                                    />
+                                    <div className="mt-1 text-xs text-gray-500">
+                                      <span>本地图片</span>
+                                      <a 
+                                        href={selectedResource.local_image_path} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="text-blue-500 hover:text-blue-700 underline inline-flex items-center ml-2 gap-1"
+                                      >
+                                        <span>查看原图</span>
+                                        <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                                      </a>
+                                    </div>
+                                  </div>
+                                ) : selectedResource.image_url && (
+                                  <div className="mt-2">
+                                    <a 
+                                      href={selectedResource.image_url} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer" 
+                                      className="text-blue-500 hover:text-blue-700 underline inline-flex items-center gap-1"
+                                    >
+                                      <span>查看远程图片</span>
+                                      <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
                             )}
                             {selectedResource.preview_url && (
                               <p>
@@ -1959,25 +1984,36 @@ export default function FeifeiManagement() {
                                 const parsedData = selectedResource.parsed_content ? 
                                   JSON.parse(selectedResource.parsed_content) : null;
                                 
-                                if (parsedData && parsedData.chapters && parsedData.chapters.length > 0) {
+                                // 检查是否有中文字段名（"章节"）或英文字段名（"chapters"）
+                                if ((parsedData && parsedData.chapters && parsedData.chapters.length > 0) ||
+                                    (parsedData && parsedData.章节 && parsedData.章节.length > 0)) {
+                                  
+                                  // 获取章节数组，兼容中英文字段名
+                                  const chapters = parsedData.章节 || parsedData.chapters;
+                                  
                                   return (
                                     <div className="mt-4">
                                       <h3 className="text-sm font-medium mb-2">章节列表</h3>
                                       <div className="space-y-3">
-                                        {parsedData.chapters.map((chapter: any, idx: number) => (
+                                        {chapters.map((chapter: any, idx: number) => (
                                           <div key={idx} className="border rounded-md p-3">
                                             <div className="flex justify-between">
-                                              <h4 className="font-medium">{chapter.title}</h4>
-                                              <span className="text-sm text-gray-500">{chapter.duration}</span>
+                                              {/* 兼容中英文字段名 */}
+                                              <h4 className="font-medium">{chapter.标题 || chapter.title}</h4>
+                                              <span className="text-sm text-gray-500">{chapter.时长 || chapter.duration}</span>
                                             </div>
                                             
-                                            {chapter.lectures && chapter.lectures.length > 0 ? (
+                                            {/* 兼容中英文字段名 */}
+                                            {((chapter.讲座 && chapter.讲座.length > 0) || 
+                                              (chapter.lectures && chapter.lectures.length > 0)) ? (
                                               <ul className="mt-2 space-y-1">
-                                                {chapter.lectures.map((lecture: any, lectureIdx: number) => (
+                                                {/* 获取讲座数组，兼容中英文字段名 */}
+                                                {(chapter.讲座 || chapter.lectures).map((lecture: any, lectureIdx: number) => (
                                                   <li key={lectureIdx} className="text-sm pl-4 border-l-2 border-gray-200">
                                                     <div className="flex justify-between">
-                                                      <span>{lecture.title}</span>
-                                                      <span className="text-gray-500">{lecture.duration}</span>
+                                                      {/* 兼容中英文字段名 */}
+                                                      <span>{lecture.标题 || lecture.title}</span>
+                                                      <span className="text-gray-500">{lecture.时长 || lecture.duration}</span>
                                                     </div>
                                                   </li>
                                                 ))}

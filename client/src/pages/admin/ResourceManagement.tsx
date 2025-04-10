@@ -167,6 +167,21 @@ export default function ResourceManagement() {
       // 2. 确定新状态（上架=1，下架=0）
       const newStatus = currentStatus === 1 ? 0 : 1;
       
+      // 2.1 如果是上架操作，先获取资源详情检查条件
+      if (newStatus === 1) {
+        // 获取资源详情
+        const resourceDetails = await apiRequest("GET", `/api/admin/resources/${id}`);
+        console.log("上架前检查资源详情:", resourceDetails);
+        
+        // 不再检查资源下载链接是否为空
+        // 资源下载链接可以为空，允许上架
+        
+        // 检查封面图片URL是否为空
+        if (!resourceDetails.cover_image) {
+          throw new Error("资源封面图片URL为空，请先添加封面图片再上架资源");
+        }
+      }
+      
       // 3. 调用API更新资源状态
       const result = await apiRequest("PATCH", `/api/admin/resources/${id}`, { status: newStatus });
       console.log("资源状态更新成功:", result);
