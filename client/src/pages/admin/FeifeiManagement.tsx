@@ -103,11 +103,13 @@ const feifeiCategoryFormSchema = insertFeifeiCategorySchema.extend({
 type FeifeiCategoryFormValues = z.infer<typeof feifeiCategoryFormSchema>;
 
 // 提取上架资源的公共函数，用于单个资源上架和批量上架
-const addFeifeiResourceToLibrary = async (resourceId: number) => {
+const addFeifeiResourceToLibrary = async (resourceId: number, parsed_content?: string) => {
   try {
     const response = await apiRequest<{ message: string, resource: { id: number } }>(
       "POST", 
-      `/api/feifei-resources/${resourceId}/to-resource`
+      `/api/feifei-resources/${resourceId}/to-resource`,
+      // 如果提供了解析内容参数，则将其传递到API
+      parsed_content ? { parsed_content } : undefined
     );
     return {
       success: true,
@@ -1597,8 +1599,22 @@ export default function FeifeiManagement() {
                     // 设置上传状态为true，禁用按钮
                     setIsUploading(true);
                     
-                    // 使用公共函数进行资源上架
-                    const result = await addFeifeiResourceToLibrary(selectedResource.id);
+                    // 确保获取最新的解析结果
+                    const parsedContent = selectedResource.parsed_content;
+                    
+                    if (!parsedContent) {
+                      toast({
+                        title: "警告",
+                        description: "该资源没有解析结果。将继续上架，但课程目录将为空。",
+                        variant: "warning"
+                      });
+                    }
+                    
+                    // 使用公共函数进行资源上架，传递解析结果
+                    const result = await addFeifeiResourceToLibrary(
+                      selectedResource.id,
+                      parsedContent // 将解析结果作为第二个参数传递
+                    );
                     
                     if (result.success) {
                       // 操作成功，更新UI状态
@@ -1612,7 +1628,9 @@ export default function FeifeiManagement() {
                       
                       toast({
                         title: "操作成功",
-                        description: result.message || "资源已成功转移到资源库，默认状态为下架"
+                        description: parsedContent 
+                          ? "资源已成功转移到资源库，解析结果已复制到课程目录"
+                          : "资源已成功转移到资源库，默认状态为下架"
                       });
                     } else {
                       // 操作失败，显示错误信息

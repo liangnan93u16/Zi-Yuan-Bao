@@ -26,13 +26,31 @@ const CourseSyllabus = ({ contentsJson }: CourseContentsProps) => {
   const [showAllChapters, setShowAllChapters] = useState(false);
 
   // 尝试解析 JSON
-  let chaptersData: { chapters: Chapter[] } = { chapters: [] };
+  let chaptersData: { chapters?: Chapter[], 章节?: any[] } = { chapters: [] };
+  let chapters: Chapter[] = [];
   
   try {
     if (contentsJson) {
       chaptersData = typeof contentsJson === 'string' 
         ? JSON.parse(contentsJson) 
         : contentsJson;
+      
+      // 兼容两种不同的 JSON 格式
+      if (chaptersData.chapters && Array.isArray(chaptersData.chapters)) {
+        // 标准格式: { chapters: [...] }
+        chapters = chaptersData.chapters;
+      } else if (chaptersData.章节 && Array.isArray(chaptersData.章节)) {
+        // 菲菲资源格式: { 章节: [...] }
+        chapters = chaptersData.章节.map(item => ({
+          title: item.标题 || '',
+          duration: item.时长 || '',
+          lectures: (item.讲座 || []).map((lecture: any) => ({
+            title: lecture.标题 || '',
+            duration: lecture.时长 || '',
+            preview: false
+          }))
+        }));
+      }
     }
   } catch (error) {
     console.error("解析课程内容时出错:", error);
@@ -42,8 +60,6 @@ const CourseSyllabus = ({ contentsJson }: CourseContentsProps) => {
       </div>
     );
   }
-
-  const { chapters } = chaptersData;
   
   if (!chapters || !Array.isArray(chapters) || chapters.length === 0) {
     return (

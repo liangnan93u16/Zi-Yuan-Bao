@@ -354,7 +354,7 @@ export class DatabaseStorage implements IStorage {
           .select()
           .from(resources)
           .where(whereClause || sql`TRUE`)
-          .orderBy(desc(resources.created_at))
+          .orderBy(desc(resources.updated_at))
           .limit(filters.limit)
           .offset(offset);
       } else {
@@ -363,7 +363,7 @@ export class DatabaseStorage implements IStorage {
           .select()
           .from(resources)
           .where(whereClause || sql`TRUE`)
-          .orderBy(desc(resources.created_at));
+          .orderBy(desc(resources.updated_at));
       }
     } catch (error) {
       console.error("Error in getAllResources:", error);

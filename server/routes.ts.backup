@@ -3803,13 +3803,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             needsUpdate = true;
           }
           
-          // 无论课程目录是否为空，只要有解析结果，就总是更新课程目录内容
-          if (parsedContent || feifeiResource.parsed_content) {
-            console.log(`更新资源库中的课程目录内容，确保总是使用最新的解析结果`);
-            updateData.contents = parsedContent || feifeiResource.parsed_content || "";
-            needsUpdate = true;
-          }
-          
           // 如果需要更新，执行更新操作
           if (needsUpdate) {
             console.log(`更新资源库中的字段:`, updateData);
@@ -4203,7 +4196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 0, // 默认设置为下架状态
         is_free: false,
         description: descriptionMarkdown, // 使用转换后的Markdown内容作为描述
-        contents: parsedContent || feifeiResource.parsed_content || "",
+        contents: feifeiResource.parsed_content || "",
         faq_content: "",
         resource_url: feifeiResource.cloud_disk_url || "", // 将网盘链接复制到资源下载链接
         resource_code: feifeiResource.cloud_disk_code || "", // 将网盘提取码复制到资源提取码
@@ -4685,7 +4678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 0, // 默认设置为下架状态
         is_free: false,
         description: descriptionMarkdown, // 使用转换后的Markdown内容作为描述
-        contents: parsedContent || feifeiResource.parsed_content || "",
+        contents: feifeiResource.parsed_content || "",
         faq_content: "",
         resource_url: feifeiResource.cloud_disk_url || "", // 将网盘链接复制到资源下载链接
         resource_code: feifeiResource.cloud_disk_code || "", // 将网盘提取码复制到资源提取码

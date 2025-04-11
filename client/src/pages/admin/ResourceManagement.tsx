@@ -56,12 +56,32 @@ export default function ResourceManagement() {
   const [updatingResourceIds, setUpdatingResourceIds] = useState<number[]>([]);
   const { toast } = useToast();
 
+  // 构建查询参数对象
+  const queryParams: Record<string, any> = {};
+  
+  if (categoryFilter !== 'all') {
+    queryParams.category_id = categoryFilter;
+  }
+  
+  if (statusFilter !== 'all') {
+    queryParams.status = statusFilter;
+  }
+  
+  if (priceFilter !== 'all') {
+    queryParams.is_free = priceFilter === 'free';
+  }
+  
+  if (page > 1) {
+    queryParams.page = page;
+    queryParams.limit = 10; // 默认每页10条
+  }
+  
   // Fetch resources with filters
   const { data, isLoading, refetch } = useQuery<{
     resources: any[];
     total: number;
   }>({
-    queryKey: ['/api/admin/resources', categoryFilter, statusFilter, priceFilter, page],
+    queryKey: ['/api/admin/resources', queryParams],
     // 确保不使用缓存，始终获取最新数据
     staleTime: 0,
     // 确保每次数据变化时都重新渲染
@@ -127,7 +147,7 @@ export default function ResourceManagement() {
         
         // 特定刷新当前页面的数据
         queryClient.refetchQueries({ 
-          queryKey: ['/api/admin/resources', categoryFilter, statusFilter, priceFilter, page],
+          queryKey: ['/api/admin/resources', queryParams],
           exact: true 
         });
       }, 100);
@@ -188,7 +208,7 @@ export default function ResourceManagement() {
       
       // 4. 强制刷新资源列表数据，完全替代本地缓存
       await queryClient.invalidateQueries({
-        queryKey: ['/api/admin/resources', categoryFilter, statusFilter, priceFilter, page],
+        queryKey: ['/api/admin/resources', queryParams],
         exact: true,
         refetchType: 'all'
       });
