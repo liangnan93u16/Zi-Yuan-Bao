@@ -64,7 +64,7 @@ export default function Login() {
       }
     } catch (error: any) {
       // 判断是否是账号锁定错误
-      if (error.message && error.message.includes('账号已被锁定')) {
+      if (error.message && (error.message.includes('账号已被锁定') || error.message.includes('账号已被禁用'))) {
         setIsAccountLocked(true);
         setErrorMessage(error.message);
       } else if (error.message && error.message.includes('密码错误次数过多')) {

@@ -3781,16 +3781,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const updateData: any = {};
           let needsUpdate = false;
           
-          // 检查网盘链接是否为空，如果为空则从菲菲资源更新
-          if (!linkedResource.resource_url && feifeiResource.cloud_disk_url) {
-            console.log(`资源库中网盘链接为空，从菲菲资源更新`);
+          // 总是使用菲菲资源的最新网盘链接更新资源库（无论是否为空）
+          if (feifeiResource.cloud_disk_url) {
+            console.log(`从菲菲资源更新网盘链接: 从 ${linkedResource.resource_url || '无'} 更新为 ${feifeiResource.cloud_disk_url}`);
             updateData.resource_url = feifeiResource.cloud_disk_url;
             needsUpdate = true;
           }
           
-          // 检查提取码是否为空，如果为空则从菲菲资源更新
-          if (!linkedResource.resource_code && feifeiResource.cloud_disk_code) {
-            console.log(`资源库中提取码为空，从菲菲资源更新`);
+          // 总是使用菲菲资源的最新提取码更新资源库（无论是否为空）
+          if (feifeiResource.cloud_disk_code) {
+            console.log(`从菲菲资源更新提取码: 从 ${linkedResource.resource_code || '无'} 更新为 ${feifeiResource.cloud_disk_code}`);
             updateData.resource_code = feifeiResource.cloud_disk_code;
             needsUpdate = true;
           }

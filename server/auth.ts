@@ -52,6 +52,15 @@ export async function login(req: Request, res: Response): Promise<void> {
       });
       return;
     }
+    
+    // 检查用户是否被禁用（在用户管理界面禁用的账号会将membership_expire_time设置为过去的时间）
+    if (user.membership_expire_time && new Date(user.membership_expire_time) < now) {
+      res.status(401).json({
+        message: "账号已被禁用，请联系管理员",
+        disabled: true
+      });
+      return;
+    }
 
     // Verify password
     const isPasswordValid = await verifyPassword(password, user.password);
@@ -210,6 +219,21 @@ export async function authenticateUser(
       return;
     }
 
+    // 检查用户是否被禁用（会员过期）
+    const now = new Date();
+    if (user.membership_expire_time && new Date(user.membership_expire_time) < now) {
+      // 清除会话
+      if (req.session) {
+        req.session.destroy((err) => {
+          if (err) {
+            console.error('Error destroying session for disabled user:', err);
+          }
+        });
+      }
+      res.status(401).json({ message: '账号已被禁用，请联系管理员', disabled: true });
+      return;
+    }
+
     // Set user in request
     req.user = user;
     next();
@@ -244,6 +268,21 @@ export async function getCurrentUser(req: AuthenticatedRequest, res: Response): 
     const user = await storage.getUser(req.session.userId);
     if (!user) {
       res.status(401).json({ message: '用户不存在' });
+      return;
+    }
+
+    // 检查用户是否被禁用（会员过期）
+    const now = new Date();
+    if (user.membership_expire_time && new Date(user.membership_expire_time) < now) {
+      // 清除会话
+      if (req.session) {
+        req.session.destroy((err) => {
+          if (err) {
+            console.error('Error destroying session for disabled user:', err);
+          }
+        });
+      }
+      res.status(401).json({ message: '账号已被禁用，请联系管理员', disabled: true });
       return;
     }
 

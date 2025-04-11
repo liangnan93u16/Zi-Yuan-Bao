@@ -143,7 +143,7 @@ export default function Profile() {
   const changePasswordMutation = useMutation({
     mutationFn: async (data: ChangePasswordFormValues) => {
       return await apiRequest("PATCH", `/api/users/${user?.id}/password`, {
-        currentPassword: data.currentPassword,
+        oldPassword: data.currentPassword, // 修改为服务器期望的字段名
         newPassword: data.newPassword,
       });
     },

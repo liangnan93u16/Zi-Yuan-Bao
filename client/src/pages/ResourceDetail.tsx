@@ -13,7 +13,9 @@ import {
   StarHalf, 
   Download, 
   Heart,
-  CheckCircle
+  CheckCircle,
+  Copy,
+  Key
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -33,6 +35,7 @@ export default function ResourceDetail() {
   const [tab, setTab] = useState("details");
   const [isFavorited, setIsFavorited] = useState(false);
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
+  const [copying, setCopying] = useState(false);
 
   // Fetch resource detail
   const { data: resource = {}, isLoading } = useQuery<any>({
@@ -344,6 +347,47 @@ export default function ResourceDetail() {
 
 
 
+  // 复制密码到剪贴板的函数
+  const handleCopyPasswordToClipboard = async () => {
+    // 检查用户是否已登录
+    if (!user) {
+      toast({
+        title: "请先登录",
+        description: "您需要登录后才能获取资源提取码。",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!resource || !resource.resource_code) {
+      toast({
+        title: "无法复制密码",
+        description: "该资源没有提取码",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setCopying(true);
+    
+    try {
+      await navigator.clipboard.writeText(resource.resource_code);
+      toast({
+        title: "复制成功",
+        description: "资源提取码已复制到剪贴板",
+      });
+    } catch (error) {
+      console.error('Error copying password to clipboard:', error);
+      toast({
+        title: "复制失败",
+        description: "请手动复制提取码",
+        variant: "destructive",
+      });
+    } finally {
+      setCopying(false);
+    }
+  };
+
   const handleAddToFavorites = async () => {
     if (!user) {
       toast({
@@ -534,6 +578,18 @@ export default function ResourceDetail() {
                     <Button onClick={handleDownload} size="lg" className="flex-1 text-base py-5">
                       {resource.resource_url ? '立即获取' : '上架通知'}
                     </Button>
+                    {resource.resource_code && (
+                      <Button 
+                        onClick={handleCopyPasswordToClipboard}
+                        variant="secondary" 
+                        size="lg"
+                        disabled={copying}
+                        className="px-3 py-5 bg-green-50 text-green-600 hover:bg-green-100 border-green-200"
+                      >
+                        {copying ? <Copy className="h-5 w-5 animate-pulse" /> : <Key className="h-5 w-5" />}
+                        <span className="ml-1">密码</span>
+                      </Button>
+                    )}
                     <Button 
                       onClick={handleAddToFavorites} 
                       variant={isFavorited ? "secondary" : "outline"} 
