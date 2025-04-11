@@ -71,6 +71,7 @@ export interface IStorage {
   createUserPurchase(userId: number, resourceId: number, price: number): Promise<UserPurchase>;
   getUserPurchase(userId: number, resourceId: number): Promise<UserPurchase | undefined>;
   getUserPurchases(userId: number): Promise<UserPurchase[]>;
+  getUserDailyPurchaseCount(userId: number): Promise<number>;
   
   // User Favorite operations
   createUserFavorite(userId: number, resourceId: number): Promise<UserFavorite>;
@@ -538,6 +539,32 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error getting user purchases:', error);
       return [];
+    }
+  }
+  
+  async getUserDailyPurchaseCount(userId: number): Promise<number> {
+    try {
+      // 获取当前日期的开始和结束时间
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+      
+      // 查询今天的购买记录数量
+      const [result] = await db
+        .select({
+          count: sql`COUNT(*)`.mapWith(Number)
+        })
+        .from(userPurchases)
+        .where(and(
+          eq(userPurchases.user_id, userId),
+          sql`${userPurchases.purchase_time} >= ${startOfDay}`,
+          sql`${userPurchases.purchase_time} <= ${endOfDay}`
+        ));
+      
+      return result?.count || 0;
+    } catch (error) {
+      console.error('Error getting user daily purchase count:', error);
+      return 0;
     }
   }
   

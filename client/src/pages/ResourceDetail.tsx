@@ -222,6 +222,16 @@ export default function ResourceDetail() {
         return;
       }
       
+      // 如果用户当天的购买数量达到上限
+      if (!response.ok && response.status === 400 && data.message && data.message.includes('已达到购买限制')) {
+        toast({
+          title: "购买失败",
+          description: data.message || "您今天已达到购买限制（每天最多购买5条资源），请明天再来",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       // 如果用户需要付费且未购买过，弹出确认对话框
       if (!response.ok && response.status === 400 && data.message === '积分不足') {
         // 积分不足
@@ -394,27 +404,7 @@ export default function ResourceDetail() {
         </Link>
       </div>
       
-      {/* 资源封面图片 */}
-      <div className="mb-6 overflow-hidden rounded-xl shadow-md">
-        <img 
-          className="w-full h-64 object-cover"
-          src={
-            // 优先使用本地图片路径，如果存在
-            resource.local_image_path 
-              ? `/uploads${resource.local_image_path}` 
-              : (resource.cover_image || 'https://via.placeholder.com/1200x400/e2e8f0/1a202c?text=No+Image')
-          } 
-          alt={resource.title} 
-          onError={(e) => {
-            // 如果本地图片加载失败，回退到远程图片
-            const target = e.target as HTMLImageElement;
-            if (resource.local_image_path && target.src.includes('/uploads')) {
-              console.log('本地图片加载失败，切换到远程图片');
-              target.src = resource.cover_image || 'https://via.placeholder.com/1200x400/e2e8f0/1a202c?text=No+Image';
-            }
-          }}
-        />
-      </div>
+
       
       {/* 使用grid grid-cols-12系统进行9:3比例布局 */}
       <div className="grid grid-cols-12 gap-6">
@@ -799,6 +789,28 @@ export default function ResourceDetail() {
         
         {/* 右侧边栏 - 3/12比例 */}
         <div className="col-span-12 lg:col-span-3 space-y-6">
+          {/* 资源封面图片 */}
+          <div className="bg-white rounded-xl shadow-md overflow-hidden">
+            <img 
+              className="w-full object-cover"
+              src={
+                // 优先使用本地图片路径，如果存在
+                resource.local_image_path 
+                  ? `/images/${resource.local_image_path.split('/').pop()}` 
+                  : (resource.cover_image || '/images/placeholder.svg')
+              } 
+              alt={resource.title} 
+              onError={(e) => {
+                // 如果本地图片加载失败，回退到远程图片
+                const target = e.target as HTMLImageElement;
+                if (resource.local_image_path && target.src.includes('/images/')) {
+                  console.log('本地图片加载失败，切换到远程图片');
+                  target.src = resource.cover_image || '/images/placeholder.svg';
+                }
+              }}
+            />
+          </div>
+          
           {/* 作者信息卡片 */}
           <div className="bg-white rounded-xl shadow-md overflow-hidden p-5">
             <h3 className="font-semibold text-lg mb-3">关于作者</h3>

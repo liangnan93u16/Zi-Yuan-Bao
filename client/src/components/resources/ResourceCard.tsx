@@ -115,24 +115,26 @@ export default function ResourceCard({ resource, isLoggedIn = false }: ResourceC
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition">
       <div className="relative">
-        <img 
-          className="h-48 w-full object-cover" 
-          src={
-            // 优先使用本地图片路径，如果存在
-            resource.local_image_path 
-              ? `/uploads${resource.local_image_path}` 
-              : (resource.cover_image || 'https://via.placeholder.com/640x360/e2e8f0/1a202c?text=No+Image')
-          } 
-          alt={resource.title} 
-          onError={(e) => {
-            // 如果本地图片加载失败，回退到远程图片
-            const target = e.target as HTMLImageElement;
-            if (resource.local_image_path && target.src.includes('/uploads')) {
-              console.log('本地图片加载失败，切换到远程图片');
-              target.src = resource.cover_image || 'https://via.placeholder.com/640x360/e2e8f0/1a202c?text=No+Image';
-            }
-          }}
-        />
+        <Link href={`/resources/${resource.id}`}>
+          <img 
+            className="h-48 w-full object-cover cursor-pointer" 
+            src={
+              // 优先使用本地图片路径，如果存在
+              resource.local_image_path 
+                ? `/images/${resource.local_image_path.split('/').pop()}` 
+                : (resource.cover_image || '/images/placeholder.svg')
+            } 
+            alt={resource.title} 
+            onError={(e) => {
+              // 如果本地图片加载失败，回退到远程图片
+              const target = e.target as HTMLImageElement;
+              if (resource.local_image_path && target.src.includes('/images/')) {
+                console.log('本地图片加载失败，切换到远程图片');
+                target.src = resource.cover_image || '/images/placeholder.svg';
+              }
+            }}
+          />
+        </Link>
         
         {isHot && (
           <span className="absolute top-3 left-3 bg-primary text-white text-xs font-medium px-2 py-1 rounded">

@@ -49,6 +49,7 @@ const resourceFormSchema = z.object({
   title: z.string().min(2, "标题至少需要2个字符").max(255, "标题不能超过255个字符"),
   subtitle: z.string().optional(),
   cover_image: z.string().optional(),
+  local_image_path: z.string().optional(), // 添加本地图片路径字段
   category_id: z.coerce.number().optional(),
   author_id: z.coerce.number().optional(), // 作者ID
   price: z.string().default("0"), // 更改为字符串类型以匹配后端期望
@@ -105,6 +106,7 @@ export default function ResourceEdit() {
       title: "",
       subtitle: "",
       cover_image: "",
+      local_image_path: "", // 添加本地图片路径默认值
       price: "0", // 更改为字符串默认值
       video_url: "",
       video_duration: 0,
@@ -160,6 +162,7 @@ export default function ResourceEdit() {
         title: resource.title,
         subtitle: resource.subtitle || "",
         cover_image: resource.cover_image || "",
+        local_image_path: resource.local_image_path || "", // 添加本地图片路径
         category_id: categoryId,
         author_id: authorId,
         price: priceAsString, // 使用字符串价格
@@ -647,6 +650,53 @@ export default function ResourceEdit() {
                 {/* 媒体信息标签页 */}
                 <TabsContent value="media" className="pt-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* 本地图片路径字段 */}
+                    <FormField
+                      control={form.control}
+                      name="local_image_path"
+                      render={({ field }) => (
+                        <FormItem className="col-span-1 md:col-span-2">
+                          <FormLabel>本地图片路径</FormLabel>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                            <FormControl>
+                              <Input {...field} placeholder="本地图片路径" />
+                            </FormControl>
+                            <div className="flex items-center gap-4">
+                              {field.value && (
+                                <div className="border rounded overflow-hidden w-32 h-20">
+                                  <img src={field.value.startsWith('/') ? `/images/${field.value.split('/').pop()}` : field.value} 
+                                    alt="本地图片预览" 
+                                    className="w-full h-full object-cover" 
+                                    onError={(e) => {
+                                      console.error("图片加载失败:", field.value);
+                                      e.currentTarget.src = "/images/placeholder.svg";
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              <div className="border border-dashed rounded p-6 text-center flex-grow">
+                                <div className="flex justify-center gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={syncImagePath}
+                                    className="text-xs"
+                                  >
+                                    从菲菲资源同步图片
+                                  </Button>
+                                </div>
+                                <p className="text-sm text-neutral-500 mt-2">
+                                  本地图片路径用于存储下载的图片
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
                     <FormField
                       control={form.control}
                       name="video_duration"

@@ -336,6 +336,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       
+      // 从系统参数表获取每日购买限制
+      let dailyLimit = 5; // 默认限制为5
+      try {
+        const limitParam = await storage.getParameterByKey('DAILY_PURCHASE_LIMIT');
+        if (limitParam && limitParam.value) {
+          const parsedLimit = parseInt(limitParam.value);
+          if (!isNaN(parsedLimit) && parsedLimit > 0) {
+            dailyLimit = parsedLimit;
+          }
+        }
+      } catch (error) {
+        console.error('获取每日购买限制参数失败，使用默认值5:', error);
+      }
+      
+      // 检查用户当天的购买次数是否已达到限制
+      const dailyPurchaseCount = await storage.getUserDailyPurchaseCount(req.user.id);
+      if (dailyPurchaseCount >= dailyLimit) {
+        res.status(400).json({
+          success: false,
+          message: `您今天已达到购买限制（每天最多购买${dailyLimit}条资源），请明天再来`
+        });
+        return;
+      }
+      
       // 如果资源是免费的，直接返回成功并记录
       if (resource.is_free) {
         // 记录购买信息（免费购买）
@@ -2372,6 +2396,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // 解析单个菲菲资源页面内容已合并到下方的智谱AI解析API
+
+  // 获取单个系统参数（公开接口）
+  app.get('/api/public-parameter/:key', async (req, res) => {
+    try {
+      const { key } = req.params;
+      if (!key) {
+        return res.status(400).json({ message: '参数键是必须的' });
+      }
+      
+      const parameter = await storage.getParameterByKey(key);
+      if (!parameter) {
+        return res.status(404).json({ message: '参数不存在' });
+      }
+      
+      res.json({
+        key: parameter.key,
+        value: parameter.value
+      });
+    } catch (error) {
+      console.error('Error getting public parameter:', error);
+      res.status(500).json({ message: '获取参数失败' });
+    }
+  });
 
   // Parameter management routes (admin only)
   app.get('/api/parameters', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {

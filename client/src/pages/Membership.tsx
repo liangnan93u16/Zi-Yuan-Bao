@@ -289,9 +289,22 @@ export default function Membership() {
                     <Card key={resource.id} className="overflow-hidden group">
                       <div className="relative">
                         <img 
-                          src={resource.cover_image || ''} 
+                          src={
+                            // 优先使用本地图片路径，如果存在
+                            resource.local_image_path 
+                              ? `/images/${resource.local_image_path.split('/').pop()}` 
+                              : (resource.cover_image || '/images/placeholder.svg')
+                          } 
                           alt={resource.title} 
                           className="w-full h-48 object-cover"
+                          onError={(e) => {
+                            // 如果本地图片加载失败，回退到远程图片
+                            const target = e.target as HTMLImageElement;
+                            if (resource.local_image_path && target.src.includes('/images/')) {
+                              console.log('本地图片加载失败，切换到远程图片');
+                              target.src = resource.cover_image || '/images/placeholder.svg';
+                            }
+                          }}
                         />
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                           <Button variant="secondary" onClick={() => setLocation(`/resources/${resource.id}`)}>
