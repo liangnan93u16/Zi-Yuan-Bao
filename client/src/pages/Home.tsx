@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, ArrowDown } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import CategoryCard from "@/components/resources/CategoryCard";
 import ResourceCard from "@/components/resources/ResourceCard";
 import { FilterType, ResourceWithCategory } from "@/lib/types";
@@ -11,23 +11,32 @@ import { useAuth } from "@/hooks/use-auth";
 
 export default function Home() {
   const [filter, setFilter] = useState<FilterType>("all");
-  const [page, setPage] = useState(1);
   const { user } = useAuth(); // 获取当前用户登录状态
   
   // Fetch categories
-  const { data: categories = [], isLoading: isLoadingCategories } = useQuery<Category[]>({
+  const { data: allCategories = [], isLoading: isLoadingCategories } = useQuery<Category[]>({
     queryKey: ['/api/categories'],
   });
   
+  // 过滤并整理分类数据
+  // 1. 对于热门分类区域，我们需要显示"设计-平面设计与插画"作为第一个分类
+  // 2. 然后显示其他几个排序靠前的子分类
+  const categories = [
+    // 首先确保"设计-平面设计与插画"排在第一位
+    ...allCategories.filter(c => c.id === 7),
+    // 然后是其他几个排序靠前的子分类（但排除已经显示的设计-平面设计与插画）
+    ...allCategories.filter(c => c.id !== 7 && c.name.includes('-')).slice(0, 5)
+  ];
+  
   // Fetch resources with filter
   const { data: resourcesData, isLoading: isLoadingResources } = useQuery<{resources: ResourceWithCategory[], total: number}>({
-    queryKey: ['/api/resources', filter, page],
+    queryKey: ['/api/resources', filter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (filter === "free") params.append("is_free", "true");
       if (filter === "paid") params.append("is_free", "false");
-      params.append("page", String(page));
-      params.append("limit", "4"); // 每页显示4个资源
+      params.append("page", "1");
+      params.append("limit", "8"); // 显示8个资源
       params.append("status", "1"); // 只显示已上架的资源
       
       const url = `/api/resources?${params.toString()}`;
@@ -53,9 +62,6 @@ export default function Home() {
             <div className="flex flex-wrap gap-3">
               <Link href="/resources">
                 <Button className="bg-white text-primary hover:bg-blue-50">开始探索</Button>
-              </Link>
-              <Link href="/membership">
-                <Button className="bg-blue-700 text-white hover:bg-blue-800">加入会员</Button>
               </Link>
             </div>
           </div>
@@ -93,6 +99,7 @@ export default function Home() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {/* 显示管理后台中排序的前6个分类 */}
             {categories?.slice(0, 6).map((category: Category) => (
               <CategoryCard
                 key={category.id}
@@ -174,77 +181,6 @@ export default function Home() {
             ))}
           </div>
         )}
-        
-        <div className="mt-8 text-center">
-          <Button 
-            variant="outline" 
-            onClick={() => setPage(prev => prev + 1)}
-            className="mx-auto"
-          >
-            加载更多 <ArrowDown className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Membership Section */}
-      <div className="bg-white rounded-xl shadow-md overflow-hidden mb-16">
-        <div className="md:flex">
-          <div className="p-8 md:w-3/5">
-            <h2 className="text-2xl font-bold mb-3">升级会员，畅享所有优质资源</h2>
-            <p className="text-neutral-600 mb-6">加入我们的会员计划，一次性获取网站上的所有付费资源，无需单独购买。享受高速下载、优先更新等特权服务。</p>
-            
-            <div className="grid md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-neutral-50 p-4 rounded-lg">
-                <div className="flex items-center mb-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                  </svg>
-                  <h3 className="font-medium">无限下载</h3>
-                </div>
-                <p className="text-sm text-neutral-600">畅享所有资源，没有下载限制</p>
-              </div>
-              <div className="bg-neutral-50 p-4 rounded-lg">
-                <div className="flex items-center mb-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-500 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                  </svg>
-                  <h3 className="font-medium">专属内容</h3>
-                </div>
-                <p className="text-sm text-neutral-600">独享会员专属高端资源</p>
-              </div>
-              <div className="bg-neutral-50 p-4 rounded-lg">
-                <div className="flex items-center mb-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                  </svg>
-                  <h3 className="font-medium">优先支持</h3>
-                </div>
-                <p className="text-sm text-neutral-600">优先获得技术支持和答疑</p>
-              </div>
-            </div>
-            
-            <div className="flex flex-wrap gap-4">
-              <Link href="/membership">
-                <Button>查看会员计划</Button>
-              </Link>
-              <Link href="/about">
-                <Button variant="outline">了解更多</Button>
-              </Link>
-            </div>
-          </div>
-          <div className="md:w-2/5 bg-gradient-to-br from-blue-100 to-indigo-100 p-8 flex items-center justify-center">
-            <div className="text-center">
-              <div className="text-5xl font-bold text-primary mb-2">40%</div>
-              <div className="text-lg font-medium text-neutral-800 mb-1">限时优惠</div>
-              <div className="text-sm text-neutral-600 mb-4">仅限7天，抓紧时间</div>
-              <div className="bg-white text-primary text-sm font-medium px-4 py-2 rounded-full inline-block">
-                使用优惠码: WELCOME40
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

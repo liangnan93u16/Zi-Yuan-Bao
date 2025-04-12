@@ -59,6 +59,11 @@ export default function ResourceManagement() {
   // 构建查询参数对象
   const queryParams: Record<string, any> = {};
   
+  // 添加搜索关键字到查询参数
+  if (searchQuery.trim() !== '') {
+    queryParams.search = searchQuery.trim();
+  }
+  
   if (categoryFilter !== 'all') {
     queryParams.category_id = categoryFilter;
   }
@@ -71,10 +76,9 @@ export default function ResourceManagement() {
     queryParams.is_free = priceFilter === 'free';
   }
   
-  if (page > 1) {
-    queryParams.page = page;
-    queryParams.limit = 10; // 默认每页10条
-  }
+  // 分页参数
+  queryParams.page = page;
+  queryParams.limit = 10; // 默认每页10条
   
   // Fetch resources with filters
   const { data, isLoading, refetch } = useQuery<{
@@ -89,7 +93,7 @@ export default function ResourceManagement() {
     refetchOnMount: true,
   });
   
-  // 当组件挂载或导航到此页面时，强制刷新数据
+  // 当组件挂载或导航到此页面时，或搜索参数变化时，强制刷新数据
   useEffect(() => {
     const needsForceRefresh = localStorage.getItem('force_refresh_resources') === 'true';
     
@@ -118,7 +122,7 @@ export default function ResourceManagement() {
     
     // 组件卸载时清除定时器
     return () => clearInterval(checkInterval);
-  }, [refetch, data]);
+  }, [refetch, data, searchQuery, categoryFilter, statusFilter, priceFilter, page]);
 
   // Fetch categories for filter dropdown
   const { data: categories } = useQuery<any[]>({
@@ -246,7 +250,9 @@ export default function ResourceManagement() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Implement search functionality
+    // 执行搜索功能：将搜索字符串添加到查询参数中并重置页码
+    setPage(1); // 重置到第一页
+    // 实际查询会由useEffect中的依赖项变化触发
     console.log("Searching for:", searchQuery);
   };
 
@@ -304,7 +310,7 @@ export default function ResourceManagement() {
           
           <TabsContent value="resources" className="p-6">
             <div className="flex flex-wrap gap-4 mb-6">
-              <form onSubmit={handleSearch} className="relative flex-grow">
+              <form onSubmit={handleSearch} className="relative flex-grow flex">
                 <Input
                   type="text"
                   placeholder="搜索资源..."
@@ -312,7 +318,14 @@ export default function ResourceManagement() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
-                <Search className="absolute right-3 top-2.5 h-4 w-4 text-neutral-500" />
+                <Button 
+                  type="submit" 
+                  variant="outline" 
+                  className="ml-2" 
+                  size="icon"
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
               </form>
               
               <div className="flex gap-2">

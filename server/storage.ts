@@ -12,7 +12,8 @@ import {
   feifeiResources, type FeifeiResource, type InsertFeifeiResource,
   feifeiTags, type FeifeiTag, type InsertFeifeiTag,
   feifeiResourceTags, type FeifeiResourceTag, type InsertFeifeiResourceTag,
-  parameters, type Parameter, type InsertParameter
+  parameters, type Parameter, type InsertParameter,
+  resourceNotifications, type ResourceNotification, type InsertResourceNotification
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, or, desc, sql, count } from "drizzle-orm";
@@ -129,6 +130,11 @@ export interface IStorage {
   updateParameter(id: number, data: Partial<Parameter>): Promise<Parameter | undefined>;
   deleteParameter(id: number): Promise<boolean>;
   getAllParameters(): Promise<Parameter[]>;
+  
+  // Resource Notification operations
+  createResourceNotification(userId: number, resourceId: number): Promise<ResourceNotification>;
+  getResourceNotifications(page?: number, pageSize?: number, resourceId?: number, emailSentFilter?: boolean): Promise<{ notifications: ResourceNotification[], total: number }>;
+  updateNotificationEmailStatus(notificationId: number, emailSent: boolean): Promise<ResourceNotification | undefined>;
   
   // Initialize default data
   initializeDefaultData(): Promise<void>;
@@ -662,6 +668,90 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error checking if user favorited:', error);
       return false;
+    }
+  }
+  
+  // 资源上架通知方法
+  async createResourceNotification(userId: number, resourceId: number): Promise<ResourceNotification> {
+    try {
+      const [notification] = await db
+        .insert(resourceNotifications)
+        .values({
+          user_id: userId,
+          resource_id: resourceId
+        })
+        .returning();
+      return notification;
+    } catch (error) {
+      console.error('Error creating resource notification:', error);
+      throw error;
+    }
+  }
+  
+  async getResourceNotifications(
+    page: number = 1, 
+    pageSize: number = 10,
+    resourceId?: number,
+    emailSentFilter?: boolean
+  ): Promise<{ notifications: ResourceNotification[], total: number }> {
+    try {
+      // 构建查询条件
+      const whereConditions = [];
+      
+      if (resourceId !== undefined) {
+        whereConditions.push(eq(resourceNotifications.resource_id, resourceId));
+      }
+      
+      // 如果有邮件状态筛选条件
+      if (emailSentFilter !== undefined) {
+        whereConditions.push(eq(resourceNotifications.email_sent, emailSentFilter));
+      }
+      
+      const whereClause = whereConditions.length > 0 
+        ? and(...whereConditions) 
+        : undefined;
+      
+      // 查询总记录数
+      const [countResult] = await db
+        .select({ count: sql`count(*)`.mapWith(Number) })
+        .from(resourceNotifications)
+        .where(whereClause);
+      
+      const total = countResult?.count || 0;
+      
+      // 分页查询记录
+      const offset = (page - 1) * pageSize;
+      
+      const notificationList = await db
+        .select()
+        .from(resourceNotifications)
+        .where(whereClause)
+        .orderBy(desc(resourceNotifications.created_at))
+        .limit(pageSize)
+        .offset(offset);
+      
+      return { notifications: notificationList, total };
+    } catch (error) {
+      console.error('Error getting resource notifications:', error);
+      return { notifications: [], total: 0 };
+    }
+  }
+  
+  async updateNotificationEmailStatus(notificationId: number, emailSent: boolean): Promise<ResourceNotification | undefined> {
+    try {
+      const [notification] = await db
+        .update(resourceNotifications)
+        .set({ 
+          email_sent: emailSent,
+          email_sent_at: emailSent ? new Date() : null 
+        })
+        .where(eq(resourceNotifications.id, notificationId))
+        .returning();
+        
+      return notification;
+    } catch (error) {
+      console.error('Error updating notification email status:', error);
+      return undefined;
     }
   }
   

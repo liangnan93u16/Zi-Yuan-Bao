@@ -16,6 +16,7 @@ import ResourceManagement from "./pages/admin/ResourceManagement";
 import ResourceUpload from "./pages/admin/ResourceUpload";
 import ResourceEdit from "./pages/admin/ResourceEdit";
 import ResourceRequests from "./pages/admin/ResourceRequests";
+import ResourceNotifications from "./pages/admin/ResourceNotifications";
 import UserManagement from "./pages/admin/UserManagement";
 import ReviewManagement from "./pages/admin/ReviewManagement";
 import LoginLogs from "./pages/admin/LoginLogs";
@@ -62,6 +63,7 @@ function App() {
               <AdminRoute path="/admin/resources/upload" component={ResourceUpload} />
               <AdminRoute path="/admin/resources/:id/edit" component={ResourceEdit} />
               <AdminRoute path="/admin/resource-requests" component={ResourceRequests} />
+              <AdminRoute path="/admin/resource-notifications" component={ResourceNotifications} />
               <AdminRoute path="/admin/users" component={UserManagement} />
               <AdminRoute path="/admin/reviews" component={ReviewManagement} />
               <AdminRoute path="/admin/login-logs" component={LoginLogs} />

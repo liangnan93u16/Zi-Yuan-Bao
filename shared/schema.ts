@@ -348,5 +348,23 @@ export const insertUserFavoriteSchema = createInsertSchema(userFavorites).omit({
 export type UserFavorite = typeof userFavorites.$inferSelect;
 export type InsertUserFavorite = z.infer<typeof insertUserFavoriteSchema>;
 
+// 资源上架通知记录表
+export const resourceNotifications = pgTable("resource_notifications", {
+  id: serial("id").primaryKey(),
+  user_id: integer("user_id").notNull().references(() => users.id),
+  resource_id: integer("resource_id").notNull().references(() => resources.id),
+  email_sent: boolean("email_sent").default(false), // 邮件是否已发送
+  email_sent_at: timestamp("email_sent_at"), // 邮件发送时间
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const insertResourceNotificationSchema = createInsertSchema(resourceNotifications).omit({
+  id: true,
+  created_at: true
+});
+
+export type ResourceNotification = typeof resourceNotifications.$inferSelect;
+export type InsertResourceNotification = z.infer<typeof insertResourceNotificationSchema>;
+
 export type LoginCredentials = z.infer<typeof loginSchema>;
 export type RegisterData = z.infer<typeof registerSchema>;

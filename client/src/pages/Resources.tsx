@@ -69,7 +69,7 @@ export default function Resources() {
       }
       
       // Set category from URL
-      const urlCategory = urlParams.get("category");
+      const urlCategory = urlParams.get("category") || urlParams.get("category_id");
       if (urlCategory) {
         if (urlCategory === "all") {
           setCategoryFilter("all");

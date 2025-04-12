@@ -7,6 +7,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import OpenAI from 'openai';
 import { db } from './db';
+import { fixMarkdownContent } from './html-to-markdown';
 import { eq, sql, and, isNull, isNotNull, ne } from 'drizzle-orm';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -794,6 +795,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
+      // 导入邮件发送模块
+      const { sendResourcePublishedEmail } = await import('./email');
+      
+      // 检查是否从无资源链接变为有资源链接
+      const isResourceUrlAdded = req.body.resource_url && 
+                               (!originalResource.resource_url || originalResource.resource_url === '');
+      
+      // 检查是否需要发送邮件通知
+      if (isResourceUrlAdded && updatedResource.status === 1) {
+        console.log(`资源 ${resourceId} 已上架且新增了下载链接`);
+        
+        // 检查资源下载链接是否存在
+        if (updatedResource.resource_url) {
+          console.log(`资源 ${resourceId} 存在下载链接，检查是否需要发送上架通知邮件`);
+          
+          // 获取与该资源相关的未发送邮件的通知记录
+          const { notifications } = await storage.getResourceNotifications(1, 100, resourceId, false);
+          
+          if (notifications && notifications.length > 0) {
+            console.log(`找到 ${notifications.length} 条需要发送上架通知的记录`);
+            
+            // 对每条通知记录，获取用户邮箱并发送通知邮件
+            for (const notification of notifications) {
+              const user = await storage.getUser(notification.user_id);
+              if (user && user.email) {
+                console.log(`正在向用户 ${user.email} 发送资源上架通知邮件`);
+                
+                // 发送邮件
+                const sent = await sendResourcePublishedEmail(
+                  user.email, 
+                  updatedResource.title, 
+                  resourceId
+                );
+                
+                if (sent) {
+                  // 更新通知记录的邮件发送状态
+                  await storage.updateNotificationEmailStatus(notification.id, true);
+                  console.log(`已成功向用户 ${user.email} 发送资源上架通知邮件`);
+                } else {
+                  console.error(`向用户 ${user.email} 发送资源上架通知邮件失败`);
+                }
+              } else {
+                console.log(`用户 ${notification.user_id} 不存在或没有邮箱信息，跳过发送`);
+              }
+            }
+          } else {
+            console.log(`资源 ${resourceId} 没有需要发送通知的记录`);
+          }
+        }
+      }
+
       console.log('更新后的资源:', JSON.stringify(updatedResource));
       res.json(updatedResource);
     } catch (error) {
@@ -944,11 +996,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(400).json({ message: '资源数据无效', errors: validationResult.error.format() });
         return;
       }
-
+      
+      // 获取更新前的资源信息
+      const originalResource = await storage.getResource(resourceId);
+      if (!originalResource) {
+        res.status(404).json({ message: '资源不存在' });
+        return;
+      }
+      
+      // 更新资源
       const updatedResource = await storage.updateResource(resourceId, validationResult.data);
       if (!updatedResource) {
         res.status(404).json({ message: '资源不存在' });
         return;
+      }
+      
+      // 导入邮件发送模块
+      const { sendResourcePublishedEmail } = await import('./email');
+      
+      // 检查是否为上架操作（状态从非1变为1）
+      const isStatusChangeToPublished = req.body.status === 1 && originalResource.status !== 1;
+      
+      // 检查是否从无资源链接变为有资源链接
+      const isResourceUrlAdded = req.body.resource_url && 
+                               (!originalResource.resource_url || originalResource.resource_url === '');
+      
+      // 检查是否需要发送邮件通知
+      if (isStatusChangeToPublished || isResourceUrlAdded) {
+        // 记录触发条件
+        if (isStatusChangeToPublished) {
+          console.log(`资源 ${resourceId} 从下架状态变为上架状态`);
+        }
+        
+        if (isResourceUrlAdded) {
+          console.log(`资源 ${resourceId} 新增了下载链接`);
+        }
+        
+        // 检查资源下载链接是否存在
+        if (updatedResource.resource_url) {
+          console.log(`资源 ${resourceId} 存在下载链接，检查是否需要发送上架通知邮件`);
+          
+          // 获取与该资源相关的未发送邮件的通知记录
+          const { notifications } = await storage.getResourceNotifications(1, 100, resourceId, false);
+          
+          if (notifications && notifications.length > 0) {
+            console.log(`找到 ${notifications.length} 条需要发送上架通知的记录`);
+            
+            // 对每条通知记录，获取用户邮箱并发送通知邮件
+            for (const notification of notifications) {
+              const user = await storage.getUser(notification.user_id);
+              if (user && user.email) {
+                console.log(`正在向用户 ${user.email} 发送资源上架通知邮件`);
+                
+                // 发送邮件
+                const sent = await sendResourcePublishedEmail(
+                  user.email, 
+                  updatedResource.title, 
+                  resourceId
+                );
+                
+                if (sent) {
+                  // 更新通知记录的邮件发送状态
+                  await storage.updateNotificationEmailStatus(notification.id, true);
+                  console.log(`已成功向用户 ${user.email} 发送资源上架通知邮件`);
+                } else {
+                  console.error(`向用户 ${user.email} 发送资源上架通知邮件失败`);
+                }
+              } else {
+                console.log(`用户 ${notification.user_id} 不存在或没有邮箱信息，跳过发送`);
+              }
+            }
+          } else {
+            console.log(`资源 ${resourceId} 没有需要发送通知的记录`);
+          }
+        } else {
+          console.log(`资源 ${resourceId} 没有下载链接，不发送上架通知邮件`);
+        }
       }
 
       res.json(updatedResource);
@@ -3189,6 +3312,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // 修复资源描述中的Markdown格式
+  app.post('/api/admin/fix-markdown', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期' });
+        return;
+      }
+      
+      // 导入修复脚本
+      const { fixResourceDescriptions } = await import('./fix-markdown');
+      
+      // 执行修复
+      const result = await fixResourceDescriptions();
+      
+      if (result.success) {
+        res.status(200).json({ 
+          message: result.message,
+          count: result.count
+        });
+      } else {
+        res.status(500).json({ 
+          message: '修复过程中出错',
+          error: result.message
+        });
+      }
+    } catch (error) {
+      console.error('运行修复脚本时出错:', error);
+      res.status(500).json({ 
+        message: '修复过程中出错',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // 公共函数：解析一个菲菲资源页面
   async function parseFeifeiResourcePage(resourceId: number, isLogVerbose: boolean = false): Promise<{
     success: boolean;
@@ -3759,6 +3916,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('接收到前端传递的解析结果，将用于资源上架');
     }
     
+    // 导入HTML到Markdown转换工具
+    const { convertHtmlToMarkdown, fixMarkdownContent, isHtml } = await import('./html-to-markdown');
+    
     try {
       // 获取菲菲资源
       const feifeiResource = await storage.getFeifeiResource(resourceId);
@@ -3814,6 +3974,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (needsUpdate) {
             console.log(`更新资源库中的字段:`, updateData);
             const updatedResource = await storage.updateResource(linkedResource.id, updateData);
+            
+            // 如果资源是上架状态且更新了网盘链接或提取码，检查是否需要发送上架通知邮件
+            if (updatedResource.status === 1 && (updateData.resource_url || updateData.resource_code)) {
+              // 检查资源是否有下载链接
+              if (updatedResource.resource_url) {
+                console.log(`资源 ${updatedResource.id} 已上架且更新了链接，检查是否需要发送上架通知邮件`);
+                
+                // 导入邮件发送模块
+                const { sendResourcePublishedEmail } = await import('./email');
+                
+                // 获取与该资源相关的未发送邮件的通知记录
+                const { notifications } = await storage.getResourceNotifications(1, 100, updatedResource.id, false);
+                
+                if (notifications && notifications.length > 0) {
+                  console.log(`找到 ${notifications.length} 条需要发送上架通知的记录`);
+                  
+                  // 对每条通知记录，获取用户邮箱并发送通知邮件
+                  for (const notification of notifications) {
+                    const user = await storage.getUser(notification.user_id);
+                    if (user && user.email) {
+                      console.log(`正在向用户 ${user.email} 发送资源上架通知邮件`);
+                      
+                      // 发送邮件
+                      const sent = await sendResourcePublishedEmail(
+                        user.email, 
+                        updatedResource.title, 
+                        updatedResource.id
+                      );
+                      
+                      if (sent) {
+                        // 更新通知记录的邮件发送状态
+                        await storage.updateNotificationEmailStatus(notification.id, true);
+                        console.log(`已成功向用户 ${user.email} 发送资源上架通知邮件`);
+                      } else {
+                        console.error(`向用户 ${user.email} 发送资源上架通知邮件失败`);
+                      }
+                    } else {
+                      console.log(`用户 ${notification.user_id} 不存在或没有邮箱信息，跳过发送`);
+                    }
+                  }
+                } else {
+                  console.log(`资源 ${updatedResource.id} 没有需要发送通知的记录`);
+                }
+              } else {
+                console.log(`资源 ${updatedResource.id} 没有下载链接，不发送上架通知邮件`);
+              }
+            }
+            
             return { 
               success: true, 
               message: '已更新资源库中的信息',
@@ -4200,9 +4408,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         language: languageValue,
         subtitle_languages: feifeiResource.subtitle || "",
         resolution: feifeiResource.video_size || "",
-        status: 0, // 默认设置为下架状态
+        status: 1, // 默认设置为上架状态
         is_free: false,
-        description: descriptionMarkdown, // 使用转换后的Markdown内容作为描述
+        description: fixMarkdownContent(descriptionMarkdown), // 使用转换后的Markdown内容作为描述
         contents: parsedContent || feifeiResource.parsed_content || "",
         faq_content: "",
         resource_url: feifeiResource.cloud_disk_url || "", // 将网盘链接复制到资源下载链接
@@ -4682,9 +4890,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         language: languageValue,
         subtitle_languages: feifeiResource.subtitle || "",
         resolution: feifeiResource.video_size || "",
-        status: 0, // 默认设置为下架状态
+        status: 1, // 默认设置为上架状态
         is_free: false,
-        description: descriptionMarkdown, // 使用转换后的Markdown内容作为描述
+        description: fixMarkdownContent(descriptionMarkdown), // 使用转换后的Markdown内容作为描述
         contents: parsedContent || feifeiResource.parsed_content || "",
         faq_content: "",
         resource_url: feifeiResource.cloud_disk_url || "", // 将网盘链接复制到资源下载链接
@@ -4937,6 +5145,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: '更新本地图片路径失败',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // 添加资源上架通知记录
+  app.post('/api/resources/:id/notify', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期' });
+        return;
+      }
+      
+      const resourceId = parseInt(req.params.id);
+      if (isNaN(resourceId)) {
+        res.status(400).json({ success: false, message: '无效的资源ID' });
+        return;
+      }
+      
+      // 检查资源是否存在
+      const resource = await storage.getResource(resourceId);
+      if (!resource) {
+        res.status(404).json({ success: false, message: '资源不存在' });
+        return;
+      }
+      
+      // 创建通知记录
+      const notification = await storage.createResourceNotification(req.user.id, resourceId);
+      
+      // 返回结果
+      res.status(201).json({ 
+        success: true, 
+        message: '已添加上架通知',
+        notification
+      });
+    } catch (error) {
+      console.error('添加资源上架通知记录时出错:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: '添加上架通知失败',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // 获取资源通知记录列表 (仅管理员可访问)
+  app.get('/api/admin/resource-notifications', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user || req.user.membership_type !== 'admin') {
+        res.status(403).json({ success: false, message: '权限不足' });
+        return;
+      }
+      
+      // 获取查询参数
+      const page = parseInt(req.query.page as string) || 1;
+      const pageSize = parseInt(req.query.pageSize as string) || 10;
+      const resourceId = req.query.resourceId ? parseInt(req.query.resourceId as string) : undefined;
+      
+      // 获取通知列表
+      const { notifications, total } = await storage.getResourceNotifications(page, pageSize, resourceId);
+      
+      // 获取用户和资源信息，进行关联
+      const enrichedNotifications = await Promise.all(
+        notifications.map(async (notification) => {
+          const user = await storage.getUser(notification.user_id);
+          const resource = await storage.getResource(notification.resource_id);
+          
+          return {
+            ...notification,
+            user: user ? {
+              id: user.id,
+              email: user.email,
+              avatar: user.avatar
+            } : null,
+            resource: resource ? {
+              id: resource.id,
+              title: resource.title,
+              subtitle: resource.subtitle,
+              cover_image: resource.cover_image,
+              status: resource.status,
+              resource_url: resource.resource_url
+            } : null
+          };
+        })
+      );
+      
+      // 返回结果
+      res.json({
+        success: true,
+        notifications: enrichedNotifications,
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize)
+      });
+    } catch (error) {
+      console.error('获取资源通知列表时出错:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: '获取资源通知列表失败',
         error: error instanceof Error ? error.message : String(error)
       });
     }

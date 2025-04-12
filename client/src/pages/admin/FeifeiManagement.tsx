@@ -494,6 +494,26 @@ export default function FeifeiManagement() {
       });
     }
   });
+  
+  // 修复资源描述中的Markdown格式
+  const fixMarkdownMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest<{ message: string, count: number }>("POST", `/api/admin/fix-markdown`);
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Markdown修复成功",
+        description: data.message || `成功修复了${data.count || 0}个资源的描述格式。`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Markdown修复失败",
+        description: error.message || "修复资源描述的Markdown格式时出错，请重试。",
+        variant: "destructive",
+      });
+    }
+  });
 
   // 获取分类资源 - 支持分页
   const fetchCategoryResources = async (categoryId: number, page: number = 1, pageSize: number = 10) => {
@@ -928,6 +948,27 @@ export default function FeifeiManagement() {
                   <>
                     <Zap className="h-4 w-4" />
                     解析所有菲菲资源
+                  </>
+                )}
+              </Button>
+              
+              <Button 
+                onClick={() => fixMarkdownMutation.mutate()}
+                size="sm" 
+                className="flex items-center gap-1 ml-2"
+                variant="secondary"
+                disabled={fixMarkdownMutation.isPending}
+                title="修复资源描述中的Markdown格式问题"
+              >
+                {fixMarkdownMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    修复中...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4" />
+                    修复Markdown格式
                   </>
                 )}
               </Button>

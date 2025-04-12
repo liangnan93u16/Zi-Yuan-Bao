@@ -140,10 +140,32 @@ export default function ResourceDetail() {
     
     // 如果资源没有下载链接，则处理预售通知逻辑
     if (!resource.resource_url) {
-      toast({
-        title: "预售通知已设置",
-        description: "当资源正式上架后，我们将通过系统消息通知您。",
-      });
+      try {
+        // 添加上架通知记录
+        const notifyResponse = await apiRequest('POST', `/api/resources/${id}/notify`);
+        
+        // 添加到收藏
+        const favoriteResponse = await apiRequest('POST', `/api/resources/${id}/favorite`);
+        
+        if (favoriteResponse.success) {
+          setIsFavorited(true);
+          toast({
+            title: "预售通知已设置",
+            description: "当资源正式上架后，我们将通过邮件通知您。已自动添加到您的收藏夹。",
+          });
+        } else {
+          toast({
+            title: "预售通知已设置",
+            description: "当资源正式上架后，我们将通过邮件通知您。",
+          });
+        }
+      } catch (error) {
+        console.error('Error setting up notification:', error);
+        toast({
+          title: "预售通知已设置",
+          description: "当资源正式上架后，我们将通过邮件通知您。",
+        });
+      }
       return;
     }
 
@@ -729,67 +751,9 @@ export default function ResourceDetail() {
                     </div>
                   </>
                 ) : (
-                  <>
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="font-medium mb-2">第1章：React 基础入门</h4>
-                        <ul className="space-y-2 pl-4">
-                          <li className="flex justify-between">
-                            <span>1.1 课程介绍与环境搭建</span>
-                            <span className="text-sm text-neutral-500">15:20</span>
-                          </li>
-                          <li className="flex justify-between">
-                            <span>1.2 React 核心概念</span>
-                            <span className="text-sm text-neutral-500">22:45</span>
-                          </li>
-                          <li className="flex justify-between">
-                            <span>1.3 创建第一个 React 组件</span>
-                            <span className="text-sm text-neutral-500">18:30</span>
-                          </li>
-                        </ul>
-                      </div>
-                      
-                      <div>
-                        <h4 className="font-medium mb-2">第2章：React Hooks 详解</h4>
-                        <ul className="space-y-2 pl-4">
-                          <li className="flex justify-between">
-                            <span>2.1 useState 状态管理</span>
-                            <span className="text-sm text-neutral-500">20:15</span>
-                          </li>
-                          <li className="flex justify-between">
-                            <span>2.2 useEffect 与生命周期</span>
-                            <span className="text-sm text-neutral-500">25:40</span>
-                          </li>
-                          <li className="flex justify-between">
-                            <span>2.3 useContext 全局状态</span>
-                            <span className="text-sm text-neutral-500">19:50</span>
-                          </li>
-                        </ul>
-                      </div>
-                      
-                      <div>
-                        <h4 className="font-medium mb-2">第3章：React 路由</h4>
-                        <ul className="space-y-2 pl-4">
-                          <li className="flex justify-between">
-                            <span>3.1 React Router 基础</span>
-                            <span className="text-sm text-neutral-500">22:10</span>
-                          </li>
-                          <li className="flex justify-between">
-                            <span>3.2 动态路由与参数</span>
-                            <span className="text-sm text-neutral-500">18:35</span>
-                          </li>
-                          <li className="flex justify-between">
-                            <span>3.3 嵌套路由与布局</span>
-                            <span className="text-sm text-neutral-500">24:20</span>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-4 text-center">
-                      <Button variant="outline">查看完整目录</Button>
-                    </div>
-                  </>
+                  <div className="p-4 bg-neutral-50 text-neutral-500 rounded-md text-center">
+                    暂无课程目录信息
+                  </div>
                 )}
               </TabsContent>
               
@@ -806,31 +770,8 @@ export default function ResourceDetail() {
                     </ReactMarkdown>
                   </div>
                 ) : (
-                  <div className="space-y-5">
-                    <div>
-                      <h4 className="font-medium mb-2">1. 这门课程适合完全没有React经验的人吗？</h4>
-                      <p className="text-neutral-700">是的，这门课程是从零基础开始讲解的，即使你之前没有React经验也可以学习。不过，建议你至少具备基本的HTML、CSS和JavaScript知识。</p>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium mb-2">2. 购买后我可以永久访问课程内容吗？</h4>
-                      <p className="text-neutral-700">是的，一旦购买，你将获得课程的终身访问权限，包括未来的内容更新。</p>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium mb-2">3. 课程包含源代码和项目文件吗？</h4>
-                      <p className="text-neutral-700">是的，课程包含所有讲解中使用的源代码和项目文件，你可以直接下载并在本地运行。</p>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium mb-2">4. 如果我对课程有疑问，可以获得支持吗？</h4>
-                      <p className="text-neutral-700">当然可以，你可以在课程评论区提问，老师和助教会定期回复学员的问题。VIP会员还可以获得优先回复和一对一指导。</p>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium mb-2">5. 课程内容会定期更新吗？</h4>
-                      <p className="text-neutral-700">是的，我们会根据React的版本更新和前端技术发展，定期更新课程内容，确保学员学习的是最新的知识和技能。</p>
-                    </div>
+                  <div className="p-4 bg-neutral-50 text-neutral-500 rounded-md text-center">
+                    暂无常见问题
                   </div>
                 )}
               </TabsContent>

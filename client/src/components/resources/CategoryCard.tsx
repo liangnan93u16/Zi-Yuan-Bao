@@ -71,7 +71,7 @@ export default function CategoryCard({ category, count }: CategoryCardProps) {
   const { bg, textColor } = categoryColorMap[colorKey];
 
   return (
-    <Link href={`/resources?category=${category.id}`}>
+    <Link href={`/resources?category_id=${category.id}`}>
       <a className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition flex flex-col items-center justify-center text-center">
         <div className={`w-12 h-12 ${bg} rounded-full flex items-center justify-center mb-3`}>
           <div className={`${textColor} flex items-center justify-center`}>

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Search, Menu, User, ShoppingBag, LogOut, BookOpen, Edit, CheckCircle, ClipboardCheck, Users, History, Shield, Home, Package, Crown, HelpCircle, Info, Link as LinkIcon, Settings } from "lucide-react";
+import { Search, Menu, User, ShoppingBag, LogOut, BookOpen, Edit, CheckCircle, ClipboardCheck, Users, History, Shield, Home, Package, Crown, HelpCircle, Info, Link as LinkIcon, Settings, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -30,9 +30,10 @@ export default function Navbar() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      // Redirect to resources page with search query
+      // 重定向到资源页面并添加搜索查询参数
       const encodedQuery = encodeURIComponent(searchQuery.trim());
       setLocation(`/resources?search=${encodedQuery}`);
+      // 搜索后清空搜索框
       setSearchQuery("");
     }
   };
@@ -64,14 +65,7 @@ export default function Navbar() {
                   <Package className="h-4 w-4" />
                   全部资源
               </Link>
-              <Link href="/membership" className={`inline-flex items-center gap-1 px-1 pt-1 border-b-2 text-sm font-medium ${
-                  isActive("/membership") 
-                    ? "border-primary text-neutral-900" 
-                    : "border-transparent text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
-                }`}>
-                  <Crown className="h-4 w-4" />
-                  会员专区
-              </Link>
+
               <Link href="/resource-request" className={`inline-flex items-center gap-1 px-1 pt-1 border-b-2 text-sm font-medium ${
                   isActive("/resource-request") 
                     ? "border-primary text-neutral-900" 
@@ -91,7 +85,7 @@ export default function Navbar() {
             </div>
           </div>
           <div className="hidden sm:ml-6 sm:flex sm:items-center sm:space-x-4">
-            <form onSubmit={handleSearch} className="relative">
+            <form onSubmit={handleSearch} className="relative flex">
               <Input
                 type="text"
                 placeholder="搜索资源..."
@@ -99,7 +93,14 @@ export default function Navbar() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <Search className="absolute right-3 top-2.5 h-4 w-4 text-neutral-500" />
+              <Button 
+                type="submit" 
+                variant="outline" 
+                size="icon" 
+                className="ml-2"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
             </form>
 
             <Link href="/user/purchases">
@@ -148,6 +149,12 @@ export default function Navbar() {
                         <Link href="/admin/resource-requests" className="flex items-center gap-2">
                           <ClipboardCheck className="h-4 w-4" />
                           资源需求管理
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Link href="/admin/resource-notifications" className="flex items-center gap-2">
+                          <Bell className="h-4 w-4" />
+                          上架通知记录
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem>
@@ -221,6 +228,24 @@ export default function Navbar() {
               </SheetTrigger>
               <SheetContent side="right">
                 <div className="flex flex-col space-y-4 mt-4">
+                  <form onSubmit={handleSearch} className="flex mb-2">
+                    <Input
+                      type="text"
+                      placeholder="搜索资源..."
+                      className="bg-neutral-100 rounded-lg text-sm"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    <Button 
+                      type="submit" 
+                      variant="outline" 
+                      size="icon" 
+                      className="ml-2"
+                    >
+                      <Search className="h-4 w-4" />
+                    </Button>
+                  </form>
+                  
                   <Link href="/" className={`flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium ${
                       isActive("/") 
                         ? "text-primary bg-neutral-50" 
@@ -237,14 +262,7 @@ export default function Navbar() {
                       <Package className="h-4 w-4" />
                       全部资源
                   </Link>
-                  <Link href="/membership" className={`flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium ${
-                      isActive("/membership") 
-                        ? "text-primary bg-neutral-50" 
-                        : "text-neutral-700 hover:text-primary hover:bg-neutral-50"
-                    }`}>
-                      <Crown className="h-4 w-4" />
-                      会员专区
-                  </Link>
+
                   <Link href="/resource-request" className={`flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium ${
                       isActive("/resource-request") 
                         ? "text-primary bg-neutral-50" 
@@ -286,6 +304,10 @@ export default function Navbar() {
                             <Link href="/admin/resource-requests" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
                                 <ClipboardCheck className="h-4 w-4" />
                                 资源需求管理
+                            </Link>
+                            <Link href="/admin/resource-notifications" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
+                                <Bell className="h-4 w-4" />
+                                上架通知记录
                             </Link>
                             <Link href="/admin/users" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-neutral-700 hover:text-primary hover:bg-neutral-50">
                                 <Users className="h-4 w-4" />
