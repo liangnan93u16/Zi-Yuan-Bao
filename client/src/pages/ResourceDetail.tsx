@@ -27,6 +27,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ReviewSection from "@/components/ReviewSection";
 import CourseSyllabus from "@/components/CourseSyllabus";
+import SEO from "@/components/SEO";
 
 export default function ResourceDetail() {
   const { id } = useParams();
@@ -460,8 +461,87 @@ export default function ResourceDetail() {
     }
   };
 
+  // 为资源详情页面创建结构化数据
+  const generateResourceSchema = () => {
+    if (!resource || !resource.id) return null;
+    
+    // 创建课程结构化数据
+    const courseSchema = {
+      "@context": "https://schema.org",
+      "@type": "Course",
+      "name": resource.title || "",
+      "description": resource.description || resource.subtitle || "",
+      "provider": {
+        "@type": "Organization",
+        "name": "资源宝",
+        "sameAs": "https://resourcetreasure.replit.app/"
+      }
+    };
+    
+    // 为视频类型资源添加特定属性
+    if (resource.resource_type === 'video') {
+      return {
+        ...courseSchema,
+        "timeRequired": resource.video_duration ? `PT${Math.floor(resource.video_duration)}M` : undefined,
+        "educationalCredentialAwarded": "技能证书"
+      };
+    }
+    
+    // 为电子书类型资源添加特定属性
+    if (resource.resource_type === 'ebook') {
+      return {
+        "@context": "https://schema.org",
+        "@type": "Book",
+        "name": resource.title || "",
+        "description": resource.description || resource.subtitle || "",
+        "author": resource.author ? {
+          "@type": "Person",
+          "name": resource.author.name || "未知作者"
+        } : undefined,
+        "publisher": {
+          "@type": "Organization",
+          "name": "资源宝"
+        }
+      };
+    }
+    
+    return courseSchema;
+  };
+  
+  // 生成SEO描述
+  const generateDescription = () => {
+    let desc = resource.subtitle || "";
+    if (resource.description) {
+      // 从markdown中提取纯文本，并截取前150个字符作为描述
+      const plainText = resource.description.replace(/[#*_`~]/g, '').replace(/\n/g, ' ').trim();
+      desc = (plainText.length > 150) ? `${plainText.substring(0, 150)}...` : plainText;
+    }
+    return desc || `${resource.title} - 资源宝分享的优质学习资源，助您快速掌握相关技能。`;
+  };
+  
+  // 生成关键词
+  const generateKeywords = () => {
+    const keywords = [`${resource.title}`, "学习资源", "视频教程"];
+    if (resource.category) {
+      keywords.push(resource.category.name);
+    }
+    return keywords.join(',');
+  };
+  
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-6 max-w-[1400px]">
+    <>
+      {!isLoading && resource && resource.id && (
+        <SEO 
+          title={`${resource.title} - 资源宝`}
+          description={generateDescription()}
+          keywords={generateKeywords()}
+          ogImage={resource.cover_image || "https://resourcetreasure.replit.app/images/og-image.jpg"}
+          ogType="article"
+          path={`resources/${id}`}
+          schema={JSON.stringify(generateResourceSchema())}
+        />
+      )}
+      <div className="container mx-auto px-4 sm:px-6 py-6 max-w-[1400px]">
       <div className="mb-4">
         <Link href="/resources">
           <a className="text-primary hover:text-blue-700 flex items-center text-sm font-medium">
@@ -888,5 +968,6 @@ export default function ResourceDetail() {
         </div>
       </div>
     </div>
+    </>
   );
 }

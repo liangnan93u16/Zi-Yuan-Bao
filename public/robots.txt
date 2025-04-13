@@ -1,0 +1,10 @@
+# Allow crawling of all content
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://resourcetreasure.replit.app/sitemap.xml
+
+# 禁止访问某些敏感目录
+Disallow: /admin/
+Disallow: /api/

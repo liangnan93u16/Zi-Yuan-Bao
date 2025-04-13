@@ -11,6 +11,7 @@ import { fixMarkdownContent } from './html-to-markdown';
 import { eq, sql, and, isNull, isNotNull, ne } from 'drizzle-orm';
 import * as fs from 'fs';
 import * as path from 'path';
+import multer from 'multer';
 import { 
   insertCategorySchema, 
   insertResourceSchema, 
@@ -54,6 +55,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // 设置静态文件服务，提供图片访问
   app.use('/images', express.static(path.join('public', 'images')));
+  
+  // 配置multer以处理文件上传
+  const multerStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, imagesDir);
+    },
+    filename: function (req, file, cb) {
+      // 生成文件名: 原始名称-时间戳.扩展名
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const ext = path.extname(file.originalname);
+      const filename = file.originalname.replace(ext, '') + '-' + uniqueSuffix + ext;
+      cb(null, filename);
+    }
+  });
+  
+  const upload = multer({ 
+    storage: multerStorage,
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 限制文件大小为10MB
+    },
+    fileFilter: function (req, file, cb) {
+      // 接受的图片类型
+      const filetypes = /jpeg|jpg|png|gif|webp|svg/;
+      const mimetype = filetypes.test(file.mimetype);
+      const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+      
+      if (mimetype && extname) {
+        return cb(null, true);
+      }
+      
+      cb(new Error('只支持上传图片文件(jpg, jpeg, png, gif, webp, svg)'));
+    }
+  });
   
   // 检查资源是否可以被删除（是否已被购买）
   async function canDeleteResource(resourceId: number): Promise<boolean> {
@@ -888,6 +922,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting resource:', error);
       res.status(500).json({ message: '删除资源失败' });
+    }
+  });
+
+  // 图片上传接口 - 允许已登录用户上传图片
+  app.post('/api/upload/image', authenticateUser as any, upload.single('image'), async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期' });
+        return;
+      }
+      
+      // 检查是否有文件上传
+      if (!req.file) {
+        res.status(400).json({ message: '没有上传文件或文件格式不正确' });
+        return;
+      }
+      
+      // 生成可访问的文件路径
+      const imageUrl = `/images/${req.file.filename}`;
+      const localPath = req.file.path;
+      
+      // 返回图片URL和本地路径
+      res.status(200).json({
+        success: true,
+        message: '图片上传成功',
+        data: {
+          image_url: imageUrl,
+          local_path: localPath
+        }
+      });
+    } catch (error) {
+      console.error('图片上传失败:', error);
+      res.status(500).json({ message: '图片上传失败', error: String(error) });
     }
   });
 

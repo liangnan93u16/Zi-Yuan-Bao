@@ -8,6 +8,7 @@ import ResourceCard from "@/components/resources/ResourceCard";
 import { FilterType, ResourceWithCategory } from "@/lib/types";
 import { Category } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
+import SEO from "@/components/SEO";
 
 export default function Home() {
   const [filter, setFilter] = useState<FilterType>("all");
@@ -51,8 +52,28 @@ export default function Home() {
   // Extract resources from the response and provide a default empty array
   const resources = resourcesData?.resources || [];
 
+  // 为首页添加SEO数据
+  const homeSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "资源宝 - 精品学习资源分享平台",
+    "url": "https://resourcetreasure.replit.app/",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://resourcetreasure.replit.app/resources?query={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  };
+  
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <>
+      <SEO 
+        title="资源宝 - 精品学习资源分享平台"
+        description="数千种精选视频课程、电子书和学习资料，助您掌握新技能，提升专业水平，高质量学习资源一站式获取平台"
+        keywords="学习资源,视频教程,电子书,技能提升,在线学习,设计教程,编程教程"
+        schema={JSON.stringify(homeSchema)}
+      />
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-primary to-blue-600 rounded-xl shadow-md overflow-hidden mb-8">
         <div className="md:flex">
@@ -183,5 +204,6 @@ export default function Home() {
         )}
       </div>
     </div>
+    </>
   );
 }

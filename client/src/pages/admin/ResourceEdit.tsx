@@ -352,6 +352,80 @@ export default function ResourceEdit() {
   const syncImagePath = () => {
     syncImagePathMutation.mutate();
   };
+  
+  // 处理图片上传
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    // 仅接受图片文件
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "上传失败",
+        description: "请选择图片文件",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // 检查文件大小 (限制为5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "上传失败",
+        description: "图片大小不能超过5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await fetch('/api/upload/image', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '上传图片失败');
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // 更新表单中的本地图片路径
+        form.setValue('local_image_path', result.data.local_path);
+        
+        // 立即保存资源，确保图片路径被保存到数据库
+        saveResourceDirectly();
+        
+        toast({
+          title: "上传成功",
+          description: "图片已成功上传并保存",
+        });
+        
+        // 延迟一点时间后刷新数据，确保能看到最新的图片
+        setTimeout(() => {
+          refetch();
+        }, 500);
+      } else {
+        throw new Error(result.message || '上传图片失败');
+      }
+    } catch (error) {
+      console.error('上传图片时出错:', error);
+      toast({
+        title: "上传失败",
+        description: error instanceof Error ? error.message : "上传图片时发生错误",
+        variant: "destructive",
+      });
+    }
+    
+    // 清空file input，允许再次选择相同的文件
+    event.target.value = '';
+  };
 
   // Handle form submission
   const onSubmit = (data: ResourceFormValues) => {
@@ -664,7 +738,12 @@ export default function ResourceEdit() {
                             <div className="flex items-center gap-4">
                               {field.value && (
                                 <div className="border rounded overflow-hidden w-32 h-20">
-                                  <img src={field.value.startsWith('/') ? `/images/${field.value.split('/').pop()}` : field.value} 
+                                  <img 
+                                    src={field.value.includes('/') 
+                                      ? `/images/${field.value.split('/').pop()}` 
+                                      : field.value.startsWith('public/images/') 
+                                        ? `/images/${field.value.replace('public/images/', '')}`
+                                        : field.value} 
                                     alt="本地图片预览" 
                                     className="w-full h-full object-cover" 
                                     onError={(e) => {
@@ -675,7 +754,7 @@ export default function ResourceEdit() {
                                 </div>
                               )}
                               <div className="border border-dashed rounded p-6 text-center flex-grow">
-                                <div className="flex justify-center gap-2">
+                                <div className="flex justify-center gap-2 flex-wrap">
                                   <Button
                                     type="button"
                                     variant="outline"
@@ -685,6 +764,18 @@ export default function ResourceEdit() {
                                   >
                                     从菲菲资源同步图片
                                   </Button>
+                                  <label htmlFor="image-upload" className="cursor-pointer">
+                                    <div className="bg-primary text-primary-foreground hover:bg-primary/90 h-9 rounded-md px-3 text-xs flex items-center">
+                                      上传本地图片
+                                    </div>
+                                    <input
+                                      id="image-upload"
+                                      type="file"
+                                      accept="image/*"
+                                      className="hidden"
+                                      onChange={handleImageUpload}
+                                    />
+                                  </label>
                                 </div>
                                 <p className="text-sm text-neutral-500 mt-2">
                                   本地图片路径用于存储下载的图片
