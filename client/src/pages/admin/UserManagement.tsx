@@ -35,7 +35,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Search, UserPlus, Camera } from "lucide-react";
+import { Search, UserPlus, Camera, FileText, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -75,6 +75,22 @@ const userCreateSchema = z.object({
 type UserEditValues = z.infer<typeof userEditSchema>;
 type UserCreateValues = z.infer<typeof userCreateSchema>;
 
+// 定义购买记录类型
+interface Purchase {
+  id: number;
+  user_id: number;
+  resource_id: number;
+  price: string;
+  purchase_time: string;
+  resource: {
+    id: number;
+    title: string;
+    subtitle?: string;
+    cover_image?: string;
+    resource_url?: string;
+  };
+}
+
 export default function UserManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [membershipFilter, setMembershipFilter] = useState("all");
@@ -84,6 +100,10 @@ export default function UserManagement() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
+  const [isPurchasesDialogOpen, setIsPurchasesDialogOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [userPurchases, setUserPurchases] = useState<Purchase[]>([]);
+  const [isLoadingPurchases, setIsLoadingPurchases] = useState(false);
   const { toast } = useToast();
 
   // Fetch users
@@ -137,17 +157,78 @@ export default function UserManagement() {
     },
   });
   
+  // 删除用户购买记录mutation
+  const deletePurchaseMutation = useMutation({
+    mutationFn: async (purchaseId: number) => {
+      return apiRequest("DELETE", `/api/admin/purchases/${purchaseId}`);
+    },
+    onSuccess: () => {
+      // 如果当前用户ID存在，则刷新该用户的购买记录
+      if (currentUserId) {
+        fetchUserPurchases(currentUserId);
+      }
+      toast({
+        title: "删除成功",
+        description: "购买记录已成功删除",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "删除失败",
+        description: `删除购买记录时出错: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // 获取用户购买记录
+  const fetchUserPurchases = async (userId: number) => {
+    setIsLoadingPurchases(true);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/purchases`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('获取购买记录失败');
+      }
+      
+      const data = await response.json();
+      setUserPurchases(data);
+    } catch (error) {
+      console.error('Error fetching user purchases:', error);
+      toast({
+        title: '获取失败',
+        description: '无法加载用户购买记录，请稍后重试',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingPurchases(false);
+    }
+  };
+
+  // 查看用户购买记录
+  const handleViewPurchases = (userId: number) => {
+    setCurrentUserId(userId);
+    fetchUserPurchases(userId);
+    setIsPurchasesDialogOpen(true);
+  };
+
+  // 删除购买记录
+  const handleDeletePurchase = (purchaseId: number) => {
+    if (confirm('确定要删除此购买记录吗？此操作不可撤销。')) {
+      deletePurchaseMutation.mutate(purchaseId);
+    }
+  };
+
   // Toggle user status mutation
   const toggleUserStatusMutation = useMutation({
     mutationFn: async ({ userId, isActive }: { userId: number, isActive: boolean }) => {
-      // If user is active, set the membership_expire_time to yesterday to disable
-      // If user is disabled, set the membership_expire_time to null to enable
-      const now = new Date();
-      const yesterday = new Date(now);
-      yesterday.setDate(yesterday.getDate() - 1);
+      // 将禁用状态使用特殊的日期来表示：
+      // 通过判断是否大于2099年，表示用户被禁用，但不影响会员权限
       
       const userData = {
-        membership_expire_time: isActive ? yesterday.toISOString() : null
+        account_locked_until: isActive ? "2099-12-31" : null
       };
       
       return apiRequest("PATCH", `/api/admin/users/${userId}`, userData);
@@ -204,7 +285,7 @@ export default function UserManagement() {
 
     setEditingUser(user);
     form.reset({
-      membership_type: user.membership_type || "",
+      membership_type: user.membership_type || "regular",
       membership_expire_time: user.membership_expire_time ? new Date(user.membership_expire_time).toISOString().split('T')[0] : "",
       coins: user.coins || 0,
       email: user.email || "",
@@ -227,11 +308,23 @@ export default function UserManagement() {
       apiData.membership_expire_time = null;
     }
     
+    // 处理"regular"会员类型，将其转为null（普通用户）
+    if (formattedData.membership_type === "regular") {
+      apiData.membership_type = null;
+    }
+    
     updateUserMutation.mutate({ id: editingUser.id, ...apiData });
   };
   
   const onSubmitCreate = (data: UserCreateValues) => {
-    createUserMutation.mutate(data);
+    // 处理"regular"会员类型，将其转为null（普通用户）
+    const formattedData = { ...data };
+    if (formattedData.membership_type === "regular") {
+      // 由于TypeScript的限制，我们需要使用as unknown的中间转换
+      (formattedData as any).membership_type = null;
+    }
+    
+    createUserMutation.mutate(formattedData);
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -256,13 +349,20 @@ export default function UserManagement() {
     let matches = true;
     
     if (membershipFilter !== "all") {
-      matches = matches && user.membership_type === membershipFilter;
+      if (membershipFilter === "regular") {
+        // 对于regular过滤器，应该匹配null或者空值的用户
+        matches = matches && (!user.membership_type || user.membership_type === "regular");
+      } else {
+        matches = matches && user.membership_type === membershipFilter;
+      }
     }
     
     if (statusFilter === "active") {
-      matches = matches && (!user.membership_expire_time || new Date(user.membership_expire_time) > new Date());
+      // 活跃用户：没有被永久禁用（账号锁定日期为空或不超过2099年）
+      matches = matches && (!user.account_locked_until || new Date(user.account_locked_until) <= new Date("2099-01-01"));
     } else if (statusFilter === "disabled") {
-      matches = matches && (user.membership_expire_time && new Date(user.membership_expire_time) <= new Date());
+      // 被禁用的用户：账号锁定日期超过2099年（永久禁用标志）
+      matches = matches && (user.account_locked_until && new Date(user.account_locked_until) > new Date("2099-01-01"));
     }
     
     if (searchQuery) {
@@ -310,7 +410,8 @@ export default function UserManagement() {
                   <SelectContent>
                     <SelectItem value="all">所有会员类型</SelectItem>
                     <SelectItem value="regular">普通用户</SelectItem>
-                    <SelectItem value="vip">VIP会员</SelectItem>
+                    <SelectItem value="premium">高级会员</SelectItem>
+                    <SelectItem value="admin">管理员</SelectItem>
                   </SelectContent>
                 </Select>
                 
@@ -384,7 +485,8 @@ export default function UserManagement() {
                               </FormControl>
                               <SelectContent>
                                 <SelectItem value="regular">普通用户</SelectItem>
-                                <SelectItem value="vip">VIP会员</SelectItem>
+                                <SelectItem value="premium">高级会员</SelectItem>
+                                <SelectItem value="admin">管理员</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage className="col-span-3 col-start-2" />
@@ -462,7 +564,9 @@ export default function UserManagement() {
                     ))
                   ) : (
                     paginatedUsers?.map((user: any) => {
-                      const isActive = !user.membership_expire_time || new Date(user.membership_expire_time) > new Date();
+                      // 检查是否被禁用 - 使用account_locked_until判断，2099年之后的日期被认为是永久禁用状态
+                      const isDisabled = user.account_locked_until && new Date(user.account_locked_until) > new Date("2099-01-01");
+                      const isActive = !isDisabled;
                       
                       return (
                         <TableRow key={user.id}>
@@ -481,13 +585,11 @@ export default function UserManagement() {
                           <TableCell>
                             <Badge variant="outline" className={`
                               ${user.membership_type === 'admin' ? 'bg-red-100 text-red-800' : 
-                                user.membership_type === 'vip' ? 'bg-purple-100 text-purple-800' : 
                                 user.membership_type === 'premium' ? 'bg-indigo-100 text-indigo-800' : 
                                 'bg-neutral-100 text-neutral-800'}
                               border-0
                             `}>
                               {user.membership_type === 'admin' ? '管理员' : 
-                               user.membership_type === 'vip' ? 'VIP会员' : 
                                user.membership_type === 'premium' ? '高级会员' : '普通用户'}
                             </Badge>
                             {user.membership_expire_time && (
@@ -519,6 +621,14 @@ export default function UserManagement() {
                               title={user.membership_type === 'admin' ? "管理员用户不可编辑" : "编辑用户"}
                             >
                               编辑
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              className="text-blue-600 hover:text-blue-800 h-auto p-0 mr-3"
+                              onClick={() => handleViewPurchases(user.id)}
+                              title="查看购买记录"
+                            >
+                              购买记录
                             </Button>
                             <Button
                               variant="ghost"
@@ -595,7 +705,8 @@ export default function UserManagement() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="regular">普通用户</SelectItem>
-                              <SelectItem value="vip">VIP会员</SelectItem>
+                              <SelectItem value="premium">高级会员</SelectItem>
+                              <SelectItem value="admin">管理员</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -742,6 +853,99 @@ export default function UserManagement() {
         onSelect={handleAvatarSelect}
         currentAvatar={form.getValues().avatar}
       />
+      
+      {/* 用户购买记录对话框 */}
+      <Dialog open={isPurchasesDialogOpen} onOpenChange={setIsPurchasesDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>用户购买记录</DialogTitle>
+            <DialogDescription>
+              查看和管理用户的所有购买记录
+            </DialogDescription>
+          </DialogHeader>
+          
+          {isLoadingPurchases ? (
+            <div className="py-8 flex justify-center">
+              <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : userPurchases.length === 0 ? (
+            <div className="py-8 text-center text-neutral-600">
+              该用户暂无购买记录
+            </div>
+          ) : (
+            <div className="overflow-y-auto max-h-[60vh]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>资源名称</TableHead>
+                    <TableHead>价格</TableHead>
+                    <TableHead>购买时间</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {userPurchases.map((purchase) => (
+                    <TableRow key={purchase.id}>
+                      <TableCell>
+                        <div className="flex items-center">
+                          {purchase.resource.cover_image ? (
+                            <div className="w-10 h-10 mr-3 rounded overflow-hidden">
+                              <img 
+                                src={purchase.resource.cover_image} 
+                                alt={purchase.resource.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-10 h-10 mr-3 rounded bg-neutral-200 flex items-center justify-center">
+                              <FileText className="h-5 w-5 text-neutral-500" />
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-medium">{purchase.resource.title}</div>
+                            {purchase.resource.subtitle && (
+                              <div className="text-xs text-neutral-500">{purchase.resource.subtitle}</div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{purchase.price} 积分</TableCell>
+                      <TableCell>
+                        {new Date(purchase.purchase_time).toLocaleString('zh-CN', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          className="text-red-600 hover:text-red-800 h-auto p-0"
+                          onClick={() => handleDeletePurchase(purchase.id)}
+                          title="删除购买记录"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsPurchasesDialogOpen(false)}
+            >
+              关闭
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

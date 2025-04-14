@@ -73,6 +73,7 @@ export interface IStorage {
   getUserPurchase(userId: number, resourceId: number): Promise<UserPurchase | undefined>;
   getUserPurchases(userId: number): Promise<UserPurchase[]>;
   getUserDailyPurchaseCount(userId: number): Promise<number>;
+  deleteUserPurchase(purchaseId: number): Promise<boolean>;
   
   // User Favorite operations
   createUserFavorite(userId: number, resourceId: number): Promise<UserFavorite>;
@@ -571,6 +572,19 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error getting user daily purchase count:', error);
       return 0;
+    }
+  }
+  
+  async deleteUserPurchase(purchaseId: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(userPurchases)
+        .where(eq(userPurchases.id, purchaseId))
+        .returning({ id: userPurchases.id });
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error deleting user purchase:', error);
+      return false;
     }
   }
   

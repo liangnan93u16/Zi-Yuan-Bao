@@ -408,29 +408,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       
-      // 如果是会员且会员没有过期，可以免费获取资源
+      // 只有高级会员(premium)和管理员(admin)才能免费获取资源，且高级会员必须是有效期内
+      // 管理员不受会员到期时间的限制
       if (req.user.membership_type) {
-        // 检查会员是否有效（没有到期时间或当前时间小于到期时间）
-        const membershipValid = !req.user.membership_expire_time || 
-                               new Date(req.user.membership_expire_time) > new Date();
-                               
-        if (membershipValid) {
-          // 记录购买信息（会员免费获取）
-          await storage.createUserPurchase(req.user.id, resourceId, 0);
+        // admin会员不受有效期限制，永远可以免费获取
+        if (req.user.membership_type === 'admin') {
+          // 记录购买信息（管理员免费获取）时保存实际资源价格，而不是0
+          const actualPrice = typeof resource.price === 'string' ? parseFloat(resource.price) : (resource.price || 0);
+          await storage.createUserPurchase(req.user.id, resourceId, actualPrice);
           
           res.json({ 
             success: true, 
-            message: '会员资源获取成功',
+            message: '管理员资源获取成功',
             resource_url: resource.resource_url
           });
           return;
+        }
+        
+        // 高级会员(premium)需要检查会员是否有效（没有到期时间或当前时间小于到期时间）
+        if (req.user.membership_type === 'premium') {
+          const membershipValid = !req.user.membership_expire_time || 
+                                 new Date(req.user.membership_expire_time) > new Date();
+                                 
+          console.log('高级会员检查:', {
+            userId: req.user.id,
+            membershipType: req.user.membership_type,
+            expireTime: req.user.membership_expire_time,
+            isValidMembership: membershipValid,
+            resourceId,
+            resourcePrice: resource.price,
+            isFree: resource.is_free
+          });
+          
+          if (membershipValid) {
+            // 记录购买信息（高级会员免费获取）时保存实际资源价格，而不是0
+            const actualPrice = typeof resource.price === 'string' ? parseFloat(resource.price) : (resource.price || 0);
+            await storage.createUserPurchase(req.user.id, resourceId, actualPrice);
+            
+            res.json({ 
+              success: true, 
+              message: '高级会员资源获取成功',
+              resource_url: resource.resource_url
+            });
+            return;
+          } else {
+            // 高级会员已过期，提示用户
+            console.log('高级会员已过期:', {
+              userId: req.user.id,
+              expireTime: req.user.membership_expire_time
+            });
+          }
         }
       }
       
       // 计算资源价格（确保是数字）
       const price = typeof resource.price === 'string' ? parseFloat(resource.price) : (resource.price || 0);
       
-      // 检查用户积分是否足够
+      // 严格检查用户积分是否足够
+      console.log('积分检查:', {
+        userId: req.user.id,
+        userCoins: req.user.coins || 0,
+        resourcePrice: price,
+        isEnough: (req.user.coins || 0) >= price
+      });
+      
       if ((req.user.coins || 0) < price) {
         res.status(400).json({ 
           success: false, 
@@ -1287,6 +1328,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // 管理员获取用户购买记录
+  app.get('/api/admin/users/:id/purchases', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        res.status(400).json({ message: '无效的用户ID' });
+        return;
+      }
+      
+      // 检查用户是否存在
+      const user = await storage.getUser(userId);
+      if (!user) {
+        res.status(404).json({ message: '用户不存在' });
+        return;
+      }
+      
+      // 获取用户的购买记录
+      const purchases = await storage.getUserPurchases(userId);
+      
+      // 丰富购买记录数据，添加资源信息
+      const enrichedPurchases = await Promise.all(purchases.map(async (purchase) => {
+        const resource = await storage.getResource(purchase.resource_id);
+        return {
+          ...purchase,
+          resource: resource || { title: '资源已删除', cover_image: null }
+        };
+      }));
+      
+      res.json(enrichedPurchases);
+    } catch (error) {
+      console.error('Error getting user purchases:', error);
+      res.status(500).json({ message: '获取用户购买记录失败' });
+    }
+  });
+  
+  // 管理员删除用户购买记录
+  app.delete('/api/admin/purchases/:id', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const purchaseId = parseInt(req.params.id);
+      if (isNaN(purchaseId)) {
+        res.status(400).json({ message: '无效的购买记录ID' });
+        return;
+      }
+      
+      // 删除购买记录
+      const success = await storage.deleteUserPurchase(purchaseId);
+      
+      if (success) {
+        res.status(200).json({ message: '购买记录已成功删除' });
+      } else {
+        res.status(404).json({ message: '购买记录不存在或已被删除' });
+      }
+    } catch (error) {
+      console.error('Error deleting user purchase:', error);
+      res.status(500).json({ message: '删除购买记录失败' });
+    }
+  });
+  
   // 管理员修改用户信息
   app.patch('/api/admin/users/:id', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
     try {
@@ -1310,12 +1409,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // 允许管理员更新的字段
-      const allowedFields = ['membership_type', 'coins', 'email', 'avatar'];
+      const allowedFields = ['membership_type', 'coins', 'email', 'avatar', 'account_locked_until'];
       const updateData: any = {};
       
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {
-          updateData[field] = req.body[field];
+          // 特殊处理account_locked_until字段
+          if (field === 'account_locked_until' && req.body[field]) {
+            // 将日期字符串转换为Date对象
+            try {
+              const lockDate = new Date(req.body[field]);
+              if (!isNaN(lockDate.getTime())) {
+                updateData[field] = lockDate;
+              }
+            } catch (err) {
+              console.error('Invalid account_locked_until value:', req.body[field]);
+              // 如果转换失败，不更新该字段
+            }
+          } else {
+            updateData[field] = req.body[field];
+          }
         }
       }
       

@@ -170,61 +170,46 @@ export default function ResourceDetail() {
       return;
     }
 
-    // 如果资源是免费的或者用户是有效会员，直接获取资源
-    if (isFree || (user.membership_type && (!user.membership_expire_time || new Date(user.membership_expire_time) > new Date()))) {
-      try {
-        const response = await fetch(`/api/resources/${id}/purchase`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include'
+    // 处理购买或获取资源的逻辑
+    try {
+      // 先检查用户是否有足够的积分购买非免费资源
+      // 高级会员(premium)才能免费下载资源，且必须在有效期内才能享受该特权
+      const isMembershipValid = user.membership_type === 'premium' && 
+                              (!user.membership_expire_time || new Date(user.membership_expire_time) > new Date());
+      
+      // 如果资源不是免费的，用户不是有效会员，且积分不足，则提前拦截
+      if (!isFree && !isMembershipValid && (user.coins || 0) < price) {
+        console.log('前端积分验证失败：', {
+          isFree,
+          isMembershipValid,
+          userCoins: user.coins || 0,
+          price,
+          resourceId: id
         });
         
-        const data = await response.json();
-        
-        if (response.ok && data.success) {
-          if (data.resource_url) {
-            // 如果有资源下载链接，打开新窗口访问链接
-            window.open(data.resource_url, '_blank');
-            toast({
-              title: "资源链接已打开",
-              description: "请在新窗口查看资源下载链接",
-            });
-          } else {
-            toast({
-              title: "开始下载",
-              description: "资源下载已开始，请稍候...",
-            });
-            
-            // Simulate download
-            setTimeout(() => {
-              toast({
-                title: "下载完成",
-                description: "资源已成功下载到您的设备。",
-              });
-            }, 2000);
-          }
-        } else {
-          toast({
-            title: "获取资源失败",
-            description: data.message || "请稍后再试",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error("获取资源时出错:", error);
         toast({
-          title: "获取资源失败",
-          description: "服务器错误，请稍后再试",
+          title: "积分不足",
+          description: `您当前积分为${user.coins || 0}，需要${price}积分。请先充值。`,
           variant: "destructive",
         });
+        
+        // 提示充值
+        if (window.confirm("您的积分不足，是否前往充值页面？")) {
+          // 跳转到充值页面
+          window.location.href = "/profile?tab=coins";
+        }
+        return;
+      } else {
+        console.log('前端积分验证通过：', {
+          isFree,
+          isMembershipValid,
+          userCoins: user.coins || 0,
+          price,
+          resourceId: id
+        });
       }
-      return;
-    }
-    
-    // 无论是否需要付费，先尝试获取资源（API 会检查是否已购买）
-    try {
+      
+      // 发送购买请求
       const response = await fetch(`/api/resources/${id}/purchase`, {
         method: 'POST',
         headers: {
@@ -235,21 +220,55 @@ export default function ResourceDetail() {
       
       const data = await response.json();
       
-      // 如果请求成功且消息包含"已购买过"，说明用户已经购买过此资源
-      if (response.ok && data.success && data.message && data.message.includes('已购买过')) {
-        // 直接打开资源链接，不需要确认
+      // 请求成功处理
+      if (response.ok && data.success) {
+        let message = data.message || "资源获取成功";
+        
+        // 根据响应消息类型显示不同的提示
+        if (data.message && data.message.includes('已购买过')) {
+          toast({
+            title: "已购买过此资源",
+            description: "无需重复购买，直接获取",
+          });
+        } else {
+          toast({
+            title: "获取成功",
+            description: message,
+          });
+          
+          // 更新积分
+          if (data.remaining_coins !== undefined && user) {
+            user.coins = data.remaining_coins;
+          }
+        }
+        
+        // 打开资源链接
         if (data.resource_url) {
           window.open(data.resource_url, '_blank');
           toast({
             title: "资源链接已打开",
             description: "请在新窗口查看资源下载链接",
           });
+        } else {
+          toast({
+            title: "开始下载",
+            description: "资源下载已开始，请稍候...",
+          });
+          
+          // Simulate download
+          setTimeout(() => {
+            toast({
+              title: "下载完成",
+              description: "资源已成功下载到您的设备。",
+            });
+          }, 2000);
         }
         return;
       }
       
+      // 请求失败处理
       // 如果用户当天的购买数量达到上限
-      if (!response.ok && response.status === 400 && data.message && data.message.includes('已达到购买限制')) {
+      if (response.status === 400 && data.message && data.message.includes('已达到购买限制')) {
         toast({
           title: "购买失败",
           description: data.message || "您今天已达到购买限制（每天最多购买5条资源），请明天再来",
@@ -258,9 +277,8 @@ export default function ResourceDetail() {
         return;
       }
       
-      // 如果用户需要付费且未购买过，弹出确认对话框
-      if (!response.ok && response.status === 400 && data.message === '积分不足') {
-        // 积分不足
+      // 如果用户积分不足
+      if (response.status === 400 && data.message === '积分不足') {
         toast({
           title: "积分不足",
           description: `您当前积分为${data.available || 0}，需要${data.required || price}积分。请先充值。`,
@@ -275,89 +293,13 @@ export default function ResourceDetail() {
         return;
       }
       
-      // 如果是普通用户且资源不免费，直接尝试扣除积分
-      // 检查会员是否有效（没有会员类型或会员已过期）
-      const isMembershipValid = user.membership_type && 
-                                (!user.membership_expire_time || new Date(user.membership_expire_time) > new Date());
+      // 其他错误情况
+      toast({
+        title: "获取资源失败",
+        description: data.message || "请稍后再试",
+        variant: "destructive",
+      });
       
-      if (!isFree && !isMembershipValid) {
-        // 如果API返回成功，说明资源已获取（可能是会员获取或第一次API调用已成功）
-        if (response.ok && data.success) {
-          // 获取成功
-          if (data.message) {
-            toast({
-              title: "获取成功",
-              description: data.message,
-            });
-          }
-          
-          // 打开资源链接
-          if (data.resource_url) {
-            window.open(data.resource_url, '_blank');
-            toast({
-              title: "资源链接已打开",
-              description: "请在新窗口查看资源下载链接",
-            });
-          }
-          
-          // 更新积分
-          if (data.remaining_coins !== undefined && user) {
-            user.coins = data.remaining_coins;
-          }
-        } 
-        // API返回失败时，再次确认错误类型
-        else {
-          // 如果是积分不足的情况，提示充值
-          if (response.status === 400 && data.message === '积分不足') {
-            // 已经在前面处理过，这里不需要重复处理
-            return;
-          } 
-          // 其他错误情况，直接尝试购买（不再弹出确认对话框）
-          else {
-            const purchaseResponse = await fetch(`/api/resources/${id}/purchase`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              credentials: 'include'
-            });
-            
-            const purchaseData = await purchaseResponse.json();
-            
-            if (purchaseResponse.ok && purchaseData.success) {
-              // 购买成功
-              toast({
-                title: "购买成功",
-                description: purchaseData.message || `已成功扣除${price}积分`,
-              });
-              
-              // 打开资源链接
-              if (purchaseData.resource_url) {
-                window.open(purchaseData.resource_url, '_blank');
-                toast({
-                  title: "资源链接已打开",
-                  description: "请在新窗口查看资源下载链接",
-                });
-              }
-              
-              // 刷新用户信息（更新积分）
-              if (purchaseData.remaining_coins !== undefined) {
-                // 直接更新用户对象中的积分余额
-                if (user) {
-                  user.coins = purchaseData.remaining_coins;
-                }
-              }
-            } else {
-              // 其他错误
-              toast({
-                title: "购买失败",
-                description: purchaseData.message || "请稍后再试",
-                variant: "destructive",
-              });
-            }
-          }
-        }
-      }
     } catch (error) {
       console.error("获取/购买资源时出错:", error);
       toast({

@@ -226,9 +226,9 @@ export async function authenticateUser(
       return;
     }
 
-    // 检查用户是否被永久禁用（使用account_locked_until字段）
-    // 只有当账号锁定日期超过2099年时，才视为管理员禁用的账号
-    if (user.account_locked_until && new Date(user.account_locked_until) > new Date("2099-01-01")) {
+    // 检查用户是否被禁用（会员过期）
+    const now = new Date();
+    if (user.membership_expire_time && new Date(user.membership_expire_time) < now) {
       // 清除会话
       if (req.session) {
         req.session.destroy((err) => {
@@ -240,8 +240,6 @@ export async function authenticateUser(
       res.status(401).json({ message: '账号已被禁用，请联系管理员', disabled: true });
       return;
     }
-    
-    // 注意：会员到期时间(membership_expire_time)不再影响登录，只影响下载权限
 
     // Set user in request
     req.user = user;
@@ -280,9 +278,9 @@ export async function getCurrentUser(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    // 检查用户是否被永久禁用（通过account_locked_until字段）
-    // 只有当账号锁定日期超过2099年时，才视为管理员禁用的账号
-    if (user.account_locked_until && new Date(user.account_locked_until) > new Date("2099-01-01")) {
+    // 检查用户是否被禁用（会员过期）
+    const now = new Date();
+    if (user.membership_expire_time && new Date(user.membership_expire_time) < now) {
       // 清除会话
       if (req.session) {
         req.session.destroy((err) => {
@@ -294,8 +292,6 @@ export async function getCurrentUser(req: AuthenticatedRequest, res: Response): 
       res.status(401).json({ message: '账号已被禁用，请联系管理员', disabled: true });
       return;
     }
-    
-    // 注意：会员到期时间(membership_expire_time)不再影响登录，只影响下载权限
 
     // Return user without password
     const { password, ...userWithoutPassword } = user;
