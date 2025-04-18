@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { ExternalLink, FileDown, ShoppingBag, FileText, Calendar } from 'lucide-react';
+import { ExternalLink, FileDown, ShoppingBag, FileText, Calendar, Copy, Key } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface PurchaseWithResource {
@@ -26,6 +26,7 @@ interface PurchaseWithResource {
     subtitle?: string;
     cover_image?: string;
     resource_url?: string;
+    resource_code?: string; // 添加资源提取码字段
   };
 }
 
@@ -35,6 +36,7 @@ export default function UserPurchases() {
   const { toast } = useToast();
   const [purchases, setPurchases] = useState<PurchaseWithResource[]>([]);
   const [loading, setLoading] = useState(true);
+  const [copyingPasswordId, setCopyingPasswordId] = useState<number | null>(null);
 
   useEffect(() => {
     // 如果用户未登录，跳转到登录页面
@@ -83,6 +85,37 @@ export default function UserPurchases() {
     }
     
     window.open(url, '_blank');
+  };
+  
+  // 复制提取码到剪贴板的函数
+  const handleCopyPassword = async (resourceId: number, code?: string) => {
+    if (!code) {
+      toast({
+        title: '无法复制密码',
+        description: '该资源没有提取码',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setCopyingPasswordId(resourceId);
+    
+    try {
+      await navigator.clipboard.writeText(code);
+      toast({
+        title: '复制成功',
+        description: '资源提取码已复制到剪贴板',
+      });
+    } catch (error) {
+      console.error('Error copying password to clipboard:', error);
+      toast({
+        title: '复制失败',
+        description: '请手动复制提取码: ' + code,
+        variant: 'destructive',
+      });
+    } finally {
+      setCopyingPasswordId(null);
+    }
   };
 
   return (
@@ -143,7 +176,7 @@ export default function UserPurchases() {
                 </div>
               </CardContent>
               
-              <CardFooter className="border-t pt-4">
+              <CardFooter className="border-t pt-4 flex flex-col gap-2">
                 <Button 
                   onClick={() => handleDownload(purchase.resource.resource_url)} 
                   variant="default" 
@@ -152,6 +185,27 @@ export default function UserPurchases() {
                   <FileDown className="h-4 w-4" /> 
                   下载资源
                 </Button>
+                
+                {purchase.resource.resource_code && (
+                  <Button
+                    onClick={() => handleCopyPassword(purchase.resource_id, purchase.resource.resource_code)}
+                    variant="outline"
+                    className="w-full gap-1"
+                    disabled={copyingPasswordId === purchase.resource_id}
+                  >
+                    {copyingPasswordId === purchase.resource_id ? (
+                      <>
+                        <Copy className="h-4 w-4 animate-spin" />
+                        <span>复制中...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Key className="h-4 w-4" />
+                        <span>密码</span>
+                      </>
+                    )}
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           ))}

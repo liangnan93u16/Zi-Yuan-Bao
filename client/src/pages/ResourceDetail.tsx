@@ -177,37 +177,16 @@ export default function ResourceDetail() {
       const isMembershipValid = user.membership_type === 'premium' && 
                               (!user.membership_expire_time || new Date(user.membership_expire_time) > new Date());
       
-      // 如果资源不是免费的，用户不是有效会员，且积分不足，则提前拦截
-      if (!isFree && !isMembershipValid && (user.coins || 0) < price) {
-        console.log('前端积分验证失败：', {
-          isFree,
-          isMembershipValid,
-          userCoins: user.coins || 0,
-          price,
-          resourceId: id
-        });
-        
-        toast({
-          title: "积分不足",
-          description: `您当前积分为${user.coins || 0}，需要${price}积分。请先充值。`,
-          variant: "destructive",
-        });
-        
-        // 提示充值
-        if (window.confirm("您的积分不足，是否前往充值页面？")) {
-          // 跳转到充值页面
-          window.location.href = "/profile?tab=coins";
-        }
-        return;
-      } else {
-        console.log('前端积分验证通过：', {
-          isFree,
-          isMembershipValid,
-          userCoins: user.coins || 0,
-          price,
-          resourceId: id
-        });
-      }
+      // 注释掉前端积分验证，让后端处理支付逻辑
+      // 仅记录日志，不做拦截
+      console.log('用户积分情况：', {
+        isFree,
+        isMembershipValid,
+        userCoins: user.coins || 0,
+        price,
+        resourceId: id,
+        isEnough: (user.coins || 0) >= price || isFree || isMembershipValid
+      });
       
       // 发送购买请求
       const response = await fetch(`/api/resources/${id}/purchase`, {
@@ -220,7 +199,65 @@ export default function ResourceDetail() {
       
       const data = await response.json();
       
-      // 请求成功处理
+      // 处理积分不足需要支付的情况（返回200但success=false且有payment_required标记）
+      if (response.ok && !data.success && data.payment_required && data.payment) {
+        console.log('积分不足，处理支付流程 - 状态码200:', data);
+        
+        toast({
+          title: "积分不足，正在处理支付",
+          description: `需要${data.required || price}积分，即将跳转到支付页面。`,
+          variant: "default",
+        });
+        
+        // 创建支付表单并自动提交到弹出窗口
+        const { payment_url, payment_params } = data.payment;
+        
+        // 创建一个弹出窗口
+        const width = 800;
+        const height = 600;
+        const left = (window.innerWidth - width) / 2;
+        const top = (window.innerHeight - height) / 2;
+        const popup = window.open('about:blank', 'paymentWindow', 
+          `width=${width},height=${height},left=${left},top=${top},location=yes,resizable=yes,status=yes`);
+        
+        if (!popup) {
+          // 如果弹出窗口被阻止，则提示用户
+          toast({
+            title: "弹出窗口被阻止",
+            description: "请允许弹出窗口以完成支付",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // 在弹出窗口中创建表单
+        popup.document.write('<html><head><title>正在前往支付页面，请稍候...</title></head><body></body></html>');
+        const form = popup.document.createElement('form');
+        form.method = 'POST';
+        form.action = payment_url;
+        
+        // 添加所有参数
+        for (const [key, value] of Object.entries(payment_params)) {
+          const input = popup.document.createElement('input');
+          input.type = 'hidden';
+          input.name = key;
+          input.value = String(value);
+          form.appendChild(input);
+        }
+        
+        // 添加到弹出窗口并提交
+        popup.document.body.appendChild(form);
+        form.submit();
+        
+        toast({
+          title: "正在前往支付页面",
+          description: "请在完成支付后返回此页面刷新",
+          duration: 5000,
+        });
+        return;
+      }
+      
+      // 请求成功处理 - 用户积分足够的情况
       if (response.ok && data.success) {
         let message = data.message || "资源获取成功";
         
@@ -277,18 +314,78 @@ export default function ResourceDetail() {
         return;
       }
       
-      // 如果用户积分不足
+      // 如果用户积分不足 (状态码400)
       if (response.status === 400 && data.message === '积分不足') {
-        toast({
-          title: "积分不足",
-          description: `您当前积分为${data.available || 0}，需要${data.required || price}积分。请先充值。`,
-          variant: "destructive",
-        });
+        console.log('积分不足，处理支付流程 - 状态码400:', data);
         
-        // 提示充值
-        if (window.confirm("您的积分不足，是否前往充值页面？")) {
-          // 跳转到充值页面
-          window.location.href = "/profile?tab=coins";
+        // 检查是否返回了支付信息
+        if (data.payment_required && data.payment) {
+          console.log('有支付信息，处理支付 - 状态码400:', data.payment);
+          
+          toast({
+            title: "积分不足，正在处理支付",
+            description: `需要${data.required || price}积分，即将跳转到支付页面。`,
+            variant: "default",
+          });
+          
+          // 创建支付表单并自动提交到弹出窗口
+          const { payment_url, payment_params } = data.payment;
+          
+          // 创建一个弹出窗口
+          const width = 800;
+          const height = 600;
+          const left = (window.innerWidth - width) / 2;
+          const top = (window.innerHeight - height) / 2;
+          const popup = window.open('about:blank', 'paymentWindow', 
+            `width=${width},height=${height},left=${left},top=${top},location=yes,resizable=yes,status=yes`);
+          
+          if (!popup) {
+            // 如果弹出窗口被阻止，则提示用户
+            toast({
+              title: "弹出窗口被阻止",
+              description: "请允许弹出窗口以完成支付",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          // 在弹出窗口中创建表单
+          popup.document.write('<html><head><title>正在前往支付页面，请稍候...</title></head><body></body></html>');
+          const form = popup.document.createElement('form');
+          form.method = 'POST';
+          form.action = payment_url;
+          
+          // 添加所有参数
+          for (const [key, value] of Object.entries(payment_params)) {
+            const input = popup.document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = String(value);
+            form.appendChild(input);
+          }
+          
+          // 添加到弹出窗口并提交
+          popup.document.body.appendChild(form);
+          form.submit();
+          
+          toast({
+            title: "正在前往支付页面",
+            description: "请在完成支付后返回此页面刷新",
+            duration: 5000,
+          });
+        } else {
+          // 旧的处理方式：提示充值
+          toast({
+            title: "积分不足",
+            description: `您当前积分为${data.available || 0}，需要${data.required || price}积分。请先充值。`,
+            variant: "destructive",
+          });
+          
+          // 提示充值
+          if (window.confirm("您的积分不足，是否前往充值页面？")) {
+            // 跳转到充值页面
+            window.location.href = "/profile?tab=coins";
+          }
         }
         return;
       }

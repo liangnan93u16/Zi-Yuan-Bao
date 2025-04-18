@@ -8,6 +8,7 @@ import * as cheerio from 'cheerio';
 import OpenAI from 'openai';
 import { db } from './db';
 import { fixMarkdownContent } from './html-to-markdown';
+import { generateOrderNo, generatePaymentSign, verifyPaymentCallback } from './utils/payment';
 import { eq, sql, and, isNull, isNotNull, ne } from 'drizzle-orm';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -176,12 +177,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 获取用户的购买记录
       const purchases = await storage.getUserPurchases(req.user.id);
       
-      // 丰富购买记录数据，添加资源信息
+      // 丰富购买记录数据，添加资源信息（包括提取码）
       const enrichedPurchases = await Promise.all(purchases.map(async (purchase) => {
         const resource = await storage.getResource(purchase.resource_id);
         return {
           ...purchase,
-          resource: resource || { chinese_title: '未知资源', english_title: null, subtitle: '' }
+          resource: resource ? {
+            id: resource.id,
+            title: resource.title,
+            subtitle: resource.subtitle,
+            cover_image: resource.cover_image,
+            resource_url: resource.resource_url,
+            resource_code: resource.resource_code // 添加提取码信息
+          } : { title: '未知资源', subtitle: '' }
         };
       }));
       
@@ -473,12 +481,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       if ((req.user.coins || 0) < price) {
-        res.status(400).json({ 
-          success: false, 
-          message: '积分不足',
-          required: price,
-          available: req.user.coins || 0
-        });
+        // 积分不足时，创建支付订单
+        try {
+          // 获取商户信息
+          const merchantIdParam = await storage.getParameterByKey('商户ID');
+          const merchantKeyParam = await storage.getParameterByKey('商户密钥');
+          const siteUrlParam = await storage.getParameterByKey('SITE_URL');
+
+          if (!merchantIdParam?.value || !merchantKeyParam?.value) {
+            res.status(500).json({ message: '支付配置不完整，请联系管理员' });
+            return;
+          }
+
+          const merchantId = merchantIdParam.value;
+          const merchantKey = merchantKeyParam.value;
+          const siteUrl = siteUrlParam?.value || req.headers.origin || '';
+
+          // 生成唯一订单号
+          const orderNo = generateOrderNo();
+
+          // 创建订单记录
+          const order = await storage.createOrder({
+            order_no: orderNo,
+            user_id: req.user.id,
+            resource_id: resourceId,
+            amount: price.toString(),
+            payment_method: 'alipay',
+            status: 'pending'
+          });
+
+          // 构建支付参数
+          const paymentParams = {
+            pid: merchantId,
+            type: 'alipay',
+            out_trade_no: orderNo,
+            notify_url: `${siteUrl}/api/payment/notify`,
+            return_url: `${siteUrl}/payment/result`,
+            name: resource.title,
+            money: price.toString(),
+            sign_type: 'MD5'
+          };
+
+          // 生成签名
+          const sign = generatePaymentSign(paymentParams, merchantKey);
+
+          // 返回支付参数给前端
+          res.json({
+            success: false, 
+            message: '积分不足，请支付',
+            required: price,
+            available: req.user.coins || 0,
+            payment_required: true,
+            payment: {
+              order_id: order.id,
+              order_no: orderNo,
+              payment_url: 'https://zpayz.cn/submit.php',
+              payment_params: {
+                ...paymentParams,
+                sign
+              }
+            }
+          });
+        } catch (error) {
+          console.error('创建支付订单失败:', error);
+          res.status(500).json({ 
+            success: false, 
+            message: '积分不足，创建支付订单失败',
+            required: price,
+            available: req.user.coins || 0
+          });
+        }
         return;
       }
       
@@ -5427,6 +5499,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: '获取资源通知列表失败',
         error: error instanceof Error ? error.message : String(error)
       });
+    }
+  });
+
+  // 支付回调通知处理
+  app.get('/api/payment/notify', async (req, res) => {
+    try {
+      const callbackParams = req.query;
+      console.log('收到支付回调通知:', JSON.stringify(callbackParams));
+      
+      // 获取商户密钥
+      const merchantKeyParam = await storage.getParameterByKey('商户密钥');
+      if (!merchantKeyParam?.value) {
+        console.error('支付回调验证失败: 商户密钥未配置');
+        return res.status(500).send('FAIL');
+      }
+
+      // 验证签名
+      const isValidSign = verifyPaymentCallback(callbackParams as Record<string, any>, merchantKeyParam.value);
+      if (!isValidSign) {
+        console.error('支付回调验证失败: 签名无效', callbackParams);
+        return res.status(400).send('FAIL');
+      }
+
+      // 获取订单信息
+      const orderNo = callbackParams.out_trade_no as string;
+      const order = await storage.getOrderByOrderNo(orderNo);
+      if (!order) {
+        console.error('支付回调验证失败: 订单不存在', orderNo);
+        return res.status(404).send('FAIL');
+      }
+
+      // 检查支付状态
+      if (callbackParams.trade_status !== 'TRADE_SUCCESS') {
+        console.log('订单未成功支付:', callbackParams.trade_status);
+        return res.send('success');
+      }
+
+      // 如果订单已经处理过，直接返回成功
+      if (order.status === 'paid') {
+        return res.send('success');
+      }
+
+      // 更新订单状态为已支付
+      await storage.updateOrder(order.id, {
+        status: 'paid',
+        trade_no: callbackParams.trade_no as string,
+        pay_time: new Date()
+      });
+
+      // 为用户添加积分
+      const user = await storage.getUser(order.user_id);
+      if (user) {
+        const amount = parseFloat(order.amount);
+        await storage.updateUser(user.id, {
+          coins: (user.coins || 0) + amount
+        });
+
+        console.log(`用户 ${user.id} 支付成功，已增加 ${amount} 积分`);
+      }
+
+      // 如果订单有关联资源，记录购买记录
+      if (order.resource_id) {
+        await storage.createUserPurchase(
+          order.user_id, 
+          order.resource_id, 
+          parseFloat(order.amount)
+        );
+        console.log(`为用户 ${order.user_id} 创建资源 ${order.resource_id} 的购买记录`);
+      }
+
+      // 返回成功响应
+      res.send('success');
+    } catch (error) {
+      console.error('处理支付回调失败:', error);
+      res.status(500).send('FAIL');
+    }
+  });
+
+  // 查询订单状态
+  app.get('/api/payment/order/:orderNo', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: '未登录或会话已过期' });
+      }
+
+      const { orderNo } = req.params;
+      const order = await storage.getOrderByOrderNo(orderNo);
+
+      if (!order) {
+        return res.status(404).json({ message: '订单不存在' });
+      }
+
+      // 验证是否是当前用户的订单
+      if (order.user_id !== req.user.id) {
+        return res.status(403).json({ message: '无权访问此订单' });
+      }
+
+      // 如果已支付，获取资源信息
+      let resource = null;
+      if (order.resource_id) {
+        resource = await storage.getResource(order.resource_id);
+      }
+
+      res.json({
+        success: true,
+        order: {
+          id: order.id,
+          order_no: order.order_no,
+          amount: order.amount,
+          status: order.status,
+          payment_method: order.payment_method,
+          created_at: order.created_at,
+          pay_time: order.pay_time
+        },
+        resource: resource ? {
+          id: resource.id,
+          title: resource.title,
+          resource_url: order.status === 'paid' ? resource.resource_url : null
+        } : null
+      });
+    } catch (error) {
+      console.error('查询订单状态失败:', error);
+      res.status(500).json({ message: '查询订单状态失败，请稍后再试' });
     }
   });
 

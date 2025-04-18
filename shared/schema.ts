@@ -327,6 +327,31 @@ export const insertParameterSchema = createInsertSchema(parameters).omit({
 export type Parameter = typeof parameters.$inferSelect;
 export type InsertParameter = z.infer<typeof insertParameterSchema>;
 
+// 订单表
+export const orders = pgTable("orders", {
+  id: serial("id").primaryKey(),
+  order_no: text("order_no").notNull().unique(), // 订单编号，唯一
+  user_id: integer("user_id").notNull().references(() => users.id),
+  resource_id: integer("resource_id").references(() => resources.id), // 关联的资源ID
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // 订单金额
+  payment_method: text("payment_method").default("alipay"), // 支付方式，默认支付宝
+  status: text("status").default("pending"), // 订单状态：pending-待支付，paid-已支付，cancelled-已取消
+  trade_no: text("trade_no"), // 支付平台返回的交易号
+  pay_time: timestamp("pay_time"), // 支付时间
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow()
+});
+
+export const insertOrderSchema = createInsertSchema(orders).omit({
+  id: true,
+  pay_time: true,
+  created_at: true,
+  updated_at: true
+});
+
+export type Order = typeof orders.$inferSelect;
+export type InsertOrder = z.infer<typeof insertOrderSchema>;
+
 // 用户收藏表，记录用户收藏的资源
 export const userFavorites = pgTable("user_favorites", {
   id: serial("id").primaryKey(),

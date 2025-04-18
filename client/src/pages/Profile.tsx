@@ -70,10 +70,29 @@ export default function Profile() {
     }
   };
 
+  // 检查会员是否过期
+  const isMembershipExpired = () => {
+    if (!user?.membership_expire_time) return false; // 如果没有到期时间，视为永久会员
+    try {
+      const expireDate = new Date(user.membership_expire_time);
+      const now = new Date();
+      return expireDate < now;
+    } catch (e) {
+      return false; // 日期格式错误，默认视为未过期
+    }
+  };
+
   // Get membership status and badge
   const getMembershipBadge = () => {
     if (!user?.membership_type) {
       return <Badge variant="outline">免费用户</Badge>;
+    }
+    
+    // 检查会员是否已过期
+    const isExpired = isMembershipExpired();
+    
+    if (isExpired) {
+      return <Badge variant="outline" className="bg-red-50 text-red-500">会员已过期</Badge>;
     }
     
     if (user.membership_type === "premium") {
@@ -356,10 +375,20 @@ export default function Profile() {
                   <Gift className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-medium">{user?.membership_type ? `${user.membership_type} 会员` : "免费用户"}</h3>
+                  <h3 className="font-medium">
+                    {user?.membership_type ? (
+                      <>
+                        {`${user.membership_type} 会员`}
+                        {isMembershipExpired() && <span className="text-red-500 ml-2">(已过期)</span>}
+                      </>
+                    ) : "免费用户"}
+                  </h3>
                   <p className="text-sm text-neutral-500">
                     {user?.membership_expire_time ? (
-                      <>到期时间: {formatExpirationDate(user.membership_expire_time)}</>
+                      <>
+                        到期时间: {formatExpirationDate(user.membership_expire_time)} 
+                        {isMembershipExpired() && <span className="text-red-500 ml-2">已过期，请续费</span>}
+                      </>
                     ) : (
                       user?.membership_type ? "永久会员" : "未开通会员服务"
                     )}
@@ -402,8 +431,12 @@ export default function Profile() {
               )}
             </CardContent>
             <CardFooter className="flex justify-end">
-              <Button onClick={() => setLocation("/membership")}>
-                {user?.membership_type ? "管理会员" : "开通会员"}
+              <Button 
+                onClick={() => setLocation("/membership")}
+                className={isMembershipExpired() ? "bg-red-500 hover:bg-red-600" : ""}
+              >
+                {!user?.membership_type ? "开通会员" : 
+                  isMembershipExpired() ? "立即续费" : "管理会员"}
               </Button>
             </CardFooter>
           </Card>

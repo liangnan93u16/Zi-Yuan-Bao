@@ -13,7 +13,8 @@ import {
   feifeiTags, type FeifeiTag, type InsertFeifeiTag,
   feifeiResourceTags, type FeifeiResourceTag, type InsertFeifeiResourceTag,
   parameters, type Parameter, type InsertParameter,
-  resourceNotifications, type ResourceNotification, type InsertResourceNotification
+  resourceNotifications, type ResourceNotification, type InsertResourceNotification,
+  orders, type Order, type InsertOrder
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, and, or, desc, sql, count } from "drizzle-orm";
@@ -136,6 +137,13 @@ export interface IStorage {
   createResourceNotification(userId: number, resourceId: number): Promise<ResourceNotification>;
   getResourceNotifications(page?: number, pageSize?: number, resourceId?: number, emailSentFilter?: boolean): Promise<{ notifications: ResourceNotification[], total: number }>;
   updateNotificationEmailStatus(notificationId: number, emailSent: boolean): Promise<ResourceNotification | undefined>;
+  
+  // 订单相关操作
+  createOrder(order: InsertOrder): Promise<Order>;
+  getOrder(id: number): Promise<Order | undefined>;
+  getOrderByOrderNo(orderNo: string): Promise<Order | undefined>;
+  updateOrder(id: number, data: Partial<Order>): Promise<Order | undefined>;
+  getUserOrders(userId: number, status?: string): Promise<Order[]>;
   
   // Initialize default data
   initializeDefaultData(): Promise<void>;
@@ -766,6 +774,79 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error updating notification email status:', error);
       return undefined;
+    }
+  }
+  
+  // 订单相关方法
+  async createOrder(orderData: InsertOrder): Promise<Order> {
+    try {
+      const [order] = await db
+        .insert(orders)
+        .values(orderData)
+        .returning();
+      return order;
+    } catch (error) {
+      console.error('Error creating order:', error);
+      throw error;
+    }
+  }
+
+  async getOrder(id: number): Promise<Order | undefined> {
+    try {
+      const [order] = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, id));
+      return order;
+    } catch (error) {
+      console.error('Error getting order:', error);
+      return undefined;
+    }
+  }
+
+  async getOrderByOrderNo(orderNo: string): Promise<Order | undefined> {
+    try {
+      const [order] = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.order_no, orderNo));
+      return order;
+    } catch (error) {
+      console.error('Error getting order by order number:', error);
+      return undefined;
+    }
+  }
+
+  async updateOrder(id: number, data: Partial<Order>): Promise<Order | undefined> {
+    try {
+      const [order] = await db
+        .update(orders)
+        .set({ ...data, updated_at: new Date() })
+        .where(eq(orders.id, id))
+        .returning();
+      return order;
+    } catch (error) {
+      console.error('Error updating order:', error);
+      return undefined;
+    }
+  }
+
+  async getUserOrders(userId: number, status?: string): Promise<Order[]> {
+    try {
+      let queryConditions = [eq(orders.user_id, userId)];
+      
+      if (status) {
+        queryConditions.push(eq(orders.status, status));
+      }
+      
+      return await db
+        .select()
+        .from(orders)
+        .where(and(...queryConditions))
+        .orderBy(desc(orders.created_at));
+    } catch (error) {
+      console.error('Error getting user orders:', error);
+      return [];
     }
   }
   
