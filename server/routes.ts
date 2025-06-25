@@ -5543,11 +5543,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 支付回调通知处理
-  app.get('/api/payment/notify', async (req, res) => {
+  // 支付回调通知处理（支持GET和POST方法）
+  const handlePaymentNotify = async (req: any, res: any) => {
     try {
-      const callbackParams = req.query;
+      // 获取回调参数（支持GET和POST）
+      const callbackParams = req.method === 'POST' ? req.body : req.query;
       console.log('收到支付回调通知:', JSON.stringify(callbackParams));
+      
+      // 验证必要参数
+      const requiredParams = ['out_trade_no', 'trade_no', 'trade_status', 'money', 'sign', 'pid'];
+      for (const param of requiredParams) {
+        if (!callbackParams[param]) {
+          console.error(`支付回调验证失败: 缺少必要参数 ${param}`);
+          return res.status(400).send('FAIL');
+        }
+      }
       
       // 获取商户密钥
       const merchantKeyParam = await storage.getParameterByKey('商户密钥');
@@ -5569,6 +5579,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!order) {
         console.error('支付回调验证失败: 订单不存在', orderNo);
         return res.status(404).send('FAIL');
+      }
+
+      // 校验订单金额（防止假通知）
+      const callbackMoney = parseFloat(callbackParams.money as string);
+      const orderMoney = parseFloat(order.amount);
+      if (Math.abs(callbackMoney - orderMoney) > 0.01) { // 允许0.01的误差
+        console.error('支付回调验证失败: 金额不匹配', {
+          callbackMoney,
+          orderMoney,
+          orderNo
+        });
+        return res.status(400).send('FAIL');
       }
 
       // 检查支付状态
@@ -5639,7 +5661,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('处理支付回调失败:', error);
       res.status(500).send('FAIL');
     }
-  });
+  };
+
+  // 注册GET和POST路由
+  app.get('/api/payment/notify', handlePaymentNotify);
+  app.post('/api/payment/notify', handlePaymentNotify);
 
   // 查询订单状态（支付结果页面专用，不需要身份验证）
   app.get('/api/payment/order/:orderNo', async (req, res) => {
