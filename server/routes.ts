@@ -5573,20 +5573,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).send('FAIL');
       }
 
+      // 获取订单信息
+      const orderNo = callbackParams.out_trade_no as string;
+      const order = await storage.getOrderByOrderNo(orderNo);
+      if (!order) {
+        console.error('支付回调验证失败: 订单不存在', orderNo);
+        return res.status(404).send('FAIL');
+      }
+
+      // 校验订单金额（防止假通知）
+      const callbackMoney = parseFloat(callbackParams.money as string);
+      const orderMoney = parseFloat(order.amount);
+      if (Math.abs(callbackMoney - orderMoney) > 0.01) { // 允许0.01的误差
+        console.error('支付回调验证失败: 金额不匹配', {
+          callbackMoney,
+          orderMoney,
+          orderNo
+        });
+        return res.status(400).send('FAIL');
+      }
+
       // 检查支付状态
       if (callbackParams.trade_status !== 'TRADE_SUCCESS') {
         console.log('订单未成功支付:', callbackParams.trade_status);
         return res.send('success');
       }
 
-      // 直接处理支付成功逻辑，不依赖订单查找
-      const orderNo = callbackParams.out_trade_no as string;
-      const amount = parseFloat(callbackParams.money as string);
-      
-      console.log(`收到支付成功通知: 订单号 ${orderNo}, 金额 ${amount} 元`);
-      
-      // 记录支付成功，但不做具体业务处理
-      // 仅返回成功响应给ZPAY
+      // 如果订单已经处理过，直接返回成功
+      if (order.status === 'paid') {
+        return res.send('success');
+      }
+
+      // 更新订单状态为已支付
+      await storage.updateOrder(order.id, {
+        status: 'paid',
+        trade_no: callbackParams.trade_no as string,
+        pay_time: new Date()
+      });
+
+      // 为用户添加积分
+      const user = await storage.getUser(order.user_id);
+      if (user) {
+        const amount = parseFloat(order.amount);
+        await storage.updateUser(user.id, {
+          coins: (user.coins || 0) + amount
+        });
+
+        console.log(`用户 ${user.id} 支付成功，已增加 ${amount} 积分`);
+      }
+
+      // 如果订单有关联资源，自动完成购买并扣除积分
+      if (order.resource_id && user) {
+        // 检查是否已经存在购买记录（避免重复处理）
+        const existingPurchase = await storage.getUserPurchase(order.user_id, order.resource_id);
+        if (!existingPurchase) {
+          // 获取资源信息
+          const resource = await storage.getResource(order.resource_id);
+          if (resource) {
+            const resourcePrice = typeof resource.price === 'string' ? parseFloat(resource.price) : (resource.price || 0);
+            
+            // 重新获取用户最新积分（因为上面已经增加了积分）
+            const updatedUser = await storage.getUser(user.id);
+            if (updatedUser) {
+              // 扣除积分
+              await storage.updateUser(user.id, {
+                coins: (updatedUser.coins || 0) - resourcePrice
+              });
+              
+              // 创建购买记录
+              await storage.createUserPurchase(
+                order.user_id, 
+                order.resource_id, 
+                resourcePrice
+              );
+              
+              console.log(`用户 ${order.user_id} 支付完成，已自动购买资源 ${order.resource_id}，扣除 ${resourcePrice} 积分`);
+            }
+          }
+        } else {
+          console.log(`用户 ${order.user_id} 资源 ${order.resource_id} 已存在购买记录，跳过重复处理`);
+        }
+      }
 
       // 返回成功响应
       res.send('success');
