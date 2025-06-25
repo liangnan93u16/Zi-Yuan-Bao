@@ -10,12 +10,17 @@ export default function PaymentSuccess() {
     const urlParams = new URLSearchParams(window.location.search);
     console.log('URL 参数:', Object.fromEntries(urlParams.entries()));
     console.log('window.location.pathname:', window.location.pathname);
+    console.log('完整 URL:', window.location.href);
     
     // 检查支付结果参数
     const tradeStatus = urlParams.get('trade_status');
     const outTradeNo = urlParams.get('out_trade_no');
+    const money = urlParams.get('money');
     if (tradeStatus && outTradeNo) {
-      console.log('检测到支付结果参数:', { tradeStatus, outTradeNo });
+      console.log('检测到支付结果参数:', { tradeStatus, outTradeNo, money });
+      if (tradeStatus === 'TRADE_SUCCESS') {
+        console.log('支付成功！金额:', money);
+      }
     }
     
     // 尝试通知父窗口支付成功

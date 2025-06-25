@@ -60,7 +60,7 @@ function App() {
               <Route path="/profile" component={Profile} />
               <Route path="/user/purchases" component={UserPurchases} />
               <Route path="/payment/result" component={PaymentResultSimple} />
-              <Route path="/payment/success" component={PaymentSuccess} />
+              <Route path="/payment/success*" component={PaymentSuccess} />
               
               {/* 管理员路由 - 所有/admin路径都需要管理员权限 */}
               <AdminRoute path="/admin/resources" component={ResourceManagement} />

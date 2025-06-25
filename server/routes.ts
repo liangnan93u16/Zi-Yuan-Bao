@@ -42,8 +42,8 @@ import {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  // 支付成功页面路由 - 必须在其他路由之前注册，确保在开发环境中正确处理
-  app.get('/payment/success', (req, res, next) => {
+  // 支付成功页面路由 - 支持查询参数
+  app.get('/payment/success*', (req, res, next) => {
     console.log('支付成功页面访问:', {
       url: req.url,
       originalUrl: req.originalUrl,
@@ -5690,6 +5690,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // 注册GET和POST路由
   app.get('/api/payment/notify', handlePaymentNotify);
   app.post('/api/payment/notify', handlePaymentNotify);
+
+
 
   // 查询订单状态（支付结果页面专用，不需要身份验证）
   app.get('/api/payment/order/:orderNo', async (req, res) => {
