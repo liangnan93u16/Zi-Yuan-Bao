@@ -4,9 +4,15 @@ import { Button } from "@/components/ui/button";
 
 export default function PaymentSuccess() {
   useEffect(() => {
+    // 添加调试信息
+    console.log('PaymentSuccess 组件已加载');
+    console.log('当前 URL:', window.location.href);
+    console.log('URL 参数:', new URLSearchParams(window.location.search));
+    
     // 尝试通知父窗口支付成功
     try {
       if (window.opener) {
+        console.log('检测到父窗口，发送支付成功消息');
         window.opener.postMessage({ 
           type: 'payment_success',
           status: 'success'
@@ -14,8 +20,11 @@ export default function PaymentSuccess() {
         
         // 延迟关闭窗口，给用户看到成功信息的时间
         setTimeout(() => {
+          console.log('2秒后自动关闭窗口');
           window.close();
         }, 2000);
+      } else {
+        console.log('未检测到父窗口，可能是直接访问');
       }
     } catch (e) {
       console.log('无法通知父窗口或关闭窗口:', e);

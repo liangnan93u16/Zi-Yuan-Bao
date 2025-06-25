@@ -5663,6 +5663,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
+  // 添加支付成功页面访问日志 - 在所有路由之前
+  app.get('/payment/success', (req, res, next) => {
+    console.log('支付成功页面访问:', {
+      url: req.url,
+      originalUrl: req.originalUrl,
+      query: req.query,
+      params: req.params,
+      method: req.method,
+      userAgent: req.get('User-Agent')
+    });
+    next();
+  });
+
   // 注册GET和POST路由
   app.get('/api/payment/notify', handlePaymentNotify);
   app.post('/api/payment/notify', handlePaymentNotify);

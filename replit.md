@@ -72,6 +72,12 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- June 25, 2025: 创建固定支付成功页面，解决return_url参数问题
+  - 创建PaymentSuccess组件，绕过身份验证显示支付成功页面
+  - 修改return_url指向/payment/success，避免参数导致的404错误
+  - 添加调试日志分析支付成功页面访问问题
+  - 支持弹窗自动关闭和父窗口通信功能
+
 - June 25, 2025: 完善支付接口安全性和规范性，彻底解决支付结果页面401错误
   - 添加订单金额校验，防止假通知攻击
   - 支持GET和POST两种回调方式，符合ZPAY接口规范
