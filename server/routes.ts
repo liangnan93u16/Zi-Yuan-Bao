@@ -5641,23 +5641,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 查询订单状态
-  app.get('/api/payment/order/:orderNo', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
+  // 查询订单状态（支付结果页面专用，不需要身份验证）
+  app.get('/api/payment/order/:orderNo', async (req, res) => {
     try {
-      if (!req.user) {
-        return res.status(401).json({ message: '未登录或会话已过期' });
-      }
-
       const { orderNo } = req.params;
       const order = await storage.getOrderByOrderNo(orderNo);
 
       if (!order) {
         return res.status(404).json({ message: '订单不存在' });
-      }
-
-      // 验证是否是当前用户的订单
-      if (order.user_id !== req.user.id) {
-        return res.status(403).json({ message: '无权访问此订单' });
       }
 
       // 如果已支付，获取资源信息
