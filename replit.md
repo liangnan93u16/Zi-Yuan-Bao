@@ -79,6 +79,7 @@ Preferred communication style: Simple, everyday language.
   - 创建PaymentResultSimple组件，移除身份验证依赖
   - 支付成功后自动关闭弹出窗口，优化用户体验
   - 完整的支付流程：异步回调处理业务逻辑，同步跳转显示结果
+  - 资源价格支持小数输入，前端表单step设为0.01，数据库使用numeric(10,2)类型
 
 - June 25, 2025: 修复支付接口重大逻辑问题
   - 修复支付回调逻辑：支付成功后自动扣除积分完成购买
