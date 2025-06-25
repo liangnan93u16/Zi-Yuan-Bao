@@ -70,6 +70,14 @@ The application is configured for deployment on Replit with:
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+- June 25, 2025: 添加会员删除功能
+  - 后端添加 DELETE /api/admin/users/:id API路由
+  - 实现级联删除用户相关数据（购买记录、收藏、评论等）
+  - 前端会员管理页面添加删除按钮（文字样式）
+  - 安全验证：防止删除管理员和自己账户
+
 ## Changelog
 
 Changelog:

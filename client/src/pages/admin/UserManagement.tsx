@@ -684,7 +684,7 @@ export default function UserManagement() {
                               disabled={deleteUserMutation.isPending || user.membership_type === 'admin'}
                               title={user.membership_type === 'admin' ? "管理员用户不可删除" : "删除会员"}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              删除
                             </Button>
                           </TableCell>
                         </TableRow>
