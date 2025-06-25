@@ -72,6 +72,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- June 25, 2025: 修复支付接口问题
+  - 优化支付结果页面重试逻辑，避免"获取订单状态失败"提示
+  - 支付成功后自动重试获取订单状态（最多10次，每3秒一次）
+  - 改进用户界面提示信息，显示"正在验证支付结果"
+  - 添加支付成功的toast提示和更友好的操作按钮
+  - 修正return_url参数，确保订单号正确传递
+
 - June 25, 2025: 添加会员删除功能
   - 后端添加 DELETE /api/admin/users/:id API路由
   - 实现级联删除用户相关数据（购买记录、收藏、评论等）
