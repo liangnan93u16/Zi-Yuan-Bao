@@ -41,6 +41,20 @@ import {
 } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // 支付成功页面路由 - 必须在其他路由之前注册，确保在开发环境中正确处理
+  app.get('/payment/success', (req, res, next) => {
+    console.log('支付成功页面访问:', {
+      url: req.url,
+      originalUrl: req.originalUrl,
+      query: req.query,
+      method: req.method,
+      userAgent: req.get('User-Agent')
+    });
+    // 让前端路由处理该页面
+    next();
+  });
+  
   // 创建图片保存目录
   const imagesDir = path.join('public', 'images');
   try {
@@ -5663,18 +5677,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  // 添加支付成功页面访问日志 - 在所有路由之前
-  app.get('/payment/success', (req, res, next) => {
-    console.log('支付成功页面访问:', {
-      url: req.url,
-      originalUrl: req.originalUrl,
-      query: req.query,
-      params: req.params,
-      method: req.method,
-      userAgent: req.get('User-Agent')
-    });
-    next();
-  });
+
 
   // 注册GET和POST路由
   app.get('/api/payment/notify', handlePaymentNotify);
