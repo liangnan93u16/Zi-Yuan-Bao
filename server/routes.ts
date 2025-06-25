@@ -1544,6 +1544,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 管理员删除用户
+  app.delete('/api/admin/users/:id', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        res.status(400).json({ message: '无效的用户ID' });
+        return;
+      }
+      
+      // 检查用户是否存在
+      const user = await storage.getUser(userId);
+      if (!user) {
+        res.status(404).json({ message: '用户不存在' });
+        return;
+      }
+      
+      // 不允许删除管理员用户
+      if (user.membership_type === 'admin') {
+        res.status(403).json({ message: '不能删除管理员用户' });
+        return;
+      }
+      
+      // 不允许删除自己
+      if (userId === req.user.id) {
+        res.status(403).json({ message: '不能删除自己的账户' });
+        return;
+      }
+      
+      // 删除用户（会级联删除相关记录）
+      const success = await storage.deleteUser(userId);
+      if (success) {
+        res.status(200).json({ message: '会员及其相关数据已成功删除' });
+      } else {
+        res.status(500).json({ message: '删除用户失败' });
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ message: '删除用户时发生错误' });
+    }
+  });
+
   app.patch('/api/users/:id', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = parseInt(req.params.id);
