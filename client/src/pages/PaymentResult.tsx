@@ -52,7 +52,14 @@ export default function PaymentResult() {
       }
       
       try {
-        const response = await apiRequest<OrderResponse>('GET', `/api/payment/order/${orderNo}`);
+        // 直接使用fetch避免身份验证问题
+        const res = await fetch(`/api/payment/order/${orderNo}`);
+        
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        
+        const response = await res.json() as OrderResponse;
         
         // 如果订单状态是已支付，直接显示成功
         if (response.order.status === 'paid') {
