@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { apiRequest } from '@/lib/queryClient';
+import { formatPrice } from '@/lib/price-formatter';
 
 interface ResourceCardProps {
   resource: ResourceWithCategory;
@@ -96,20 +97,9 @@ export default function ResourceCard({ resource, isLoggedIn = false }: ResourceC
     }
   };
   
-  // Format price as integer
+  // 使用通用价格格式化函数
   const getFormattedPrice = (): string => {
-    let priceValue = 0;
-    
-    if (resource.price) {
-      // Try to convert to number whatever the type is
-      const numericPrice = Number(resource.price);
-      if (!isNaN(numericPrice)) {
-        priceValue = numericPrice;
-      }
-    }
-    
-    // Format as integer
-    return Math.round(priceValue).toString();
+    return formatPrice(resource.price);
   };
 
   return (

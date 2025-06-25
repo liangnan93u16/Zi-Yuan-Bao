@@ -28,6 +28,7 @@ import remarkGfm from "remark-gfm";
 import ReviewSection from "@/components/ReviewSection";
 import CourseSyllabus from "@/components/CourseSyllabus";
 import SEO from "@/components/SEO";
+import { formatPrice } from "@/lib/price-formatter";
 
 export default function ResourceDetail() {
   const { id } = useParams();
@@ -644,11 +645,11 @@ export default function ResourceDetail() {
                 <div className="mb-4">
                   <div className="flex items-center mb-1">
                     <div className="text-4xl font-bold text-neutral-900">
-                      {isFree ? '免费' : `${Math.round(price)} 积分`}
+                      {isFree ? '免费' : `${formatPrice(price)} 积分`}
                     </div>
                     {!isFree && (
                       <div className="text-neutral-500 line-through ml-3 mt-1">
-                        原价: {Math.round(originalPrice)} 积分
+                        原价: {formatPrice(originalPrice)} 积分
                       </div>
                     )}
                   </div>

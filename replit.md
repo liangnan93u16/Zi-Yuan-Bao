@@ -88,6 +88,12 @@ Preferred communication style: Simple, everyday language.
   - 添加重复购买检查，避免重复处理同一订单
   - 优化支付结果页面重试逻辑和用户界面提示
 
+- June 25, 2025: 优化资源价格显示格式
+  - 创建通用价格格式化函数 formatPrice
+  - 支持小数价格显示（如0.01积分）
+  - 整数价格省略小数点（如1.0显示为1）
+  - 在ResourceCard和ResourceDetail中统一使用
+
 - June 25, 2025: 添加会员删除功能
   - 后端添加 DELETE /api/admin/users/:id API路由
   - 实现级联删除用户相关数据（购买记录、收藏、评论等）
