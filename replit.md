@@ -72,11 +72,11 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-- June 25, 2025: 彻底修复支付成功页面404错误和服务器错误
-  - 修复ES模块中__dirname未定义问题，添加正确的文件路径处理
-  - 前端路由使用通配符/payment/success*支持查询参数
-  - 服务端路由支持/payment/success*模式匹配
-  - 区分开发和生产环境的路由处理逻辑
+- June 25, 2025: 修复支付URL硬编码域名问题，支持动态域名
+  - 修复return_url和notify_url中的硬编码域名问题
+  - 支付接口现在动态获取当前请求的域名
+  - 兼容开发环境的动态域名和生产环境的固定域名
+  - 修复ES模块中__dirname未定义问题
   - 完整支持ZPAY支付成功后的参数跳转功能
 
 - June 25, 2025: 完善支付接口安全性和规范性，彻底解决支付结果页面401错误
