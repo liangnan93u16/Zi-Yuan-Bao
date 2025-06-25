@@ -138,7 +138,7 @@ export default function PaymentResult() {
   const { order, resource } = orderData;
   const isPaid = order.status === 'paid';
   
-  // 如果支付成功，显示成功提示
+  // 如果支付成功，显示成功提示并关闭弹出窗口
   useEffect(() => {
     if (isPaid && orderData) {
       toast({
@@ -146,6 +146,20 @@ export default function PaymentResult() {
         description: `您已成功购买资源，积分已到账`,
         variant: "default",
       });
+      
+      // 延迟2秒后关闭弹出窗口（如果是在弹出窗口中）
+      setTimeout(() => {
+        if (window.opener) {
+          // 通知父窗口支付成功
+          window.opener.postMessage({ 
+            type: 'payment_success', 
+            orderNo: orderData.order.order_no,
+            resourceId: orderData.resource?.id 
+          }, '*');
+          // 关闭弹出窗口
+          window.close();
+        }
+      }, 2000);
     }
   }, [isPaid, orderData, toast]);
   

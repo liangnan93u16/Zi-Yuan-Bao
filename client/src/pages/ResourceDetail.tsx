@@ -62,6 +62,30 @@ export default function ResourceDetail() {
     checkFavorite();
   }, [id, user]);
 
+  // 监听支付成功消息
+  useEffect(() => {
+    const handlePaymentSuccess = (event: MessageEvent) => {
+      if (event.data.type === 'payment_success') {
+        toast({
+          title: "支付成功",
+          description: "您已成功购买资源，页面将自动刷新",
+          variant: "default",
+        });
+        
+        // 刷新页面数据
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
+    };
+
+    window.addEventListener('message', handlePaymentSuccess);
+    
+    return () => {
+      window.removeEventListener('message', handlePaymentSuccess);
+    };
+  }, [toast]);
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
