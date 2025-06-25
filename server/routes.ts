@@ -51,6 +51,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       method: req.method,
       userAgent: req.get('User-Agent')
     });
+    
+    // 添加必要的头部支持跨域和缓存
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.header('Pragma', 'no-cache');
+    res.header('Expires', '0');
+    
     // 让前端路由处理该页面
     next();
   });
