@@ -493,18 +493,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // 计算资源价格（确保是数字）
       const price = typeof resource.price === 'string' ? parseFloat(resource.price) : (resource.price || 0);
-      const priceInCoins = Math.round(price * 100); // 转换为以分为单位的整数
       
       // 严格检查用户积分是否足够
+      const userCoins = typeof req.user.coins === 'string' ? parseFloat(req.user.coins) : (req.user.coins || 0);
       console.log('积分检查:', {
         userId: req.user.id,
-        userCoins: req.user.coins || 0,
+        userCoins: userCoins,
         resourcePrice: price,
-        resourcePriceInCoins: priceInCoins,
-        isEnough: (req.user.coins || 0) >= priceInCoins
+        isEnough: userCoins >= price
       });
       
-      if ((req.user.coins || 0) < priceInCoins) {
+      if (userCoins < price) {
         // 积分不足时，创建支付订单
         try {
           // 获取商户信息
@@ -586,7 +585,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // 扣除积分
       const updatedUser = await storage.updateUser(req.user.id, {
-        coins: (req.user.coins || 0) - priceInCoins
+        coins: userCoins - price
       });
       
       if (!updatedUser) {
@@ -5641,16 +5640,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pay_time: new Date()
       });
 
-      // 为用户添加积分（转换为整数，以分为单位）
+      // 为用户添加积分（1元=1积分）
       const user = await storage.getUser(order.user_id);
       if (user) {
         const amount = parseFloat(order.amount);
-        const coinAmount = Math.round(amount * 100); // 转换为以分为单位的整数
+        const currentCoins = typeof user.coins === 'string' ? parseFloat(user.coins) : (user.coins || 0);
         await storage.updateUser(user.id, {
-          coins: (user.coins || 0) + coinAmount
+          coins: currentCoins + amount
         });
 
-        console.log(`用户 ${user.id} 支付成功，已增加 ${coinAmount} 积分（${amount}元）`);
+        console.log(`用户 ${user.id} 支付成功，已增加 ${amount} 积分`);
       }
 
       // 如果订单有关联资源，自动完成购买并扣除积分
@@ -5662,14 +5661,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const resource = await storage.getResource(order.resource_id);
           if (resource) {
             const resourcePrice = typeof resource.price === 'string' ? parseFloat(resource.price) : (resource.price || 0);
-            const resourceCoinPrice = Math.round(resourcePrice * 100); // 转换为以分为单位的整数
             
             // 重新获取用户最新积分（因为上面已经增加了积分）
             const updatedUser = await storage.getUser(user.id);
             if (updatedUser) {
               // 扣除积分
+              const currentCoins = typeof updatedUser.coins === 'string' ? parseFloat(updatedUser.coins) : (updatedUser.coins || 0);
               await storage.updateUser(user.id, {
-                coins: (updatedUser.coins || 0) - resourceCoinPrice
+                coins: currentCoins - resourcePrice
               });
               
               // 创建购买记录
@@ -5679,7 +5678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 resourcePrice
               );
               
-              console.log(`用户 ${order.user_id} 支付完成，已自动购买资源 ${order.resource_id}，扣除 ${resourceCoinPrice} 积分（${resourcePrice}元）`);
+              console.log(`用户 ${order.user_id} 支付完成，已自动购买资源 ${order.resource_id}，扣除 ${resourcePrice} 积分`);
             }
           }
         } else {
