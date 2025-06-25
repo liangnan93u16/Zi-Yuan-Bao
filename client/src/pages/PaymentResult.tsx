@@ -34,26 +34,31 @@ export default function PaymentResult() {
   const [error, setError] = useState<string | null>(null);
   const [orderData, setOrderData] = useState<OrderResponse | null>(null);
   
-  // 从URL中获取订单号
-  const params = new URLSearchParams(window.location.search);
-  const orderNo = params.get('out_trade_no');
+  // 从URL中获取订单号 - 移到useEffect内部避免Hooks顺序问题
+  const [orderNo, setOrderNo] = useState<string | null>(null);
   
   useEffect(() => {
+    // 从URL中获取订单号
+    const params = new URLSearchParams(window.location.search);
+    const currentOrderNo = params.get('out_trade_no');
+    setOrderNo(currentOrderNo);
+    
+    if (!currentOrderNo) {
+      setError('缺少订单号参数');
+      setLoading(false);
+      return;
+    }
+    
     let retryCount = 0;
     const maxRetries = 10; // 最多重试10次
     const retryInterval = 3000; // 每3秒重试一次
     
     const fetchOrderStatus = async () => {
-      if (!orderNo) {
-        setError('缺少订单号参数');
-        setLoading(false);
-        return;
-      }
       
       try {
         // 直接使用fetch避免身份验证问题
-        console.log('使用新的fetch方法请求订单状态:', `/api/payment/order/${orderNo}`);
-        const res = await fetch(`/api/payment/order/${orderNo}`);
+        console.log('使用新的fetch方法请求订单状态:', `/api/payment/order/${currentOrderNo}`);
+        const res = await fetch(`/api/payment/order/${currentOrderNo}`);
         
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -98,7 +103,7 @@ export default function PaymentResult() {
     };
     
     fetchOrderStatus();
-  }, [orderNo]);
+  }, []); // 空依赖数组，只在组件挂载时执行一次
   
   if (loading) {
     return (

@@ -10,7 +10,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import UserPurchases from "./pages/UserPurchases";
-import PaymentResult from "./pages/PaymentResult";
+import PaymentResultSimple from "./pages/PaymentResultSimple";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import ResourceManagement from "./pages/admin/ResourceManagement";
@@ -58,7 +58,7 @@ function App() {
               <Route path="/register" component={Register} />
               <Route path="/profile" component={Profile} />
               <Route path="/user/purchases" component={UserPurchases} />
-              <Route path="/payment/result" component={PaymentResult} />
+              <Route path="/payment/result" component={PaymentResultSimple} />
               
               {/* 管理员路由 - 所有/admin路径都需要管理员权限 */}
               <AdminRoute path="/admin/resources" component={ResourceManagement} />
