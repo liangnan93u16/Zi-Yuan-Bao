@@ -516,7 +516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             type: 'alipay',
             out_trade_no: orderNo,
             notify_url: `${siteUrl}/api/payment/notify`,
-            return_url: `${siteUrl}/payment/result`,
+            return_url: `${siteUrl}/payment/result?out_trade_no=${orderNo}`,
             name: resource.title,
             money: price.toString(),
             sign_type: 'MD5'

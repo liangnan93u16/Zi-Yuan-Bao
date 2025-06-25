@@ -40,6 +40,10 @@ export default function PaymentResult() {
   const orderNo = params.get('out_trade_no');
   
   useEffect(() => {
+    let retryCount = 0;
+    const maxRetries = 10; // 最多重试10次
+    const retryInterval = 3000; // 每3秒重试一次
+    
     const fetchOrderStatus = async () => {
       if (!orderNo) {
         setError('缺少订单号参数');
@@ -50,11 +54,38 @@ export default function PaymentResult() {
       try {
         const response = await apiRequest<OrderResponse>('GET', `/api/payment/order/${orderNo}`);
         
+        // 如果订单状态是已支付，直接显示成功
+        if (response.order.status === 'paid') {
+          setOrderData(response);
+          setLoading(false);
+          return;
+        }
+        
+        // 如果订单状态还是pending，且重试次数未超限，继续重试
+        if (response.order.status === 'pending' && retryCount < maxRetries) {
+          retryCount++;
+          console.log(`订单状态查询中，第${retryCount}次重试...`);
+          setTimeout(fetchOrderStatus, retryInterval);
+          return;
+        }
+        
+        // 其他情况直接设置数据
         setOrderData(response);
+        setLoading(false);
+        
       } catch (error) {
         console.error('获取订单状态失败', error);
+        
+        // 如果是网络错误且重试次数未超限，继续重试
+        if (retryCount < maxRetries) {
+          retryCount++;
+          console.log(`网络错误，第${retryCount}次重试...`);
+          setTimeout(fetchOrderStatus, retryInterval);
+          return;
+        }
+        
+        // 重试次数已满，显示错误
         setError('获取订单状态失败，请稍后再试');
-      } finally {
         setLoading(false);
       }
     };
@@ -66,7 +97,8 @@ export default function PaymentResult() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
-        <h2 className="text-xl font-semibold">正在查询订单状态...</h2>
+        <h2 className="text-xl font-semibold">正在验证支付结果...</h2>
+        <p className="text-muted-foreground mt-2">请稍候，系统正在确认您的支付状态</p>
       </div>
     );
   }
@@ -106,6 +138,17 @@ export default function PaymentResult() {
   const { order, resource } = orderData;
   const isPaid = order.status === 'paid';
   
+  // 如果支付成功，显示成功提示
+  useEffect(() => {
+    if (isPaid && orderData) {
+      toast({
+        title: "支付成功",
+        description: `您已成功购买资源，积分已到账`,
+        variant: "default",
+      });
+    }
+  }, [isPaid, orderData, toast]);
+  
   return (
     <div className="container mx-auto px-4 py-8">
       <Card className="max-w-3xl mx-auto">
@@ -116,7 +159,7 @@ export default function PaymentResult() {
             ) : (
               <Loader2 className="w-8 h-8 mr-2 text-orange-500" />
             )}
-            {isPaid ? '支付成功' : '订单处理中'}
+            {isPaid ? '支付成功' : '正在确认支付结果'}
           </CardTitle>
           <CardDescription>
             订单号: {order.order_no}
@@ -135,7 +178,7 @@ export default function PaymentResult() {
                   {isPaid ? (
                     <span className="text-green-500">支付成功</span>
                   ) : (
-                    <span className="text-orange-500">处理中</span>
+                    <span className="text-orange-500">确认中</span>
                   )}
                 </p>
               </div>
@@ -187,8 +230,16 @@ export default function PaymentResult() {
               variant="outline"
               onClick={() => window.location.reload()}
             >
-              刷新订单状态
+              刷新支付状态
             </Button>
+          )}
+          
+          {isPaid && resource && (
+            <Link to={`/resources/${resource.id}`}>
+              <Button variant="default">
+                查看已购买资源
+              </Button>
+            </Link>
           )}
         </CardFooter>
       </Card>
