@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { apiRequest } from '../lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, CheckCircle, XCircle, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -53,6 +52,7 @@ export default function PaymentResult() {
       
       try {
         // 直接使用fetch避免身份验证问题
+        console.log('使用新的fetch方法请求订单状态:', `/api/payment/order/${orderNo}`);
         const res = await fetch(`/api/payment/order/${orderNo}`);
         
         if (!res.ok) {
