@@ -7,7 +7,16 @@ export default function PaymentSuccess() {
     // 添加调试信息
     console.log('PaymentSuccess 组件已加载');
     console.log('当前 URL:', window.location.href);
-    console.log('URL 参数:', new URLSearchParams(window.location.search));
+    const urlParams = new URLSearchParams(window.location.search);
+    console.log('URL 参数:', Object.fromEntries(urlParams.entries()));
+    console.log('window.location.pathname:', window.location.pathname);
+    
+    // 检查支付结果参数
+    const tradeStatus = urlParams.get('trade_status');
+    const outTradeNo = urlParams.get('out_trade_no');
+    if (tradeStatus && outTradeNo) {
+      console.log('检测到支付结果参数:', { tradeStatus, outTradeNo });
+    }
     
     // 尝试通知父窗口支付成功
     try {
