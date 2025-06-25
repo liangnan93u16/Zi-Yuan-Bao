@@ -5600,14 +5600,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`用户 ${user.id} 支付成功，已增加 ${amount} 积分`);
       }
 
-      // 如果订单有关联资源，记录购买记录
-      if (order.resource_id) {
-        await storage.createUserPurchase(
-          order.user_id, 
-          order.resource_id, 
-          parseFloat(order.amount)
-        );
-        console.log(`为用户 ${order.user_id} 创建资源 ${order.resource_id} 的购买记录`);
+      // 如果订单有关联资源，自动完成购买并扣除积分
+      if (order.resource_id && user) {
+        // 检查是否已经存在购买记录（避免重复处理）
+        const existingPurchase = await storage.getUserPurchase(order.user_id, order.resource_id);
+        if (!existingPurchase) {
+          // 获取资源信息
+          const resource = await storage.getResource(order.resource_id);
+          if (resource) {
+            const resourcePrice = typeof resource.price === 'string' ? parseFloat(resource.price) : (resource.price || 0);
+            
+            // 重新获取用户最新积分（因为上面已经增加了积分）
+            const updatedUser = await storage.getUser(user.id);
+            if (updatedUser) {
+              // 扣除积分
+              await storage.updateUser(user.id, {
+                coins: (updatedUser.coins || 0) - resourcePrice
+              });
+              
+              // 创建购买记录
+              await storage.createUserPurchase(
+                order.user_id, 
+                order.resource_id, 
+                resourcePrice
+              );
+              
+              console.log(`用户 ${order.user_id} 支付完成，已自动购买资源 ${order.resource_id}，扣除 ${resourcePrice} 积分`);
+            }
+          }
+        } else {
+          console.log(`用户 ${order.user_id} 资源 ${order.resource_id} 已存在购买记录，跳过重复处理`);
+        }
       }
 
       // 返回成功响应
