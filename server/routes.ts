@@ -518,16 +518,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const merchantId = merchantIdParam.value;
           const merchantKey = merchantKeyParam.value;
           
-          // 动态获取当前域名，支持开发环境和生产环境
-          let siteUrl = '';
-          if (siteUrlParam?.value) {
-            siteUrl = siteUrlParam.value;
-          } else {
-            // 从请求中动态构建域名
-            const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
-            const host = req.get('host') || req.headers.host;
-            siteUrl = `${protocol}://${host}`;
-          }
+          // 始终从请求中动态获取域名，支持开发环境和生产环境
+          const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
+          const host = req.get('host') || req.headers.host;
+          const siteUrl = `${protocol}://${host}`;
           
           console.log('动态获取的站点URL:', siteUrl);
 
