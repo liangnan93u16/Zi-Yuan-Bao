@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'wouter';
-import { useToast } from '@/hooks/use-toast';
+// 已弃用 - 使用 PaymentResultSimple 代替
+// 保留此文件仅为避免构建错误
 import { Loader2, CheckCircle, XCircle, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,6 +27,10 @@ interface OrderResponse {
 }
 
 export default function PaymentResult() {
+  return <div>此组件已弃用，请使用PaymentResultSimple</div>;
+}
+
+function PaymentResultOld() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
