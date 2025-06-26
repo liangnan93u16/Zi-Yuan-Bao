@@ -73,7 +73,7 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 - June 26, 2025: 修复资源图片显示问题，添加统一默认图片处理
-  - 创建了新的默认资源图片 `/images/default-resource.svg`
+  - 使用官方提供的美观默认资源图片 `/images/default-resource.webp`
   - 统一了所有页面的图片错误处理逻辑：本地图片 → 远程图片 → 默认图片
   - 更新了以下组件和页面的图片处理：
     - ResourceCard 组件（首页资源卡片）
@@ -81,7 +81,7 @@ Preferred communication style: Simple, everyday language.
     - ResourceDetail 页面（资源详情）
     - ResourceManagement 页面（后台资源管理）
     - FeifeiManagement 页面（菲菲资源管理）
-  - 解决了部分资源图片无法正确展示的问题，确保用户始终能看到适当的图片内容
+  - 解决了部分资源图片无法正确展示的问题，确保用户始终能看到美观的默认图片
 
 - June 26, 2025: 安装和配置官方 Google Gemini CLI 工具
   - 卸载第三方工具，安装官方 @google/gemini-cli (v0.1.3)

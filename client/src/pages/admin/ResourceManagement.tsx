@@ -419,13 +419,13 @@ export default function ResourceManagement() {
                                 src={
                                   resource.local_image_path 
                                     ? `/images/${resource.local_image_path.split('/').pop()}` 
-                                    : (resource.cover_image || '/images/default-resource.svg')
+                                    : (resource.cover_image || '/images/default-resource.webp')
                                 } 
                                 alt={resource.title}
                                 onError={(e) => {
                                   const target = e.target as HTMLImageElement;
-                                  if (!target.src.includes('default-resource.svg')) {
-                                    target.src = '/images/default-resource.svg';
+                                  if (!target.src.includes('default-resource.webp')) {
+                                    target.src = '/images/default-resource.webp';
                                   }
                                 }}
                               />
