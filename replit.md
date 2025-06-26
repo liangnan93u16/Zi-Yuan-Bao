@@ -78,6 +78,8 @@ Preferred communication style: Simple, everyday language.
   - 验证工具安装成功，支持多种模型和参数配置
   - 遇到 API 配额限制（429错误），这是免费 API 密钥的正常限制
   - 支持沙盒模式、调试模式、检查点等高级功能
+  - 创建并测试自定义 Gemini CLI 模块，基本功能验证成功
+  - 测试包括文本生成、总结、情感分析、翻译等功能
 
 - June 25, 2025: 修改积分系统支持小数，完善支付流程
   - 积分字段类型从integer改为decimal(10,2)，支持小数积分
