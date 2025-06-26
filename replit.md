@@ -72,12 +72,12 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-- June 26, 2025: 安装和配置 Gemini CLI 工具
-  - 成功安装第三方 Gemini CLI 工具 (briggs-gemini-cli v1.3.1)
+- June 26, 2025: 安装和配置官方 Google Gemini CLI 工具
+  - 卸载第三方工具，安装官方 @google/gemini-cli (v0.1.3)
   - 配置 GEMINI_API_KEY 环境变量
-  - 测试基本功能：问答、中文支持、项目分析
-  - 支持交互模式和单次问答模式
-  - 可以进行代码分析、文件修改、README生成等高级功能
+  - 验证工具安装成功，支持多种模型和参数配置
+  - 遇到 API 配额限制（429错误），这是免费 API 密钥的正常限制
+  - 支持沙盒模式、调试模式、检查点等高级功能
 
 - June 25, 2025: 修改积分系统支持小数，完善支付流程
   - 积分字段类型从integer改为decimal(10,2)，支持小数积分
