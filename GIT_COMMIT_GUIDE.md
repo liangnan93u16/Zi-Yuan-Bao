@@ -50,10 +50,44 @@ git commit -m "feat: 添加新用户注册管理员邮件通知功能
 - 添加完整的错误日志记录"
 ```
 
-### 4. 推送到 GitHub
+### 4. 最终提交（OAuth凭证问题已解决）
+
+OAuth凭证已安全地移至Replit Secrets，现在可以安全提交：
+
 ```bash
+# 提交所有更改
+git add gemini-cli/packages/core/src/code_assist/oauth2.ts
+git add .env.example
+git add server/email.ts
+git add server/auth.ts
+git add replit.md
+git add GIT_COMMIT_GUIDE.md
+git commit -m "feat: 添加新用户注册邮件通知功能，修复OAuth凭证安全问题
+
+✨ 新功能：
+- 新用户注册时自动发送通知邮件到管理员邮箱 CRM@wangmaild.cn
+- 邮件包含用户详细信息和管理链接
+- 异步发送不影响用户注册响应速度
+
+🔒 安全修复：
+- 移除硬编码OAuth凭证，改用Replit Secrets管理
+- 添加凭证验证机制
+- 更新环境变量配置文档"
+
+# 推送到 GitHub
 git push origin main
 ```
+
+### OAuth凭证安全解决方案
+✅ **已完成：**
+- 硬编码OAuth凭证已完全移除
+- 凭证已安全存储在Replit Secrets中
+- 添加了环境变量验证机制
+- GitHub Push Protection问题已解决
+
+✅ **Replit Secrets配置：**
+- GOOGLE_OAUTH_CLIENT_ID: 已设置 ✓
+- GOOGLE_OAUTH_CLIENT_SECRET: 已设置 ✓
 
 ## 功能验证
 
