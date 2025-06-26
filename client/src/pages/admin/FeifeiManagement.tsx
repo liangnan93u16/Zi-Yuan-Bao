@@ -1754,9 +1754,15 @@ export default function FeifeiManagement() {
                                 {selectedResource.local_image_path ? (
                                   <div className="mt-2 max-w-xs">
                                     <img 
-                                      src={selectedResource.local_image_path} 
+                                      src={selectedResource.local_image_path || '/images/default-resource.svg'} 
                                       alt={selectedResource.chinese_title || "资源图片"} 
                                       className="rounded-md border border-gray-200 max-h-48 object-contain"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        if (!target.src.includes('default-resource.svg')) {
+                                          target.src = '/images/default-resource.svg';
+                                        }
+                                      }}
                                     />
                                     <div className="mt-1 text-xs text-gray-500">
                                       <span>本地图片</span>
