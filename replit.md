@@ -72,6 +72,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- June 26, 2025: 添加新用户注册管理员邮件通知功能
+  - 当有新用户注册时，系统自动发送通知邮件到管理员邮箱（CRM@wangmaild.cn）
+  - 使用系统参数表中的邮件配置（EMAIL_FROM、EMAIL_HOST、EMAIL_PASSWORD、EMAIL_PORT、EMAIL_USER）
+  - 邮件包含用户ID、注册邮箱、注册时间等信息
+  - 提供直达用户管理页面的链接，方便管理员查看
+  - 邮件发送采用异步方式，不影响用户注册响应速度
+  - 添加详细的错误日志记录，便于问题排查
+
 - June 26, 2025: 修复资源图片显示问题，添加统一默认图片处理
   - 使用官方提供的美观默认资源图片 `/images/default-resource.webp`
   - 统一了所有页面的图片错误处理逻辑：本地图片 → 远程图片 → 默认图片
