@@ -72,6 +72,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- June 26, 2025: 安装和配置 Gemini CLI 工具
+  - 成功安装第三方 Gemini CLI 工具 (briggs-gemini-cli v1.3.1)
+  - 配置 GEMINI_API_KEY 环境变量
+  - 测试基本功能：问答、中文支持、项目分析
+  - 支持交互模式和单次问答模式
+  - 可以进行代码分析、文件修改、README生成等高级功能
+
 - June 25, 2025: 修改积分系统支持小数，完善支付流程
   - 积分字段类型从integer改为decimal(10,2)，支持小数积分
   - 积分系统按1元=1积分的比例，0.01元=0.01积分

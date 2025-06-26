@@ -11,6 +11,7 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@google/genai": "^1.7.0",
     "@hookform/resolvers": "^3.9.1",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@neondatabase/serverless": "^0.10.4",
@@ -48,6 +49,7 @@
     "@types/nodemailer": "^6.4.17",
     "axios": "^1.8.4",
     "bcrypt": "^5.1.1",
+    "briggs-gemini-cli": "^1.4.0",
     "cheerio": "^1.0.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
