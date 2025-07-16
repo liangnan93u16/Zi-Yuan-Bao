@@ -1058,7 +1058,7 @@ export default function ResourceEdit() {
                           <FormLabel>资源价格 (积分) *</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Input {...field} type="number" step="0.01" min="0" placeholder="输入积分数量，支持小数" />
+                              <Input {...field} type="number" step="1" placeholder="输入积分数量" />
                             </div>
                           </FormControl>
                           <FormMessage />

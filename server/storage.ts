@@ -26,7 +26,6 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, data: Partial<User>): Promise<User | undefined>;
-  deleteUser(id: number): Promise<boolean>;
   getAllUsers(): Promise<User[]>;
 
   // Author operations
@@ -206,36 +205,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user || undefined;
-  }
-
-  async deleteUser(id: number): Promise<boolean> {
-    try {
-      // 首先删除用户的购买记录
-      await db.delete(userPurchases).where(eq(userPurchases.user_id, id));
-      
-      // 删除用户的收藏记录
-      await db.delete(userFavorites).where(eq(userFavorites.user_id, id));
-      
-      // 删除用户的评论
-      await db.delete(reviews).where(eq(reviews.user_id, id));
-      
-      // 删除用户的资源通知记录
-      await db.delete(resourceNotifications).where(eq(resourceNotifications.user_id, id));
-      
-      // 删除用户的订单记录
-      await db.delete(orders).where(eq(orders.user_id, id));
-      
-      // 最后删除用户
-      const result = await db
-        .delete(users)
-        .where(eq(users.id, id))
-        .returning({ id: users.id });
-      
-      return result.length > 0;
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      return false;
-    }
   }
 
   async getAllUsers(): Promise<User[]> {

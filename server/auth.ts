@@ -3,7 +3,6 @@ import bcrypt from 'bcrypt';
 import { storage } from './storage';
 import { LoginCredentials, RegisterData, User } from '@shared/schema';
 import { SessionData } from 'express-session';
-import { sendNewUserRegistrationNotification } from './email';
 
 // 扩展 express-session 中的 Session 接口
 declare module 'express-session' {
@@ -179,19 +178,6 @@ export async function register(req: Request, res: Response): Promise<void> {
     if (req.session) {
       req.session.userId = user.id;
     }
-
-    // 发送新用户注册通知邮件给管理员（异步执行，不阻塞响应）
-    sendNewUserRegistrationNotification(user.email, user.id)
-      .then(success => {
-        if (success) {
-          console.log(`新用户注册通知邮件已发送给管理员 - 用户: ${user.email}`);
-        } else {
-          console.log(`新用户注册通知邮件发送失败 - 用户: ${user.email}`);
-        }
-      })
-      .catch(error => {
-        console.error('发送新用户注册通知邮件时出错:', error);
-      });
 
     // Return user without password
     const { password: _, ...userWithoutPassword } = user;

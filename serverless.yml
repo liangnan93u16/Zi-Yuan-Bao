@@ -1,0 +1,27 @@
+component: http
+name: ziyuanbao
+inputs:
+  src:
+    src: ./
+  faas:
+    framework: express
+    name: '${name}'
+    events:
+      - http:
+          parameters:
+            netConfig:
+              enableIntranet: false
+              enableExtranet: true
+            qualifier: $DEFAULT
+            authType: NONE
+    runtime: Nodejs18.15
+    eip: false
+    timeout: 30
+    memorySize: 512
+    tags: []
+    environments: []
+  region: ap-guangzhou
+  isAutoCiDeploy: false
+org: '1363516689'
+app: ziyuanbao
+stage: dev

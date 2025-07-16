@@ -415,20 +415,7 @@ export default function ResourceManagement() {
                         <TableCell>
                           <div className="flex items-center">
                             <Avatar className="h-10 w-10 mr-4">
-                              <AvatarImage 
-                                src={
-                                  resource.local_image_path 
-                                    ? `/images/${resource.local_image_path.split('/').pop()}` 
-                                    : (resource.cover_image || '/images/default-resource.webp')
-                                } 
-                                alt={resource.title}
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  if (!target.src.includes('default-resource.webp')) {
-                                    target.src = '/images/default-resource.webp';
-                                  }
-                                }}
-                              />
+                              <AvatarImage src={resource.cover_image} alt={resource.title} />
                               <AvatarFallback>{resource.title.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div className="max-w-[150px]">

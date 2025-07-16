@@ -568,12 +568,10 @@ export default function FeifeiManagement() {
         setSelectedResource(data.resource);
       }
       
-      // 只更新列表中的单个资源，不刷新整个表格
-      setCategoryResources(prevResources => 
-        prevResources.map(resource => 
-          resource.id === data.resource.id ? data.resource : resource
-        )
-      );
+      // 更新列表中的资源
+      if (selectedCategory) {
+        fetchCategoryResources(selectedCategory.id);
+      }
     },
     onError: (error: any) => {
       toast({
@@ -589,28 +587,18 @@ export default function FeifeiManagement() {
   const saveHTMLMutation = useMutation({
     mutationFn: async (params: { resourceId: number, htmlContent: string }) => {
       // 调用API更新资源
-      return apiRequest<{ resource: EnrichedFeifeiResource }>("PATCH", `/api/feifei-resources/${params.resourceId}`, {
+      return apiRequest("PATCH", `/api/feifei-resources/${params.resourceId}`, {
         course_html: params.htmlContent
       });
     },
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       toast({
         title: "保存成功",
         description: "课程HTML内容已保存到数据库",
       });
-      
-      // 只更新列表中的单个资源，不刷新整个表格
-      if (data.resource) {
-        setCategoryResources(prevResources => 
-          prevResources.map(resource => 
-            resource.id === variables.resourceId ? { ...resource, course_html: variables.htmlContent } : resource
-          )
-        );
-        
-        // 更新当前选中的资源
-        if (selectedResource && selectedResource.id === variables.resourceId) {
-          setSelectedResource({ ...selectedResource, course_html: variables.htmlContent });
-        }
+      // 刷新资源数据
+      if (selectedCategory) {
+        fetchCategoryResources(selectedCategory.id);
       }
     },
     onError: (error: any) => {
@@ -646,12 +634,10 @@ export default function FeifeiManagement() {
         setSelectedResource(data.resource);
       }
       
-      // 只更新列表中的单个资源，不刷新整个表格
-      setCategoryResources(prevResources => 
-        prevResources.map(resource => 
-          resource.id === data.resource.id ? data.resource : resource
-        )
-      );
+      // 更新列表中的资源
+      if (selectedCategory) {
+        fetchCategoryResources(selectedCategory.id);
+      }
     },
     onError: (error: any) => {
       console.error('HTML转Markdown失败:', error);
@@ -783,12 +769,10 @@ export default function FeifeiManagement() {
         });
       }
       
-      // 只更新列表中的单个资源，不刷新整个表格
-      setCategoryResources(prevResources => 
-        prevResources.map(resource => 
-          resource.id === data.resource.id ? data.resource : resource
-        )
-      );
+      // 更新列表中的资源
+      if (selectedCategory) {
+        fetchCategoryResources(selectedCategory.id);
+      }
     },
     onError: (error: any) => {
       toast({
@@ -1754,15 +1738,9 @@ export default function FeifeiManagement() {
                                 {selectedResource.local_image_path ? (
                                   <div className="mt-2 max-w-xs">
                                     <img 
-                                      src={selectedResource.local_image_path || '/images/default-resource.webp'} 
+                                      src={selectedResource.local_image_path} 
                                       alt={selectedResource.chinese_title || "资源图片"} 
                                       className="rounded-md border border-gray-200 max-h-48 object-contain"
-                                      onError={(e) => {
-                                        const target = e.target as HTMLImageElement;
-                                        if (!target.src.includes('default-resource.webp')) {
-                                          target.src = '/images/default-resource.webp';
-                                        }
-                                      }}
                                     />
                                     <div className="mt-1 text-xs text-gray-500">
                                       <span>本地图片</span>

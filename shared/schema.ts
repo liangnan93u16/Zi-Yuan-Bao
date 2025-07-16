@@ -76,7 +76,7 @@ export const users = pgTable("users", {
   avatar: text("avatar"),
   membership_type: text("membership_type"),
   membership_expire_time: timestamp("membership_expire_time"),
-  coins: decimal("coins", { precision: 10, scale: 2 }).default("0"),
+  coins: integer("coins").default(0),
   failed_login_attempts: integer("failed_login_attempts").default(0),
   account_locked_until: timestamp("account_locked_until"),
   created_at: timestamp("created_at").defaultNow(),
