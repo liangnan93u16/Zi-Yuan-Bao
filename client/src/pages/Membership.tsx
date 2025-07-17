@@ -293,16 +293,19 @@ export default function Membership() {
                             // 优先使用本地图片路径，如果存在
                             resource.local_image_path 
                               ? `/images/${resource.local_image_path.split('/').pop()}` 
-                              : (resource.cover_image || '/images/placeholder.svg')
+                              : (resource.cover_image || '/images/default-resource.webp')
                           } 
                           alt={resource.title} 
                           className="w-full h-48 object-cover"
                           onError={(e) => {
-                            // 如果本地图片加载失败，回退到远程图片
+                            // 如果本地图片加载失败，回退到远程图片，最后使用默认图片
                             const target = e.target as HTMLImageElement;
-                            if (resource.local_image_path && target.src.includes('/images/')) {
+                            if (resource.local_image_path && target.src.includes('/images/') && !target.src.includes('default-resource.webp')) {
                               console.log('本地图片加载失败，切换到远程图片');
-                              target.src = resource.cover_image || '/images/placeholder.svg';
+                              target.src = resource.cover_image || '/images/default-resource.webp';
+                            } else if (resource.cover_image && !target.src.includes('default-resource.webp')) {
+                              console.log('远程图片加载失败，使用默认图片');
+                              target.src = '/images/default-resource.webp';
                             }
                           }}
                         />

@@ -3,6 +3,12 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeStorage } from "./storage";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+import * as path from 'path';
+import * as fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json());
@@ -59,6 +65,25 @@ app.use((req, res, next) => {
 
     res.status(status).json({ message });
     throw err;
+  });
+
+  // 添加支付成功页面的特殊处理（确保在生产和开发环境都工作）
+  app.get('/payment/success*', (req, res, next) => {
+    console.log('支付成功页面访问:', req.url);
+    
+    // 在开发环境中，让 Vite 处理
+    if (app.get("env") === "development") {
+      next();
+      return;
+    }
+    
+    // 在生产环境中，直接提供 index.html
+    const indexPath = path.resolve(__dirname, 'public', 'index.html');
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(404).send('Page not found');
+    }
   });
 
   // importantly only setup vite in development and after

@@ -272,6 +272,27 @@ export default function UserManagement() {
     },
   });
 
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      return apiRequest("DELETE", `/api/admin/users/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({
+        title: "删除成功",
+        description: "会员及其相关数据已成功删除。",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "删除失败",
+        description: `删除会员时出错: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleEditUser = (user: any) => {
     // 如果用户是管理员，不允许编辑
     if (user.membership_type === 'admin') {
@@ -325,6 +346,23 @@ export default function UserManagement() {
     }
     
     createUserMutation.mutate(formattedData);
+  };
+
+  // Handle delete user
+  const handleDeleteUser = (user: any) => {
+    // 不允许删除管理员用户
+    if (user.membership_type === 'admin') {
+      toast({
+        title: "无法删除",
+        description: "不能删除管理员用户。",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (confirm(`确定要删除会员 "${user.email}" 吗？此操作将同时删除该用户的所有购买记录、收藏记录等相关数据，且不可撤销。`)) {
+      deleteUserMutation.mutate(user.id);
+    }
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -632,12 +670,21 @@ export default function UserManagement() {
                             </Button>
                             <Button
                               variant="ghost"
-                              className={isActive ? "text-red-600 hover:text-red-800 h-auto p-0" : "text-green-600 hover:text-green-800 h-auto p-0"}
+                              className={isActive ? "text-red-600 hover:text-red-800 h-auto p-0 mr-3" : "text-green-600 hover:text-green-800 h-auto p-0 mr-3"}
                               onClick={() => toggleUserStatusMutation.mutate({ userId: user.id, isActive: isActive })}
                               disabled={toggleUserStatusMutation.isPending || user.membership_type === 'admin'}
                               title={user.membership_type === 'admin' ? "管理员用户不可禁用" : (isActive ? "禁用用户" : "启用用户")}
                             >
                               {isActive ? '禁用' : '启用'}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              className="text-red-600 hover:text-red-800 h-auto p-0"
+                              onClick={() => handleDeleteUser(user)}
+                              disabled={deleteUserMutation.isPending || user.membership_type === 'admin'}
+                              title={user.membership_type === 'admin' ? "管理员用户不可删除" : "删除会员"}
+                            >
+                              删除
                             </Button>
                           </TableCell>
                         </TableRow>
