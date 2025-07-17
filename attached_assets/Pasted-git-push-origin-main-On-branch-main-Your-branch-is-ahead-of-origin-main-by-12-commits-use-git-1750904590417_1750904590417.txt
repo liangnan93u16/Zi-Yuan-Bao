@@ -1,0 +1,49 @@
+git push origin main
+On branch main
+Your branch is ahead of 'origin/main' by 12 commits.
+  (use "git push" to publish your local commits)
+
+nothing to commit, working tree clean
+Enumerating objects: 536, done.
+Counting objects: 100% (536/536), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (514/514), done.
+Writing objects: 100% (519/519), 3.04 MiB | 2.34 MiB/s, done.
+Total 519 (delta 94), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (94/94), completed with 15 local objects.
+remote: error: GH013: Repository rule violations found for refs/heads/main.
+remote: 
+remote: - GITHUB PUSH PROTECTION
+remote:   —————————————————————————————————————————
+remote:     Resolve the following violations before pushing again
+remote: 
+remote:     - Push cannot contain secrets
+remote: 
+remote:     
+remote:      (?) Learn how to resolve a blocked push
+remote:      https://docs.github.com/code-security/secret-scanning/working-with-secret-scanning-and-push-protection/working-with-push-protection-from-the-command-line#resolving-a-blocked-push
+remote:     
+remote:     
+remote:       —— Google OAuth Client ID ————————————————————————————
+remote:        locations:
+remote:          - commit: 41538606eac4dd7ceec29688991ac5206e3d3d92
+remote:            path: gemini-cli/packages/core/src/code_assist/oauth2.ts:19
+remote:     
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.
+remote:        https://github.com/liangnan93u16/Zi-Yuan-Bao/security/secret-scanning/unblock-secret/2z1g50ALVFKAfttLMkjBnl35D9K
+remote:     
+remote:     
+remote:       —— Google OAuth Client Secret ————————————————————————
+remote:        locations:
+remote:          - commit: 41538606eac4dd7ceec29688991ac5206e3d3d92
+remote:            path: gemini-cli/packages/core/src/code_assist/oauth2.ts:27
+remote:     
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.
+remote:        https://github.com/liangnan93u16/Zi-Yuan-Bao/security/secret-scanning/unblock-secret/2z1g4yDNFBdTP6D8cYgFURZx8iN
+remote:     
+remote: 
+remote: 
+To https://github.com/liangnan93u16/Zi-Yuan-Bao
+ ! [remote rejected] main -> main (push declined due to repository rule violations)
+error: failed to push some refs to 'https://github.com/liangnan93u16/Zi-Yuan-Bao'
+~/workspace$ 
