@@ -41,30 +41,8 @@ import {
 } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  
-  // 支付成功页面路由 - 支持查询参数
-  app.get('/payment/success*', (req, res, next) => {
-    console.log('支付成功页面访问:', {
-      url: req.url,
-      originalUrl: req.originalUrl,
-      query: req.query,
-      method: req.method,
-      userAgent: req.get('User-Agent')
-    });
-    
-    // 添加必要的头部支持跨域和缓存
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.header('Pragma', 'no-cache');
-    res.header('Expires', '0');
-    
-    // 让前端路由处理该页面
-    next();
-  });
-  
   // 创建图片保存目录
-  const imagesDir = path.join('public', 'images');
+  const imagesDir = path.join('/tmp', 'images');
   try {
     if (!fs.existsSync(imagesDir)) {
       console.log(`创建图片保存目录: ${imagesDir}`);
@@ -77,7 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   
   // 设置静态文件服务，提供图片访问
-  app.use('/images', express.static(path.join('public', 'images')));
+  app.use('/images', express.static(path.join('/tmp', 'images')));
   
   // 配置multer以处理文件上传
   const multerStorage = multer.diskStorage({
@@ -495,15 +473,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const price = typeof resource.price === 'string' ? parseFloat(resource.price) : (resource.price || 0);
       
       // 严格检查用户积分是否足够
-      const userCoins = typeof req.user.coins === 'string' ? parseFloat(req.user.coins) : (req.user.coins || 0);
       console.log('积分检查:', {
         userId: req.user.id,
-        userCoins: userCoins,
+        userCoins: req.user.coins || 0,
         resourcePrice: price,
-        isEnough: userCoins >= price
+        isEnough: (req.user.coins || 0) >= price
       });
       
-      if (userCoins < price) {
+      if ((req.user.coins || 0) < price) {
         // 积分不足时，创建支付订单
         try {
           // 获取商户信息
@@ -518,13 +495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const merchantId = merchantIdParam.value;
           const merchantKey = merchantKeyParam.value;
-          
-          // 始终从请求中动态获取域名，支持开发环境和生产环境
-          const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
-          const host = req.get('host') || req.headers.host;
-          const siteUrl = `${protocol}://${host}`;
-          
-          console.log('动态获取的站点URL:', siteUrl);
+          const siteUrl = siteUrlParam?.value || req.headers.origin || '';
 
           // 生成唯一订单号
           const orderNo = generateOrderNo();
@@ -545,7 +516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             type: 'alipay',
             out_trade_no: orderNo,
             notify_url: `${siteUrl}/api/payment/notify`,
-            return_url: `${siteUrl}/payment/success`,
+            return_url: `${siteUrl}/payment/result`,
             name: resource.title,
             money: price.toString(),
             sign_type: 'MD5'
@@ -585,7 +556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // 扣除积分
       const updatedUser = await storage.updateUser(req.user.id, {
-        coins: userCoins - price
+        coins: (req.user.coins || 0) - price
       });
       
       if (!updatedUser) {
@@ -1405,7 +1376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // 对密码进行哈希处理
-      const bcrypt = await import('bcrypt');
+      const bcrypt = await import('bcryptjs');
       const hashedPassword = await bcrypt.hash(password, 10);
       
       // 创建用户
@@ -1573,47 +1544,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 管理员删除用户
-  app.delete('/api/admin/users/:id', authenticateUser as any, authorizeAdmin as any, async (req: AuthenticatedRequest, res) => {
-    try {
-      const userId = parseInt(req.params.id);
-      if (isNaN(userId)) {
-        res.status(400).json({ message: '无效的用户ID' });
-        return;
-      }
-      
-      // 检查用户是否存在
-      const user = await storage.getUser(userId);
-      if (!user) {
-        res.status(404).json({ message: '用户不存在' });
-        return;
-      }
-      
-      // 不允许删除管理员用户
-      if (user.membership_type === 'admin') {
-        res.status(403).json({ message: '不能删除管理员用户' });
-        return;
-      }
-      
-      // 不允许删除自己
-      if (userId === req.user.id) {
-        res.status(403).json({ message: '不能删除自己的账户' });
-        return;
-      }
-      
-      // 删除用户（会级联删除相关记录）
-      const success = await storage.deleteUser(userId);
-      if (success) {
-        res.status(200).json({ message: '会员及其相关数据已成功删除' });
-      } else {
-        res.status(500).json({ message: '删除用户失败' });
-      }
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      res.status(500).json({ message: '删除用户时发生错误' });
-    }
-  });
-
   app.patch('/api/users/:id', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = parseInt(req.params.id);
@@ -1682,7 +1612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // 管理员可以直接修改密码而无需验证旧密码
       if (req.user?.membership_type !== 'admin') {
-        const bcrypt = await import('bcrypt');
+        const bcrypt = await import('bcryptjs');
         const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
         if (!isPasswordValid) {
           res.status(400).json({ message: '旧密码不正确' });
@@ -1691,7 +1621,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // 对新密码进行哈希处理
-      const bcrypt = await import('bcrypt');
+      const bcrypt = await import('bcryptjs');
       const hashedPassword = await bcrypt.hash(newPassword, 10);
 
       // 更新用户密码
@@ -5572,21 +5502,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 支付回调通知处理（支持GET和POST方法）
-  const handlePaymentNotify = async (req: any, res: any) => {
+  // 支付回调通知处理
+  app.get('/api/payment/notify', async (req, res) => {
     try {
-      // 获取回调参数（支持GET和POST）
-      const callbackParams = req.method === 'POST' ? req.body : req.query;
+      const callbackParams = req.query;
       console.log('收到支付回调通知:', JSON.stringify(callbackParams));
-      
-      // 验证必要参数
-      const requiredParams = ['out_trade_no', 'trade_no', 'trade_status', 'money', 'sign', 'pid'];
-      for (const param of requiredParams) {
-        if (!callbackParams[param]) {
-          console.error(`支付回调验证失败: 缺少必要参数 ${param}`);
-          return res.status(400).send('FAIL');
-        }
-      }
       
       // 获取商户密钥
       const merchantKeyParam = await storage.getParameterByKey('商户密钥');
@@ -5610,18 +5530,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).send('FAIL');
       }
 
-      // 校验订单金额（防止假通知）
-      const callbackMoney = parseFloat(callbackParams.money as string);
-      const orderMoney = parseFloat(order.amount);
-      if (Math.abs(callbackMoney - orderMoney) > 0.01) { // 允许0.01的误差
-        console.error('支付回调验证失败: 金额不匹配', {
-          callbackMoney,
-          orderMoney,
-          orderNo
-        });
-        return res.status(400).send('FAIL');
-      }
-
       // 检查支付状态
       if (callbackParams.trade_status !== 'TRADE_SUCCESS') {
         console.log('订单未成功支付:', callbackParams.trade_status);
@@ -5640,50 +5548,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pay_time: new Date()
       });
 
-      // 为用户添加积分（1元=1积分）
+      // 为用户添加积分
       const user = await storage.getUser(order.user_id);
       if (user) {
         const amount = parseFloat(order.amount);
-        const currentCoins = typeof user.coins === 'string' ? parseFloat(user.coins) : (user.coins || 0);
         await storage.updateUser(user.id, {
-          coins: currentCoins + amount
+          coins: (user.coins || 0) + amount
         });
 
         console.log(`用户 ${user.id} 支付成功，已增加 ${amount} 积分`);
       }
 
-      // 如果订单有关联资源，自动完成购买并扣除积分
-      if (order.resource_id && user) {
-        // 检查是否已经存在购买记录（避免重复处理）
-        const existingPurchase = await storage.getUserPurchase(order.user_id, order.resource_id);
-        if (!existingPurchase) {
-          // 获取资源信息
-          const resource = await storage.getResource(order.resource_id);
-          if (resource) {
-            const resourcePrice = typeof resource.price === 'string' ? parseFloat(resource.price) : (resource.price || 0);
-            
-            // 重新获取用户最新积分（因为上面已经增加了积分）
-            const updatedUser = await storage.getUser(user.id);
-            if (updatedUser) {
-              // 扣除积分
-              const currentCoins = typeof updatedUser.coins === 'string' ? parseFloat(updatedUser.coins) : (updatedUser.coins || 0);
-              await storage.updateUser(user.id, {
-                coins: currentCoins - resourcePrice
-              });
-              
-              // 创建购买记录
-              await storage.createUserPurchase(
-                order.user_id, 
-                order.resource_id, 
-                resourcePrice
-              );
-              
-              console.log(`用户 ${order.user_id} 支付完成，已自动购买资源 ${order.resource_id}，扣除 ${resourcePrice} 积分`);
-            }
-          }
-        } else {
-          console.log(`用户 ${order.user_id} 资源 ${order.resource_id} 已存在购买记录，跳过重复处理`);
-        }
+      // 如果订单有关联资源，记录购买记录
+      if (order.resource_id) {
+        await storage.createUserPurchase(
+          order.user_id, 
+          order.resource_id, 
+          parseFloat(order.amount)
+        );
+        console.log(`为用户 ${order.user_id} 创建资源 ${order.resource_id} 的购买记录`);
       }
 
       // 返回成功响应
@@ -5692,24 +5575,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('处理支付回调失败:', error);
       res.status(500).send('FAIL');
     }
-  };
+  });
 
-
-
-  // 注册GET和POST路由
-  app.get('/api/payment/notify', handlePaymentNotify);
-  app.post('/api/payment/notify', handlePaymentNotify);
-
-
-
-  // 查询订单状态（支付结果页面专用，不需要身份验证）
-  app.get('/api/payment/order/:orderNo', async (req, res) => {
+  // 查询订单状态
+  app.get('/api/payment/order/:orderNo', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: '未登录或会话已过期' });
+      }
+
       const { orderNo } = req.params;
       const order = await storage.getOrderByOrderNo(orderNo);
 
       if (!order) {
         return res.status(404).json({ message: '订单不存在' });
+      }
+
+      // 验证是否是当前用户的订单
+      if (order.user_id !== req.user.id) {
+        return res.status(403).json({ message: '无权访问此订单' });
       }
 
       // 如果已支付，获取资源信息

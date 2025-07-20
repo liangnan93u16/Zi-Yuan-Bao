@@ -15,8 +15,7 @@ import {
   Heart,
   CheckCircle,
   Copy,
-  Key,
-  Loader2
+  Key
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,7 +28,6 @@ import remarkGfm from "remark-gfm";
 import ReviewSection from "@/components/ReviewSection";
 import CourseSyllabus from "@/components/CourseSyllabus";
 import SEO from "@/components/SEO";
-import { formatPrice } from "@/lib/price-formatter";
 
 export default function ResourceDetail() {
   const { id } = useParams();
@@ -39,7 +37,6 @@ export default function ResourceDetail() {
   const [isFavorited, setIsFavorited] = useState(false);
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
   const [copying, setCopying] = useState(false);
-  const [downloading, setDownloading] = useState(false);
 
   // Fetch resource detail
   const { data: resource = {}, isLoading } = useQuery<any>({
@@ -64,30 +61,6 @@ export default function ResourceDetail() {
     
     checkFavorite();
   }, [id, user]);
-
-  // 监听支付成功消息
-  useEffect(() => {
-    const handlePaymentSuccess = (event: MessageEvent) => {
-      if (event.data.type === 'payment_success') {
-        toast({
-          title: "支付成功",
-          description: "您已成功购买资源，页面将自动刷新",
-          variant: "default",
-        });
-        
-        // 刷新页面数据
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      }
-    };
-
-    window.addEventListener('message', handlePaymentSuccess);
-    
-    return () => {
-      window.removeEventListener('message', handlePaymentSuccess);
-    };
-  }, [toast]);
 
   if (isLoading) {
     return (
@@ -157,10 +130,7 @@ export default function ResourceDetail() {
   // Now we get actual rating from the reviews API
   
   const handleDownload = async () => {
-    if (downloading) return; // 防止重复点击
-    
     if (!user) {
-      setDownloading(false);
       toast({
         title: "请先登录",
         description: `您需要登录后才能${resource.resource_url ? '下载资源' : '接收上架通知'}。`,
@@ -168,8 +138,6 @@ export default function ResourceDetail() {
       });
       return;
     }
-    
-    setDownloading(true);
     
     // 如果资源没有下载链接，则处理预售通知逻辑
     if (!resource.resource_url) {
@@ -198,8 +166,6 @@ export default function ResourceDetail() {
           title: "预售通知已设置",
           description: "当资源正式上架后，我们将通过邮件通知您。",
         });
-      } finally {
-        setDownloading(false);
       }
       return;
     }
@@ -261,7 +227,6 @@ export default function ResourceDetail() {
             description: "请允许弹出窗口以完成支付",
             variant: "destructive",
           });
-          setDownloading(false);
           return;
         }
         
@@ -289,7 +254,6 @@ export default function ResourceDetail() {
           description: "请在完成支付后返回此页面刷新",
           duration: 5000,
         });
-        setDownloading(false);
         return;
       }
       
@@ -334,11 +298,8 @@ export default function ResourceDetail() {
               title: "下载完成",
               description: "资源已成功下载到您的设备。",
             });
-            setDownloading(false);
           }, 2000);
-          return;
         }
-        setDownloading(false);
         return;
       }
       
@@ -350,7 +311,6 @@ export default function ResourceDetail() {
           description: data.message || "您今天已达到购买限制（每天最多购买5条资源），请明天再来",
           variant: "destructive",
         });
-        setDownloading(false);
         return;
       }
       
@@ -426,7 +386,6 @@ export default function ResourceDetail() {
             // 跳转到充值页面
             window.location.href = "/profile?tab=coins";
           }
-          setDownloading(false);
         }
         return;
       }
@@ -437,7 +396,6 @@ export default function ResourceDetail() {
         description: data.message || "请稍后再试",
         variant: "destructive",
       });
-      setDownloading(false);
       
     } catch (error) {
       console.error("获取/购买资源时出错:", error);
@@ -446,7 +404,6 @@ export default function ResourceDetail() {
         description: "服务器错误，请稍后再试",
         variant: "destructive",
       });
-      setDownloading(false);
     }
   };
 
@@ -663,11 +620,11 @@ export default function ResourceDetail() {
                 <div className="mb-4">
                   <div className="flex items-center mb-1">
                     <div className="text-4xl font-bold text-neutral-900">
-                      {isFree ? '免费' : `${formatPrice(price)} 积分`}
+                      {isFree ? '免费' : `${Math.round(price)} 积分`}
                     </div>
                     {!isFree && (
                       <div className="text-neutral-500 line-through ml-3 mt-1">
-                        原价: {formatPrice(originalPrice)} 积分
+                        原价: {Math.round(originalPrice)} 积分
                       </div>
                     )}
                   </div>
@@ -759,20 +716,8 @@ export default function ResourceDetail() {
                 
                 <div className="flex flex-col gap-3">
                   <div className="flex gap-2">
-                    <Button 
-                      onClick={handleDownload} 
-                      size="lg" 
-                      disabled={downloading}
-                      className="flex-1 text-base py-5"
-                    >
-                      {downloading ? (
-                        <>
-                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                          正在连接支付网站...
-                        </>
-                      ) : (
-                        resource.resource_url ? '立即获取' : '上架通知'
-                      )}
+                    <Button onClick={handleDownload} size="lg" className="flex-1 text-base py-5">
+                      {resource.resource_url ? '立即获取' : '上架通知'}
                     </Button>
                     {resource.resource_code && (
                       <Button 
@@ -972,18 +917,15 @@ export default function ResourceDetail() {
                 // 优先使用本地图片路径，如果存在
                 resource.local_image_path 
                   ? `/images/${resource.local_image_path.split('/').pop()}` 
-                  : (resource.cover_image || '/images/default-resource.webp')
+                  : (resource.cover_image || '/images/placeholder.svg')
               } 
               alt={resource.title} 
               onError={(e) => {
-                // 如果本地图片加载失败，回退到远程图片，最后使用默认图片
+                // 如果本地图片加载失败，回退到远程图片
                 const target = e.target as HTMLImageElement;
-                if (resource.local_image_path && target.src.includes('/images/') && !target.src.includes('default-resource.webp')) {
+                if (resource.local_image_path && target.src.includes('/images/')) {
                   console.log('本地图片加载失败，切换到远程图片');
-                  target.src = resource.cover_image || '/images/default-resource.webp';
-                } else if (resource.cover_image && !target.src.includes('default-resource.webp')) {
-                  console.log('远程图片加载失败，使用默认图片');
-                  target.src = '/images/default-resource.webp';
+                  target.src = resource.cover_image || '/images/placeholder.svg';
                 }
               }}
             />

@@ -1,5 +1,7 @@
-// 已弃用 - 使用 PaymentResultSimple 代替
-// 保留此文件仅为避免构建错误
+import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'wouter';
+import { apiRequest } from '../lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import { Loader2, CheckCircle, XCircle, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,93 +29,44 @@ interface OrderResponse {
 }
 
 export default function PaymentResult() {
-  return <div>此组件已弃用，请使用PaymentResultSimple</div>;
-}
-
-function PaymentResultOld() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [orderData, setOrderData] = useState<OrderResponse | null>(null);
   
-  // 从URL中获取订单号 - 移到useEffect内部避免Hooks顺序问题
-  const [orderNo, setOrderNo] = useState<string | null>(null);
+  // 从URL中获取订单号
+  const params = new URLSearchParams(window.location.search);
+  const orderNo = params.get('out_trade_no');
   
   useEffect(() => {
-    // 从URL中获取订单号
-    const params = new URLSearchParams(window.location.search);
-    const currentOrderNo = params.get('out_trade_no');
-    setOrderNo(currentOrderNo);
-    
-    if (!currentOrderNo) {
-      setError('缺少订单号参数');
-      setLoading(false);
-      return;
-    }
-    
-    let retryCount = 0;
-    const maxRetries = 10; // 最多重试10次
-    const retryInterval = 3000; // 每3秒重试一次
-    
     const fetchOrderStatus = async () => {
+      if (!orderNo) {
+        setError('缺少订单号参数');
+        setLoading(false);
+        return;
+      }
       
       try {
-        // 直接使用fetch避免身份验证问题
-        console.log('使用新的fetch方法请求订单状态:', `/api/payment/order/${currentOrderNo}`);
-        const res = await fetch(`/api/payment/order/${currentOrderNo}`);
+        const response = await apiRequest<OrderResponse>('GET', `/api/payment/order/${orderNo}`);
         
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        }
-        
-        const response = await res.json() as OrderResponse;
-        
-        // 如果订单状态是已支付，直接显示成功
-        if (response.order.status === 'paid') {
-          setOrderData(response);
-          setLoading(false);
-          return;
-        }
-        
-        // 如果订单状态还是pending，且重试次数未超限，继续重试
-        if (response.order.status === 'pending' && retryCount < maxRetries) {
-          retryCount++;
-          console.log(`订单状态查询中，第${retryCount}次重试...`);
-          setTimeout(fetchOrderStatus, retryInterval);
-          return;
-        }
-        
-        // 其他情况直接设置数据
         setOrderData(response);
-        setLoading(false);
-        
       } catch (error) {
         console.error('获取订单状态失败', error);
-        
-        // 如果是网络错误且重试次数未超限，继续重试
-        if (retryCount < maxRetries) {
-          retryCount++;
-          console.log(`网络错误，第${retryCount}次重试...`);
-          setTimeout(fetchOrderStatus, retryInterval);
-          return;
-        }
-        
-        // 重试次数已满，显示错误
         setError('获取订单状态失败，请稍后再试');
+      } finally {
         setLoading(false);
       }
     };
     
     fetchOrderStatus();
-  }, []); // 空依赖数组，只在组件挂载时执行一次
+  }, [orderNo]);
   
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
-        <h2 className="text-xl font-semibold">正在验证支付结果...</h2>
-        <p className="text-muted-foreground mt-2">请稍候，系统正在确认您的支付状态</p>
+        <h2 className="text-xl font-semibold">正在查询订单状态...</h2>
       </div>
     );
   }
@@ -153,31 +106,6 @@ function PaymentResultOld() {
   const { order, resource } = orderData;
   const isPaid = order.status === 'paid';
   
-  // 如果支付成功，显示成功提示并关闭弹出窗口
-  useEffect(() => {
-    if (isPaid && orderData) {
-      toast({
-        title: "支付成功",
-        description: `您已成功购买资源，积分已到账`,
-        variant: "default",
-      });
-      
-      // 延迟2秒后关闭弹出窗口（如果是在弹出窗口中）
-      setTimeout(() => {
-        if (window.opener) {
-          // 通知父窗口支付成功
-          window.opener.postMessage({ 
-            type: 'payment_success', 
-            orderNo: orderData.order.order_no,
-            resourceId: orderData.resource?.id 
-          }, '*');
-          // 关闭弹出窗口
-          window.close();
-        }
-      }, 2000);
-    }
-  }, [isPaid, orderData, toast]);
-  
   return (
     <div className="container mx-auto px-4 py-8">
       <Card className="max-w-3xl mx-auto">
@@ -188,7 +116,7 @@ function PaymentResultOld() {
             ) : (
               <Loader2 className="w-8 h-8 mr-2 text-orange-500" />
             )}
-            {isPaid ? '支付成功' : '正在确认支付结果'}
+            {isPaid ? '支付成功' : '订单处理中'}
           </CardTitle>
           <CardDescription>
             订单号: {order.order_no}
@@ -207,7 +135,7 @@ function PaymentResultOld() {
                   {isPaid ? (
                     <span className="text-green-500">支付成功</span>
                   ) : (
-                    <span className="text-orange-500">确认中</span>
+                    <span className="text-orange-500">处理中</span>
                   )}
                 </p>
               </div>
@@ -259,16 +187,8 @@ function PaymentResultOld() {
               variant="outline"
               onClick={() => window.location.reload()}
             >
-              刷新支付状态
+              刷新订单状态
             </Button>
-          )}
-          
-          {isPaid && resource && (
-            <Link to={`/resources/${resource.id}`}>
-              <Button variant="default">
-                查看已购买资源
-              </Button>
-            </Link>
           )}
         </CardFooter>
       </Card>
