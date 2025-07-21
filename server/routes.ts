@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, ResourceFilters } from "./storage";
-import session from "express-session";
+// Session import removed - using JWT authentication
 import { z } from "zod";
 import axios from 'axios';
 import * as cheerio from 'cheerio';
@@ -39,37 +39,29 @@ import {
   getCurrentUser,
   AuthenticatedRequest
 } from "./auth";
+import { 
+  uploadToCOS, 
+  deleteFromCOS, 
+  generateFileKey, 
+  extractKeyFromUrl, 
+  isCOSConfigured 
+} from "./cos";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // 创建图片保存目录
-  const imagesDir = path.join('/tmp', 'images');
-  try {
-    if (!fs.existsSync(imagesDir)) {
-      console.log(`创建图片保存目录: ${imagesDir}`);
-      fs.mkdirSync(imagesDir, { recursive: true });
-    } else {
-      console.log(`图片保存目录已存在: ${imagesDir}`);
-    }
-  } catch (err) {
-    console.error(`创建图片保存目录失败: ${err}`);
+  // 检查COS配置状态
+  if (!isCOSConfigured()) {
+    console.warn('⚠️  COS配置不完整，需要设置以下环境变量:');
+    console.warn('   - COS_SECRET_ID: 腾讯云COS SecretId');
+    console.warn('   - COS_SECRET_KEY: 腾讯云COS SecretKey');
+    console.warn('   - COS_BUCKET: COS存储桶名称');
+    console.warn('   - COS_REGION: COS地域（可选，默认ap-beijing）');
+    console.warn('   - COS_DOMAIN: 自定义域名（可选）');
+  } else {
+    console.log('✅ COS配置已完成，图片将存储到腾讯云COS');
   }
   
-  // 设置静态文件服务，提供图片访问
-  app.use('/images', express.static(path.join('/tmp', 'images')));
-  
-  // 配置multer以处理文件上传
-  const multerStorage = multer.diskStorage({
-    destination: function (req, file, cb) {
-      cb(null, imagesDir);
-    },
-    filename: function (req, file, cb) {
-      // 生成文件名: 原始名称-时间戳.扩展名
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      const ext = path.extname(file.originalname);
-      const filename = file.originalname.replace(ext, '') + '-' + uniqueSuffix + ext;
-      cb(null, filename);
-    }
-  });
+  // 配置multer以处理文件上传（使用内存存储）
+  const multerStorage = multer.memoryStorage();
   
   const upload = multer({ 
     storage: multerStorage,
@@ -99,22 +91,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     return Number(purchases[0]?.count || 0) === 0;
   }
-  // Session middleware with memorystore
-  // Dynamically import memorystore and create store
-  const memorystore = await import('memorystore');
-  const MemoryStore = memorystore.default(session);
-  
-  app.use(
-    session({
-      cookie: { maxAge: 86400000 }, // 1 day
-      store: new MemoryStore({
-        checkPeriod: 86400000 // prune expired entries every 24h
-      }),
-      resave: false,
-      saveUninitialized: false,
-      secret: process.env.SESSION_SECRET || 'resource-sharing-secret'
-    })
-  );
+  // JWT authentication is now used instead of sessions
+  // No session middleware required for stateless authentication
 
   // Authentication routes
   app.post('/api/auth/login', login);
@@ -1025,6 +1003,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // 如果资源有封面图片且配置了COS，先删除COS上的图片
+      if (resource.cover_image && isCOSConfigured()) {
+        try {
+          // 从URL中提取文件key并删除
+          const fileKey = extractKeyFromUrl(resource.cover_image);
+          await deleteFromCOS(fileKey);
+          console.log(`已删除COS图片: ${fileKey}`);
+        } catch (cosError) {
+          console.warn(`删除COS图片失败: ${cosError}，但继续删除资源记录`);
+          // 不阻止资源删除，只记录警告
+        }
+      }
+
       const deleted = await storage.deleteResource(resourceId);
       if (!deleted) {
         res.status(500).json({ message: '删除资源失败' });
@@ -1051,23 +1042,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(400).json({ message: '没有上传文件或文件格式不正确' });
         return;
       }
+
+      // 检查COS配置
+      if (!isCOSConfigured()) {
+        res.status(500).json({ 
+          message: '服务器未配置COS存储，请联系管理员',
+          error: 'COS配置缺失'
+        });
+        return;
+      }
       
-      // 生成可访问的文件路径
-      const imageUrl = `/images/${req.file.filename}`;
-      const localPath = req.file.path;
+      // 生成COS文件key（路径）
+      const fileKey = generateFileKey(req.file.originalname, 'images');
       
-      // 返回图片URL和本地路径
-      res.status(200).json({
-        success: true,
-        message: '图片上传成功',
-        data: {
-          image_url: imageUrl,
-          local_path: localPath
-        }
-      });
+      try {
+        // 上传文件到COS
+        const cosUrl = await uploadToCOS(
+          req.file.buffer, 
+          fileKey, 
+          req.file.mimetype
+        );
+        
+        // 返回COS图片URL
+        res.status(200).json({
+          success: true,
+          message: '图片上传成功',
+          data: {
+            image_url: cosUrl,
+            file_key: fileKey,
+            original_name: req.file.originalname,
+            file_size: req.file.size,
+            mime_type: req.file.mimetype
+          }
+        });
+      } catch (cosError) {
+        console.error('COS上传失败:', cosError);
+        res.status(500).json({ 
+          message: '图片上传到COS失败', 
+          error: String(cosError) 
+        });
+      }
     } catch (error) {
       console.error('图片上传失败:', error);
       res.status(500).json({ message: '图片上传失败', error: String(error) });
+    }
+  });
+
+  // 图片删除接口 - 允许已登录用户删除图片
+  app.delete('/api/upload/image', authenticateUser as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: '未登录或会话已过期' });
+        return;
+      }
+
+      const { image_url, file_key } = req.body;
+      
+      // 检查参数
+      if (!image_url && !file_key) {
+        res.status(400).json({ message: '需要提供image_url或file_key参数' });
+        return;
+      }
+
+      // 检查COS配置
+      if (!isCOSConfigured()) {
+        res.status(500).json({ 
+          message: '服务器未配置COS存储，请联系管理员',
+          error: 'COS配置缺失'
+        });
+        return;
+      }
+
+      try {
+        let keyToDelete = file_key;
+        
+        // 如果没有提供file_key，从URL中提取
+        if (!keyToDelete && image_url) {
+          keyToDelete = extractKeyFromUrl(image_url);
+        }
+
+        // 从COS删除文件
+        await deleteFromCOS(keyToDelete);
+        
+        res.status(200).json({
+          success: true,
+          message: '图片删除成功',
+          data: {
+            deleted_key: keyToDelete
+          }
+        });
+      } catch (cosError) {
+        console.error('COS删除失败:', cosError);
+        res.status(500).json({ 
+          message: '从COS删除图片失败', 
+          error: String(cosError) 
+        });
+      }
+    } catch (error) {
+      console.error('图片删除失败:', error);
+      res.status(500).json({ message: '图片删除失败', error: String(error) });
     }
   });
 
@@ -3772,27 +3845,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     $('.wp-post-image').attr('src') ||
                     $('img.attachment-large').attr('src');
       
-      // 保存图片到本地
+      // 保存图片到腾讯云COS
       let localImagePath = null;
       if (imgUrl) {
         try {
           // 创建唯一的文件名，使用资源ID和时间戳
           const fileExtension = path.extname(new URL(imgUrl).pathname) || '.jpg';
           const fileName = `feifei_${resourceId}_${Date.now()}${fileExtension}`;
-          const imagePath = path.join('public', 'images', fileName);
           
-          if (isLogVerbose) console.log(`下载图片: ${imgUrl} 到本地: ${imagePath}`);
+          if (isLogVerbose) console.log(`下载图片: ${imgUrl} 并准备上传到COS`);
           
-          // 下载图片
+          // 下载图片到内存
           const imageResponse = await axios.get(imgUrl, { responseType: 'arraybuffer' });
+          const imageBuffer = Buffer.from(imageResponse.data);
           
-          // 保存图片到本地
-          await fs.writeFile(imagePath, Buffer.from(imageResponse.data));
-          
-          // 设置相对路径用于数据库存储
-          localImagePath = `/images/${fileName}`;
-          
-          if (isLogVerbose) console.log(`图片已保存到本地: ${localImagePath}`);
+          // 检查COS配置
+          if (isCOSConfigured()) {
+            // 生成COS存储路径
+            const cosKey = generateFileKey(fileName, 'feifei');
+            
+            // 获取Content-Type
+            const contentType = imageResponse.headers['content-type'] || 'image/jpeg';
+            
+            // 上传到腾讯云COS
+            const cosUrl = await uploadToCOS(imageBuffer, cosKey, contentType);
+            localImagePath = cosUrl;
+            
+            if (isLogVerbose) console.log(`图片已上传到COS: ${localImagePath}`);
+          } else {
+            // COS配置不可用时，保存到本地作为备用
+            console.warn('COS配置不完整，将图片保存到本地');
+            const imagePath = path.join('public', 'images', fileName);
+            await fs.writeFile(imagePath, imageBuffer);
+            localImagePath = `/images/${fileName}`;
+            if (isLogVerbose) console.log(`图片已保存到本地: ${localImagePath}`);
+          }
         } catch (imgError) {
           console.error('下载或保存图片时出错:', imgError);
           if (isLogVerbose) console.log(`无法保存图片: ${imgUrl}`);
@@ -5226,19 +5313,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // 立即回应客户端，表示任务已开始
-      res.json({ message: '已启动菲菲资源的解析任务 (仅解析第一个分类)，请查看控制台日志了解进度' });
+      res.json({ message: '已启动菲菲资源的解析任务，将处理所有分类，请查看控制台日志了解进度' });
       
-      console.log('=== 开始解析菲菲资源 (仅第一个分类) ===');
+      console.log('=== 开始解析菲菲资源 (处理所有分类) ===');
       
       // 1. 获取所有分类
       const categoriesResult = await storage.getAllFeifeiCategories({ invalidStatus: false });
       const allCategories = categoriesResult.categories;
       console.log(`获取到 ${allCategories.length} 个有效分类`);
       
-      // 2. 仅处理第一个分类
-      if (allCategories.length > 0) {
-        const category = allCategories[0];
-        console.log(`\n处理分类: ${category.title}`);
+      let totalParsedCount = 0;
+      let totalErrorCount = 0;
+      const overallStartTime = Date.now();
+      
+      // 2. 处理所有分类
+      for (let i = 0; i < allCategories.length; i++) {
+        const category = allCategories[i];
+        console.log(`\n[${i+1}/${allCategories.length}] 处理分类: ${category.title}`);
         
         try {
           // 调用共用函数解析分类URL
@@ -5251,10 +5342,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const categoryResources = resourcesResult.resources;
           console.log(`\n=== 开始解析分类 "${category.title}" 下的 ${categoryResources.length} 个资源详情页 ===`);
           
+          let categoryParsedCount = 0;
+          let categoryErrorCount = 0;
+          
           // 遍历该分类下的所有资源
           for (let k = 0; k < categoryResources.length; k++) {
             const resource = categoryResources[k];
-            console.log(`\n[${k+1}/${categoryResources.length}] 解析资源: ${resource.chinese_title}`);
+            const globalIndex = totalParsedCount + totalErrorCount + 1;
+            console.log(`\n[${k+1}/${categoryResources.length}] [全局: ${globalIndex}] 解析资源: ${resource.chinese_title}`);
             
             try {
               // 使用公共解析函数处理资源
@@ -5262,25 +5357,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const parseResult = await parseFeifeiResourcePage(resource.id, true);
               
               if (parseResult.success) {
-                console.log(`  成功解析并保存资源: ${resource.chinese_title}`);
+                console.log(`  ✓ 解析成功: ${resource.chinese_title}`);
+                categoryParsedCount++;
+                totalParsedCount++;
               } else {
-                console.error(`  解析资源失败: ${parseResult.message}`);
+                console.error(`  ✗ 解析失败: ${parseResult.message}`);
+                categoryErrorCount++;
+                totalErrorCount++;
               }
             } catch (error) {
-              console.error(`  解析资源 "${resource.chinese_title}" 时出错:`, error instanceof Error ? error.message : String(error));
+              console.error(`  ✗ 解析资源 "${resource.chinese_title}" 时出错:`, error instanceof Error ? error.message : String(error));
+              categoryErrorCount++;
+              totalErrorCount++;
             }
             
-            // 在处理完一个资源后暂停3秒
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            // 在处理完一个资源后暂停1秒
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
+          
+          console.log(`\n分类 "${category.title}" 处理完成: 成功 ${categoryParsedCount}, 失败 ${categoryErrorCount}`);
+          
+          // 在处理完一个分类后暂停2秒
+          if (i < allCategories.length - 1) {
+            console.log(`暂停2秒后处理下一个分类...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+          
         } catch (error) {
           console.error(`  解析分类 "${category.title}" 时出错:`, error instanceof Error ? error.message : String(error));
         }
-      } else {
-        console.log('没有找到有效分类，解析终止');
       }
       
-      console.log('\n=== 菲菲资源解析任务完成 (仅解析了第一个分类) ===');
+      const overallDuration = (Date.now() - overallStartTime) / 1000;
+      console.log('\n=== 所有菲菲资源解析任务完成 ===');
+      console.log(`总计处理 ${allCategories.length} 个分类`);
+      console.log(`总体结果: 成功 ${totalParsedCount}, 失败 ${totalErrorCount}, 总计 ${totalParsedCount + totalErrorCount}`);
+      console.log(`总用时: ${overallDuration.toFixed(2)}秒, 平均每项: ${((overallDuration) / (totalParsedCount + totalErrorCount)).toFixed(2)}秒`);
       
     } catch (error) {
       console.error('解析菲菲资源时出错:', error);

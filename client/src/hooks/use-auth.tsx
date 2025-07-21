@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, TokenManager } from "@/lib/queryClient";
 import { AuthUser } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,13 +22,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await fetch("/api/auth/me", { credentials: "include" });
-        if (res.ok) {
-          const userData = await res.json();
-          setUser(userData);
+        // Check if we have a stored token
+        const token = TokenManager.getToken();
+        if (!token) {
+          setLoading(false);
+          return;
         }
+
+        // Try to get user info with the token
+        const userData = await apiRequest<AuthUser>("GET", "/api/auth/me");
+        setUser(userData);
       } catch (error) {
         console.error("Failed to check auth status:", error);
+        // If auth fails, remove the invalid token
+        TokenManager.removeToken();
       } finally {
         setLoading(false);
       }
@@ -73,7 +80,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       await apiRequest("POST", "/api/auth/logout", {});
+      
+      // Clear the stored token
+      TokenManager.removeToken();
       setUser(null);
+      
       toast({
         title: "已退出登录",
         description: "您已成功退出登录。",
@@ -81,6 +92,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 跳转到首页
       window.location.href = "/";
     } catch (error) {
+      // Even if the API call fails, clear the local token
+      TokenManager.removeToken();
+      setUser(null);
+      
       toast({
         title: "退出失败",
         description: "退出登录时出现错误，请重试。",

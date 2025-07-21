@@ -483,7 +483,7 @@ export default function FeifeiManagement() {
     onSuccess: (data) => {
       toast({
         title: "批量解析任务已启动",
-        description: data.message || "所有菲菲资源的解析任务已在后台运行，请查看控制台日志了解进度。",
+        description: data.message || "所有分类下菲菲资源的解析任务已在后台运行，请查看控制台日志了解进度。",
       });
     },
     onError: (error: any) => {
@@ -1743,7 +1743,7 @@ export default function FeifeiManagement() {
                                       className="rounded-md border border-gray-200 max-h-48 object-contain"
                                     />
                                     <div className="mt-1 text-xs text-gray-500">
-                                      <span>本地图片</span>
+                                      <span>{selectedResource.local_image_path.startsWith('https://') ? 'COS存储图片' : '本地图片'}</span>
                                       <a 
                                         href={selectedResource.local_image_path} 
                                         target="_blank" 

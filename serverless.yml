@@ -16,19 +16,14 @@ inputs:
             authType: NONE
     runtime: Nodejs18.15
     eip: false
-    timeout: 30
+    timeout: 300
     memorySize: 512
     tags: []
     environments:
-      - key: DATABASE_URL
-        value: 'postgresql://neondb_owner:npg_EoezYkhq7d2Q@ep-proud-meadow-a6e984d6.us-west-2.aws.neon.tech/neondb?sslmode=require'
       - key: VITE_FORCE_DISABLE_DEPS_OPTIMIZER
         value:  'true'
       - key: NODE_ENV
         value: 'production'
-    layers:
-      - name: 'ziyuanbao-layer'
-        version: '16'
   region: ap-guangzhou
   isAutoCiDeploy: false
 org: '1363516689'

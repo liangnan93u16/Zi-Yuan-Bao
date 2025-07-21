@@ -1,18 +1,59 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { storage } from './storage';
 import { LoginCredentials, RegisterData, User } from '@shared/schema';
-import { SessionData } from 'express-session';
 
-// 扩展 express-session 中的 Session 接口
-declare module 'express-session' {
-  interface SessionData {
-    userId?: number;
-  }
+import { CONFIG, AUTH_MODE } from './config';
+
+// JWT configuration from config
+const JWT_SECRET = CONFIG.JWT_SECRET;
+const JWT_EXPIRES_IN = CONFIG.JWT_EXPIRES_IN;
+
+// JWT payload interface
+interface JWTPayload {
+  userId: number;
+  email: string;
+  iat?: number;
+  exp?: number;
 }
 
 export interface AuthenticatedRequest extends Request {
   user?: User;
+  token?: string;
+}
+
+// JWT utility functions
+export function generateToken(user: User): string {
+  const payload: JWTPayload = {
+    userId: user.id,
+    email: user.email
+  };
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+}
+
+export function verifyToken(token: string): JWTPayload | null {
+  try {
+    return jwt.verify(token, JWT_SECRET) as JWTPayload;
+  } catch (error) {
+    return null;
+  }
+}
+
+export function extractTokenFromRequest(req: Request): string | null {
+  // Check Authorization header first (Bearer token)
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+  
+  // Fallback to cookie (for browser compatibility)
+  const cookieToken = req.headers.cookie
+    ?.split(';')
+    .find(c => c.trim().startsWith('token='))
+    ?.split('=')[1];
+    
+  return cookieToken || null;
 }
 
 // Hash password
@@ -106,11 +147,6 @@ export async function login(req: Request, res: Response): Promise<void> {
       });
     }
 
-    // Set user in session
-    if (req.session) {
-      req.session.userId = user.id;
-    }
-
     // 如果是特定的管理员账号，记录登录信息
     if (email === '1034936667@qq.com' && user.membership_type === 'admin') {
       try {
@@ -136,11 +172,23 @@ export async function login(req: Request, res: Response): Promise<void> {
       }
     }
 
-    // Return user without password
+    // Generate JWT token
+    const token = generateToken(user);
+
+    // Set token in cookie for browser compatibility
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
+    // Return user without password and include token
     const { password: _, ...userWithoutPassword } = user;
     res.status(200).json({
       ...userWithoutPassword,
-      role: user.membership_type === 'admin' ? 'admin' : 'user'
+      role: user.membership_type === 'admin' ? 'admin' : 'user',
+      token
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -174,16 +222,23 @@ export async function register(req: Request, res: Response): Promise<void> {
       coins: 0
     });
 
-    // Set user in session
-    if (req.session) {
-      req.session.userId = user.id;
-    }
+    // Generate JWT token
+    const token = generateToken(user);
 
-    // Return user without password
+    // Set token in cookie for browser compatibility
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
+    // Return user without password and include token
     const { password: _, ...userWithoutPassword } = user;
     res.status(201).json({
       ...userWithoutPassword,
-      role: isAdmin ? 'admin' : 'user'
+      role: isAdmin ? 'admin' : 'user',
+      token
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -193,18 +248,13 @@ export async function register(req: Request, res: Response): Promise<void> {
 
 // Logout handler
 export function logout(req: Request, res: Response): void {
-  if (req.session) {
-    req.session.destroy((err) => {
-      if (err) {
-        res.status(500).json({ message: '退出登录时发生错误' });
-      } else {
-        res.clearCookie('connect.sid');
-        res.status(200).json({ message: '成功退出登录' });
-      }
-    });
-  } else {
-    res.status(200).json({ message: '成功退出登录' });
-  }
+  // Clear JWT token cookie
+  res.clearCookie('token');
+  
+  // Also clear session cookie if exists (for backward compatibility)
+  res.clearCookie('connect.sid');
+  
+  res.status(200).json({ message: '成功退出登录' });
 }
 
 // Authentication middleware
@@ -214,13 +264,22 @@ export async function authenticateUser(
   next: NextFunction
 ): Promise<void> {
   try {
-    if (!req.session || !req.session.userId) {
-      res.status(401).json({ message: '未登录或会话已过期' });
+    // Extract token from request
+    const token = extractTokenFromRequest(req);
+    if (!token) {
+      res.status(401).json({ message: '未登录或令牌缺失' });
+      return;
+    }
+
+    // Verify JWT token
+    const payload = verifyToken(token);
+    if (!payload) {
+      res.status(401).json({ message: '令牌无效或已过期' });
       return;
     }
 
     // Get user from storage
-    const user = await storage.getUser(req.session.userId);
+    const user = await storage.getUser(payload.userId);
     if (!user) {
       res.status(401).json({ message: '用户不存在' });
       return;
@@ -229,22 +288,15 @@ export async function authenticateUser(
     // 检查用户是否被永久禁用（使用account_locked_until字段）
     // 只有当账号锁定日期超过2099年时，才视为管理员禁用的账号
     if (user.account_locked_until && new Date(user.account_locked_until) > new Date("2099-01-01")) {
-      // 清除会话
-      if (req.session) {
-        req.session.destroy((err) => {
-          if (err) {
-            console.error('Error destroying session for disabled user:', err);
-          }
-        });
-      }
       res.status(401).json({ message: '账号已被禁用，请联系管理员', disabled: true });
       return;
     }
     
     // 注意：会员到期时间(membership_expire_time)不再影响登录，只影响下载权限
 
-    // Set user in request
+    // Set user and token in request
     req.user = user;
+    req.token = token;
     next();
   } catch (error) {
     console.error('Authentication error:', error);
@@ -268,13 +320,22 @@ export function authorizeAdmin(
 // Get current user
 export async function getCurrentUser(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    if (!req.session || !req.session.userId) {
-      res.status(401).json({ message: '未登录或会话已过期' });
+    // Extract token from request
+    const token = extractTokenFromRequest(req);
+    if (!token) {
+      res.status(401).json({ message: '未登录或令牌缺失' });
+      return;
+    }
+
+    // Verify JWT token
+    const payload = verifyToken(token);
+    if (!payload) {
+      res.status(401).json({ message: '令牌无效或已过期' });
       return;
     }
 
     // Get user from storage
-    const user = await storage.getUser(req.session.userId);
+    const user = await storage.getUser(payload.userId);
     if (!user) {
       res.status(401).json({ message: '用户不存在' });
       return;
@@ -283,14 +344,6 @@ export async function getCurrentUser(req: AuthenticatedRequest, res: Response): 
     // 检查用户是否被永久禁用（通过account_locked_until字段）
     // 只有当账号锁定日期超过2099年时，才视为管理员禁用的账号
     if (user.account_locked_until && new Date(user.account_locked_until) > new Date("2099-01-01")) {
-      // 清除会话
-      if (req.session) {
-        req.session.destroy((err) => {
-          if (err) {
-            console.error('Error destroying session for disabled user:', err);
-          }
-        });
-      }
       res.status(401).json({ message: '账号已被禁用，请联系管理员', disabled: true });
       return;
     }

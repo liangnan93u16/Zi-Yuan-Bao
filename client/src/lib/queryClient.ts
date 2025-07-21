@@ -1,5 +1,27 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+// JWT token storage and management
+class TokenManager {
+  private static readonly TOKEN_KEY = 'auth_token';
+
+  static getToken(): string | null {
+    return localStorage.getItem(this.TOKEN_KEY);
+  }
+
+  static setToken(token: string): void {
+    localStorage.setItem(this.TOKEN_KEY, token);
+  }
+
+  static removeToken(): void {
+    localStorage.removeItem(this.TOKEN_KEY);
+  }
+
+  static getAuthHeaders(): Record<string, string> {
+    const token = this.getToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -12,28 +34,39 @@ export async function apiRequest<T = any>(
   url: string,
   data?: unknown | undefined,
 ): Promise<T> {
+  const headers: Record<string, string> = {
+    ...TokenManager.getAuthHeaders(),
+  };
+
+  if (data) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
+    credentials: "include", // Still include cookies for fallback compatibility
   });
 
   await throwIfResNotOk(res);
   
-  // 对于一些特殊的端点（登录、登出等），可能不需要返回JSON
-  if (url.includes('/api/auth/login') || url.includes('/api/auth/logout')) {
-    const data = await res.json();
-    return data as T;
-  }
-  
   try {
-    return await res.json() as T;
+    const result = await res.json();
+    
+    // Store token if returned from login/register
+    if ((url.includes('/api/auth/login') || url.includes('/api/auth/register')) && result.token) {
+      TokenManager.setToken(result.token);
+    }
+    
+    return result as T;
   } catch (e) {
     // 如果无法解析为JSON（例如空响应），则返回空对象
     return {} as T;
   }
 }
+
+export { TokenManager };
 
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
@@ -65,7 +98,8 @@ export const getQueryFn: <T>(options: {
     console.log("请求URL:", url); // 调试用
     
     const res = await fetch(url, {
-      credentials: "include",
+      headers: TokenManager.getAuthHeaders(),
+      credentials: "include", // Still include cookies for fallback compatibility
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

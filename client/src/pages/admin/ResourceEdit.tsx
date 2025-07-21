@@ -396,15 +396,18 @@ export default function ResourceEdit() {
       const result = await response.json();
       
       if (result.success) {
-        // 更新表单中的本地图片路径
-        form.setValue('local_image_path', result.data.local_path);
+        // 使用COS返回的URL更新封面图片字段
+        form.setValue('cover_image', result.data.image_url);
+        
+        // 清空本地图片路径，因为现在使用COS
+        form.setValue('local_image_path', '');
         
         // 立即保存资源，确保图片路径被保存到数据库
         saveResourceDirectly();
         
         toast({
           title: "上传成功",
-          description: "图片已成功上传并保存",
+          description: "图片已成功上传到COS并保存",
         });
         
         // 延迟一点时间后刷新数据，确保能看到最新的图片
