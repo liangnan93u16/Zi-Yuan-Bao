@@ -41,9 +41,9 @@ app.use((req, res, next) => {
 (async () => {
   // Initialize storage system first
   try {
-    log('Initializing database connection...');
+    log("Initializing database connection...");
     const storage = await initializeStorage();
-    log('Database connection established successfully');
+    log("Database connection established successfully");
 
     // We don't need to run migrations manually since drizzle-kit
     // will handle that for us when connecting to the database
@@ -73,12 +73,15 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = 9000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
+  const port = 5000;
+  server.listen(
+    {
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    },
+    () => {
+      log(`serving on port ${port}`);
+    },
+  );
 })();
