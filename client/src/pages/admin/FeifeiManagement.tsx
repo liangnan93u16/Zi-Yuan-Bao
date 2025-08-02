@@ -397,7 +397,7 @@ export default function FeifeiManagement() {
         description: data.message || "成功解析网站资源链接。",
       });
       if (selectedCategory) {
-        fetchCategoryResources(selectedCategory.id);
+        fetchCategoryResources(selectedCategory.id, currentPage, itemsPerPage);
       }
     },
     onError: (error: any) => {
@@ -568,9 +568,9 @@ export default function FeifeiManagement() {
         setSelectedResource(data.resource);
       }
       
-      // 更新列表中的资源
+      // 更新列表中的资源，保持当前页码
       if (selectedCategory) {
-        fetchCategoryResources(selectedCategory.id);
+        fetchCategoryResources(selectedCategory.id, currentPage, itemsPerPage);
       }
     },
     onError: (error: any) => {
@@ -596,9 +596,9 @@ export default function FeifeiManagement() {
         title: "保存成功",
         description: "课程HTML内容已保存到数据库",
       });
-      // 刷新资源数据
+      // 刷新资源数据，保持当前页码
       if (selectedCategory) {
-        fetchCategoryResources(selectedCategory.id);
+        fetchCategoryResources(selectedCategory.id, currentPage, itemsPerPage);
       }
     },
     onError: (error: any) => {
@@ -634,9 +634,9 @@ export default function FeifeiManagement() {
         setSelectedResource(data.resource);
       }
       
-      // 更新列表中的资源
+      // 更新列表中的资源，保持当前页码
       if (selectedCategory) {
-        fetchCategoryResources(selectedCategory.id);
+        fetchCategoryResources(selectedCategory.id, currentPage, itemsPerPage);
       }
     },
     onError: (error: any) => {
@@ -769,9 +769,9 @@ export default function FeifeiManagement() {
         });
       }
       
-      // 更新列表中的资源
+      // 更新列表中的资源，保持当前页码
       if (selectedCategory) {
-        fetchCategoryResources(selectedCategory.id);
+        fetchCategoryResources(selectedCategory.id, currentPage, itemsPerPage);
       }
     },
     onError: (error: any) => {
